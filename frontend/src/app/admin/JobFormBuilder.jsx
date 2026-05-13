@@ -1,0 +1,612 @@
+import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import AdminLayout from '../../components/layouts/AdminLayout'
+import { Card, CardContent, CardHeader } from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Badge from '../../components/ui/Badge'
+import { 
+  ArrowRight,
+  ArrowLeft,
+  Plus,
+  X,
+  Edit,
+  Eye,
+  Settings,
+  Type,
+  List,
+  Calendar,
+  FileText,
+  CheckSquare,
+  Radio,
+  Upload,
+  Hash,
+  Mail,
+  Phone,
+  MapPin,
+  GripVertical
+} from 'lucide-react'
+
+const JobFormBuilder = () => {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const projectId = searchParams.get('project')
+
+  const [formSections, setFormSections] = useState([
+    {
+      id: 1,
+      title: 'Personal Information',
+      required: true,
+      fields: [
+        { id: 1, type: 'text', label: 'Full Name', required: true, placeholder: 'Enter full name' },
+        { id: 2, type: 'email', label: 'Email Address', required: true, placeholder: 'Enter email' },
+        { id: 3, type: 'tel', label: 'Mobile Number', required: true, placeholder: 'Enter mobile number' },
+        { id: 4, type: 'date', label: 'Date of Birth', required: true, placeholder: '' },
+        { id: 5, type: 'select', label: 'Gender', required: true, options: ['Male', 'Female', 'Other'] }
+      ]
+    },
+    {
+      id: 2,
+      title: 'Address Details',
+      required: true,
+      fields: [
+        { id: 6, type: 'textarea', label: 'Permanent Address', required: true, placeholder: 'Enter permanent address' },
+        { id: 7, type: 'text', label: 'City', required: true, placeholder: 'Enter city' },
+        { id: 8, type: 'text', label: 'State', required: true, placeholder: 'Enter state' },
+        { id: 9, type: 'text', label: 'PIN Code', required: true, placeholder: 'Enter PIN code' }
+      ]
+    }
+  ])
+
+  const [selectedSection, setSelectedSection] = useState(1)
+  const [showFieldModal, setShowFieldModal] = useState(false)
+  const [editingField, setEditingField] = useState(null)
+  const [newField, setNewField] = useState({
+    type: 'text',
+    label: '',
+    required: false,
+    placeholder: '',
+    options: []
+  })
+
+  const fieldTypes = [
+    { type: 'text', label: 'Text Input', icon: Type },
+    { type: 'textarea', label: 'Text Area', icon: FileText },
+    { type: 'email', label: 'Email', icon: Mail },
+    { type: 'tel', label: 'Phone', icon: Phone },
+    { type: 'number', label: 'Number', icon: Hash },
+    { type: 'date', label: 'Date', icon: Calendar },
+    { type: 'select', label: 'Dropdown', icon: List },
+    { type: 'radio', label: 'Radio Button', icon: Radio },
+    { type: 'checkbox', label: 'Checkbox', icon: CheckSquare },
+    { type: 'file', label: 'File Upload', icon: Upload }
+  ]
+
+  const addSection = () => {
+    const newSection = {
+      id: Date.now(),
+      title: 'New Section',
+      required: false,
+      fields: []
+    }
+    setFormSections([...formSections, newSection])
+    setSelectedSection(newSection.id)
+  }
+
+  const updateSection = (sectionId, updates) => {
+    setFormSections(sections => 
+      sections.map(section => 
+        section.id === sectionId ? { ...section, ...updates } : section
+      )
+    )
+  }
+
+  const deleteSection = (sectionId) => {
+    if (formSections.length > 1) {
+      setFormSections(sections => sections.filter(section => section.id !== sectionId))
+      if (selectedSection === sectionId) {
+        setSelectedSection(formSections[0].id)
+      }
+    }
+  }
+
+  const addField = () => {
+    const field = {
+      id: Date.now(),
+      ...newField,
+      options: newField.type === 'select' || newField.type === 'radio' ? newField.options : undefined
+    }
+    
+    setFormSections(sections =>
+      sections.map(section =>
+        section.id === selectedSection
+          ? { ...section, fields: [...section.fields, field] }
+          : section
+      )
+    )
+    
+    setNewField({
+      type: 'text',
+      label: '',
+      required: false,
+      placeholder: '',
+      options: []
+    })
+    setShowFieldModal(false)
+  }
+
+  const updateField = (fieldId, updates) => {
+    setFormSections(sections =>
+      sections.map(section =>
+        section.id === selectedSection
+          ? {
+              ...section,
+              fields: section.fields.map(field =>
+                field.id === fieldId ? { ...field, ...updates } : field
+              )
+            }
+          : section
+      )
+    )
+  }
+
+  const deleteField = (fieldId) => {
+    setFormSections(sections =>
+      sections.map(section =>
+        section.id === selectedSection
+          ? {
+              ...section,
+              fields: section.fields.filter(field => field.id !== fieldId)
+            }
+          : section
+      )
+    )
+  }
+
+  const handleNext = () => {
+    navigate(`/admin/jobs/create/documents${projectId ? `?project=${projectId}` : ''}`)
+  }
+
+  const handleBack = () => {
+    navigate(`/admin/jobs/create/eligibility${projectId ? `?project=${projectId}` : ''}`)
+  }
+
+  const steps = [
+    { id: 1, name: 'Basic Info', active: false },
+    { id: 2, name: 'Eligibility', active: false },
+    { id: 3, name: 'Form Builder', active: true },
+    { id: 4, name: 'Documents', active: false },
+    { id: 5, name: 'Payment', active: false },
+    { id: 6, name: 'Review', active: false }
+  ]
+
+  const currentSection = formSections.find(section => section.id === selectedSection)
+
+  return (
+    <AdminLayout title="Create Job - Form Builder">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Create Job Posting</h1>
+            <p className="text-gray-600">Step 3 of 6: Application Form Builder</p>
+          </div>
+          <Badge className="bg-orange-100 text-orange-800">
+            Project: Assistant Professor Recruitment 2024
+          </Badge>
+        </div>
+
+        {/* Progress Steps */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              {steps.map((step, index) => (
+                <div key={step.id} className="flex items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    step.active 
+                      ? 'bg-orange-600 text-white' 
+                      : step.id < 3 
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {step.id < 3 ? '✓' : step.id}
+                  </div>
+                  <span className={`ml-2 text-sm font-medium ${
+                    step.active ? 'text-orange-600' : step.id < 3 ? 'text-green-600' : 'text-gray-500'
+                  }`}>
+                    {step.name}
+                  </span>
+                  {index < steps.length - 1 && (
+                    <div className="w-12 h-0.5 bg-gray-200 mx-4"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sections Sidebar */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-800">Form Sections</h3>
+                  <Button onClick={addSection} variant="ghost" size="sm">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="space-y-1">
+                  {formSections.map((section) => (
+                    <div
+                      key={section.id}
+                      onClick={() => setSelectedSection(section.id)}
+                      className={`p-3 cursor-pointer border-l-4 transition-colors ${
+                        selectedSection === section.id
+                          ? 'bg-orange-50 border-orange-500 text-orange-700'
+                          : 'border-transparent hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">{section.title}</div>
+                          <div className="text-xs text-gray-500">{section.fields.length} fields</div>
+                        </div>
+                        {section.required && (
+                          <Badge className="bg-red-100 text-red-800 text-xs">Required</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Form Builder */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-800">{currentSection?.title}</h3>
+                    <p className="text-sm text-gray-600">Configure form fields for this section</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      onClick={() => setShowFieldModal(true)}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Field
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <Settings className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {currentSection?.fields.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No fields added yet</p>
+                    <Button
+                      onClick={() => setShowFieldModal(true)}
+                      variant="outline"
+                      className="mt-4"
+                    >
+                      Add First Field
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {currentSection?.fields.map((field, index) => (
+                      <div key={field.id} className="p-4 border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <GripVertical className="w-4 h-4 text-gray-400" />
+                            <div>
+                              <div className="font-medium text-gray-800">{field.label}</div>
+                              <div className="text-sm text-gray-500 capitalize">{field.type}</div>
+                            </div>
+                            {field.required && (
+                              <Badge className="bg-red-100 text-red-800 text-xs">Required</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button variant="ghost" size="sm">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              onClick={() => deleteField(field.id)}
+                              variant="ghost" 
+                              size="sm"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Field Preview */}
+                        <div className="bg-gray-50 p-3 rounded">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {field.label} {field.required && <span className="text-red-500">*</span>}
+                          </label>
+                          {field.type === 'textarea' ? (
+                            <textarea
+                              placeholder={field.placeholder}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                              rows="3"
+                              disabled
+                            />
+                          ) : field.type === 'select' ? (
+                            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white" disabled>
+                              <option>Select an option</option>
+                              {field.options?.map((option, i) => (
+                                <option key={i} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          ) : field.type === 'radio' ? (
+                            <div className="space-y-2">
+                              {field.options?.map((option, i) => (
+                                <label key={i} className="flex items-center space-x-2">
+                                  <input type="radio" name={`field-${field.id}`} disabled />
+                                  <span className="text-sm">{option}</span>
+                                </label>
+                              ))}
+                            </div>
+                          ) : field.type === 'checkbox' ? (
+                            <label className="flex items-center space-x-2">
+                              <input type="checkbox" disabled />
+                              <span className="text-sm">{field.placeholder || 'Checkbox option'}</span>
+                            </label>
+                          ) : field.type === 'file' ? (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                              <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                              <span className="text-sm text-gray-500">Click to upload or drag and drop</span>
+                            </div>
+                          ) : (
+                            <input
+                              type={field.type}
+                              placeholder={field.placeholder}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                              disabled
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Preview */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Eye className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800">Form Preview</h3>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 text-sm">
+                  {formSections.map((section) => (
+                    <div key={section.id} className="border-l-2 border-gray-200 pl-3">
+                      <div className="font-medium text-gray-800">{section.title}</div>
+                      <div className="text-gray-500">{section.fields.length} fields</div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="text-sm text-gray-600">
+                    <div className="flex justify-between">
+                      <span>Total Sections:</span>
+                      <span className="font-medium">{formSections.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Fields:</span>
+                      <span className="font-medium">
+                        {formSections.reduce((total, section) => total + section.fields.length, 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Section Settings */}
+            {currentSection && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <h3 className="font-semibold text-gray-800">Section Settings</h3>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Section Title
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSection.title}
+                      onChange={(e) => updateSection(selectedSection, { title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="sectionRequired"
+                      checked={currentSection.required}
+                      onChange={(e) => updateSection(selectedSection, { required: e.target.checked })}
+                      className="w-4 h-4 text-orange-600 rounded"
+                    />
+                    <label htmlFor="sectionRequired" className="text-sm font-medium text-gray-700">
+                      Required Section
+                    </label>
+                  </div>
+                  {formSections.length > 1 && (
+                    <Button
+                      onClick={() => deleteSection(selectedSection)}
+                      variant="outline"
+                      className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      Delete Section
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Add Field Modal */}
+        {showFieldModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-800">Add New Field</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowFieldModal(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Field Type
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {fieldTypes.map((type) => {
+                      const Icon = type.icon
+                      return (
+                        <button
+                          key={type.type}
+                          onClick={() => setNewField({ ...newField, type: type.type })}
+                          className={`p-3 border rounded-lg text-left transition-colors ${
+                            newField.type === type.type
+                              ? 'border-orange-500 bg-orange-50'
+                              : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Icon className="w-4 h-4" />
+                            <span className="text-sm font-medium">{type.label}</span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Field Label
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Full Name"
+                    value={newField.label}
+                    onChange={(e) => setNewField({ ...newField, label: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Placeholder Text
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Enter your full name"
+                    value={newField.placeholder}
+                    onChange={(e) => setNewField({ ...newField, placeholder: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                {(newField.type === 'select' || newField.type === 'radio') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Options (one per line)
+                    </label>
+                    <textarea
+                      rows="4"
+                      placeholder="Option 1&#10;Option 2&#10;Option 3"
+                      value={newField.options.join('\n')}
+                      onChange={(e) => setNewField({ 
+                        ...newField, 
+                        options: e.target.value.split('\n').filter(opt => opt.trim()) 
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="fieldRequired"
+                    checked={newField.required}
+                    onChange={(e) => setNewField({ ...newField, required: e.target.checked })}
+                    className="w-4 h-4 text-orange-600 rounded"
+                  />
+                  <label htmlFor="fieldRequired" className="text-sm font-medium text-gray-700">
+                    Required Field
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 mt-6">
+                <Button 
+                  onClick={() => setShowFieldModal(false)}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={addField}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                  disabled={!newField.label}
+                >
+                  Add Field
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+          <Button 
+            onClick={handleBack}
+            variant="outline" 
+            className="px-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back: Eligibility
+          </Button>
+          <Button 
+            onClick={handleNext}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-8"
+          >
+            Next: Documents
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+    </AdminLayout>
+  )
+}
+
+export default JobFormBuilder

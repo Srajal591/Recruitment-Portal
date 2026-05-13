@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, FileText, Download, CheckCircle, X, Eye } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import Button from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -249,7 +250,7 @@ const ApplicationDetails = () => {
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-                        📄
+                        <FileText className="w-4 h-4 text-gray-600" />
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{doc.name}</p>

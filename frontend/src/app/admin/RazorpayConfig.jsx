@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Copy, AlertTriangle } from 'lucide-react'
+import { Eye, EyeOff, Copy, AlertTriangle, Key, Link, RotateCcw, Circle, Smartphone } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -33,7 +33,10 @@ const RazorpayConfig = () => {
               <h1 className="text-2xl font-semibold text-text-primary">Razorpay</h1>
               <div className="flex items-center space-x-4 mt-1">
                 <Badge variant="success">Status: Active</Badge>
-                <Badge variant="warning">🔴 Mode: Live</Badge>
+                <Badge variant="warning">
+                  <Circle className="w-3 h-3 mr-1 text-red-500" />
+                  Mode: Live
+                </Badge>
               </div>
             </div>
           </div>
@@ -52,7 +55,7 @@ const RazorpayConfig = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center space-x-2">
-                  <span className="text-primary">🔑</span>
+                  <Key className="w-5 h-5 text-orange-600" />
                   <h3 className="font-semibold text-text-primary">API Configuration</h3>
                 </div>
               </CardHeader>
@@ -122,7 +125,7 @@ const RazorpayConfig = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center space-x-2">
-                  <span className="text-yellow-600">🔗</span>
+                  <Link className="w-5 h-5 text-yellow-600" />
                   <h3 className="font-semibold text-text-primary">Webhook Endpoint</h3>
                 </div>
               </CardHeader>
@@ -170,7 +173,7 @@ const RazorpayConfig = () => {
             <Card className="border-green-200 bg-green-50">
               <CardContent className="p-6 text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">📱</span>
+                  <Smartphone className="w-8 h-8 text-green-600" />
                 </div>
                 <h3 className="font-semibold text-green-800 mb-2">Connectivity</h3>
                 <p className="text-green-700 text-sm mb-4">
@@ -186,7 +189,8 @@ const RazorpayConfig = () => {
                 <h3 className="font-semibold text-text-primary mb-4">Quick Actions</h3>
                 <div className="space-y-3">
                   <Button variant="outline" className="w-full justify-start">
-                    🔄 Auto-Validate Aadhar
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Auto-Validate Aadhar
                     <Badge variant="success" className="ml-auto">ENABLE</Badge>
                   </Button>
                   <Button variant="outline" className="w-full justify-start">

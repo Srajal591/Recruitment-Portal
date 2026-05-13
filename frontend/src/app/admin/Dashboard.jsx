@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
@@ -16,7 +16,8 @@ import {
   CheckCircle,
   Clock,
   ArrowRight,
-  BarChart3
+  BarChart3,
+  Phone
 } from 'lucide-react'
 
 const Dashboard = () => {
@@ -113,7 +114,7 @@ const Dashboard = () => {
       title: 'Job #BR-2024-08 Posted',
       description: 'Senior Administrative Officer added to public portal.',
       time: '12 mins ago',
-      icon: '📋'
+      icon: FileText
     },
     {
       type: 'admin',
@@ -304,7 +305,8 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <Button variant="outline" className="w-full text-sm">
-                  📞 Go to Support Command Center
+                  <Phone className="w-4 h-4 mr-2" />
+                  Go to Support Command Center
                 </Button>
               </CardContent>
             </Card>
@@ -321,7 +323,14 @@ const Dashboard = () => {
                 {recentActivity.map((activity, index) => (
                   <div key={index} className="flex items-start space-x-3">
                     <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-sm">
-                      {activity.icon}
+                      {typeof activity.icon === 'string' ? (
+                        activity.icon
+                      ) : (
+                        (() => {
+                          const IconComponent = activity.icon
+                          return <IconComponent className="w-4 h-4 text-orange-600" />
+                        })()
+                      )}
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium text-sm text-gray-800">{activity.title}</h4>

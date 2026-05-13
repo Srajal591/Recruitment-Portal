@@ -70,10 +70,7 @@ const AdminSidebar = ({ isCollapsed = false }) => {
   ]
 
   return (
-    <div className={cn(
-      'bg-white border-r border-orange-200 h-full transition-all duration-300 shadow-sm',
-      isCollapsed ? 'w-16' : 'w-64'
-    )}>
+    <div className="bg-white border-r border-orange-200 h-full shadow-sm overflow-y-auto">
       {/* Logo */}
       <div className="p-6 border-b border-orange-200 bg-white">
         <div className="flex items-center space-x-3">

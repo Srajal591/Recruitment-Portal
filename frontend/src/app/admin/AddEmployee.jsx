@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Lock, Settings, X } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -233,7 +234,7 @@ const AddEmployee = () => {
               <div className="p-6">
                 <div className="flex items-center space-x-2 mb-6">
                   <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    🔒
+                    <Lock className="w-5 h-5 text-blue-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-800">Security & Access</h3>
                 </div>
@@ -335,7 +336,7 @@ const AddEmployee = () => {
 
                   <div>
                     <div className="text-sm text-gray-300 flex items-center space-x-2">
-                      <span>🔒</span>
+                      <Lock className="w-4 h-4" />
                       <span>Payments & Support</span>
                     </div>
                     <div className="text-xs text-gray-400">No permissions currently assigned</div>
@@ -373,7 +374,8 @@ const AddEmployee = () => {
                 onClick={handleSubmit}
                 className="w-full bg-orange-600 hover:bg-orange-700"
               >
-                🔧 Create Employee
+                <Settings className="w-4 h-4 mr-2" />
+                Create Employee
               </Button>
               <Button 
                 variant="outline" 

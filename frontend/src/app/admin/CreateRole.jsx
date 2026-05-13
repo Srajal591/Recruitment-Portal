@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Lock, Shield, FileText, BarChart3, Edit } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -81,13 +82,13 @@ const CreateRole = () => {
     {
       id: 'applications',
       name: 'Applications',
-      icon: '📋',
+      icon: FileText,
       description: 'Candidate application processing and status updates'
     },
     {
       id: 'analytics',
       name: 'Analytics',
-      icon: '📊',
+      icon: BarChart3,
       description: 'Performance metrics and recruitment insights'
     },
     {
@@ -137,7 +138,7 @@ const CreateRole = () => {
               <div className="p-6">
                 <div className="flex items-center space-x-2 mb-6">
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                    📝
+                    <Edit className="w-5 h-5 text-orange-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-800">Basic Information</h3>
                 </div>
@@ -176,7 +177,7 @@ const CreateRole = () => {
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-2">
                     <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                      🔐
+                      <Lock className="w-5 h-5 text-orange-600" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-800">Permission Matrix</h3>
                   </div>
@@ -206,7 +207,14 @@ const CreateRole = () => {
                           <td className="py-4 px-4">
                             <div className="flex items-center space-x-3">
                               <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-                                {module.icon}
+                                {typeof module.icon === 'string' ? (
+                                  module.icon
+                                ) : (
+                                  (() => {
+                                    const IconComponent = module.icon
+                                    return <IconComponent className="w-4 h-4 text-gray-600" />
+                                  })()
+                                )}
                               </div>
                               <div>
                                 <div className="font-medium text-gray-800">{module.name}</div>
@@ -289,7 +297,7 @@ const CreateRole = () => {
 
                   <div>
                     <div className="text-sm text-gray-300 flex items-center space-x-2">
-                      <span>🔒</span>
+                      <Lock className="w-4 h-4" />
                       <span>Payments & Support</span>
                     </div>
                     <div className="text-xs text-gray-400">

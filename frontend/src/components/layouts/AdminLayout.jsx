@@ -6,9 +6,9 @@ const AdminLayout = ({ children, title }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
-    <div className="min-h-screen bg-orange-50 flex">
-      {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} transition-all duration-300 hidden lg:block`}>
+    <div className="min-h-screen bg-orange-50">
+      {/* Fixed Sidebar */}
+      <div className={`fixed left-0 top-0 h-full z-30 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'} hidden lg:block`}>
         <AdminSidebar isCollapsed={sidebarCollapsed} />
       </div>
 
@@ -17,14 +17,18 @@ const AdminLayout = ({ children, title }) => {
         {/* Add mobile sidebar implementation here */}
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <AdminHeader 
-          title={title}
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} 
-        />
+      {/* Main Content Area */}
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+        {/* Fixed Header */}
+        <div className="sticky top-0 z-20">
+          <AdminHeader 
+            title={title}
+            onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          />
+        </div>
         
-        <main className="flex-1 overflow-auto bg-orange-50">
+        {/* Page Content */}
+        <main className="min-h-screen bg-orange-50">
           {children}
         </main>
       </div>

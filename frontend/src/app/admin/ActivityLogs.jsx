@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
+import { Search, Activity, User, Clock, Eye, Download, Calendar, FileText, Briefcase, Settings, Headphones } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -16,7 +17,7 @@ const ActivityLogs = () => {
       title: 'CHANGES TODAY',
       value: '1,284',
       change: '+12% vs avg',
-      icon: '📝',
+      icon: FileText,
       color: 'text-orange-600'
     },
     {
@@ -116,10 +117,14 @@ const ActivityLogs = () => {
           </div>
           <div className="flex items-center space-x-3">
             <Button className="bg-orange-600 hover:bg-orange-700">
-              📥 Download CSV
+              <Download className="w-4 h-4 mr-2" />
+              Download CSV
             </Button>
             <select className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
-              <option>📅 Last 30 Days</option>
+              <option>
+                <Calendar className="w-4 h-4 mr-1 inline" />
+                Last 30 Days
+              </option>
               <option>Last 7 Days</option>
               <option>Last 90 Days</option>
             </select>
@@ -142,7 +147,16 @@ const ActivityLogs = () => {
                       <div className="text-xs text-green-600 mt-1">{stat.change}</div>
                     )}
                   </div>
-                  <div className="text-3xl">{stat.icon}</div>
+                  <div className="text-3xl">
+                    {typeof stat.icon === 'string' ? (
+                      stat.icon
+                    ) : (
+                      (() => {
+                        const IconComponent = stat.icon
+                        return <IconComponent className="w-6 h-6 text-gray-600" />
+                      })()
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -154,7 +168,10 @@ const ActivityLogs = () => {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium text-gray-700">🔍 Filters:</span>
+                <div className="flex items-center space-x-2">
+                  <Search className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">Filters:</span>
+                </div>
                 <select 
                   value={filters.employee}
                   onChange={(e) => setFilters({...filters, employee: e.target.value})}
@@ -233,10 +250,11 @@ const ActivityLogs = () => {
                       <td className="py-4 px-4">
                         <div className="flex items-center space-x-2">
                           <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
-                            {log.module === 'Jobs' ? '💼' : 
-                             log.module === 'Applications' ? '📋' :
-                             log.module === 'Settings' ? '⚙️' :
-                             log.module === 'Support' ? '🎧' : '📄'}
+                            {log.module === 'Jobs' ? <Briefcase className="w-3 h-3 text-orange-600" /> : 
+                             log.module === 'Applications' ? <FileText className="w-3 h-3 text-orange-600" /> :
+                             log.module === 'Settings' ? <Settings className="w-3 h-3 text-orange-600" /> :
+                             log.module === 'Support' ? <Headphones className="w-3 h-3 text-orange-600" /> : 
+                             <FileText className="w-3 h-3 text-orange-600" />}
                           </div>
                           <span className="text-sm text-gray-800">{log.module}</span>
                         </div>

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Eye, FileText, Plus } from 'lucide-react'
+import React, { useState } from 'react'
+import { Eye, FileText, Plus, CreditCard, DollarSign, Building, Shield, Lock, RefreshCw, CheckCircle } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -14,7 +14,7 @@ const PaymentSettings = () => {
       mode: 'Live Mode',
       lastUpdated: 'Oct 24, 2023',
       settlement: '1-2 Days',
-      icon: '💳',
+      icon: CreditCard,
       statusColor: 'success'
     },
     {
@@ -24,7 +24,7 @@ const PaymentSettings = () => {
       mode: 'Test Mode',
       lastUpdated: 'Sep 12, 2023',
       settlement: '1-1 Day',
-      icon: '💰',
+      icon: DollarSign,
       statusColor: 'warning'
     },
     {
@@ -34,7 +34,7 @@ const PaymentSettings = () => {
       mode: 'Live Mode',
       lastUpdated: 'Nov 05, 2023',
       settlement: '1-3 Days',
-      icon: '🏦',
+      icon: Building,
       statusColor: 'success'
     },
     {
@@ -44,7 +44,7 @@ const PaymentSettings = () => {
       mode: 'Live Mode',
       lastUpdated: 'Aug 30, 2023',
       settlement: '1-2 Days',
-      icon: '🔒',
+      icon: Lock,
       statusColor: 'warning'
     }
   ])
@@ -60,7 +60,8 @@ const PaymentSettings = () => {
 
   return (
     <AdminLayout title="Payment Settings">
-      <div className="space-y-6">
+      <div className="p-6">
+        <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
@@ -87,7 +88,12 @@ const PaymentSettings = () => {
             <Card key={gateway.id} className="relative">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-2xl">{gateway.icon}</div>
+                  <div className="text-2xl">
+                    {(() => {
+                      const IconComponent = gateway.icon
+                      return <IconComponent className="w-8 h-8 text-orange-600" />
+                    })()}
+                  </div>
                   <div className="text-right">
                     {gateway.status === 'ACTIVE' && (
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -177,7 +183,7 @@ const PaymentSettings = () => {
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
                   <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <span className="text-orange-600">🛡️</span>
+                    <Shield className="w-6 h-6 text-orange-600" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-text-primary mb-2">Institutional Security Protocol</h3>
@@ -196,7 +202,7 @@ const PaymentSettings = () => {
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <span>🔐</span>
+                    <Lock className="w-5 h-5 text-white" />
                   </div>
                   <h3 className="font-semibold">Encryption Status</h3>
                 </div>
@@ -205,11 +211,13 @@ const PaymentSettings = () => {
                   <div className="text-sm opacity-90">SSL Cert Valid (Expires 2025)</div>
                 </div>
                 <Button variant="outline" className="w-full text-white border-white hover:bg-white hover:text-secondary">
-                  REFRESH CREDENTIALS ↗
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  REFRESH CREDENTIALS
                 </Button>
               </div>
             </CardContent>
           </Card>
+        </div>
         </div>
       </div>
     </AdminLayout>

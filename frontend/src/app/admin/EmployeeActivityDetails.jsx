@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { FileText, BarChart3, FolderOpen, Phone, Download, MapPin, Calendar, Globe, Laptop, Smartphone } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -23,13 +24,13 @@ const EmployeeActivityDetails = () => {
       value: '24',
       change: '+12%',
       color: 'text-orange-600',
-      icon: '📝'
+      icon: FileText
     },
     {
       title: 'Total Changes',
       value: '1,284',
       color: 'text-gray-800',
-      icon: '📊'
+      icon: BarChart3
     },
     {
       title: 'Last Activity',
@@ -41,7 +42,7 @@ const EmployeeActivityDetails = () => {
       title: 'Projects Updated',
       value: '12',
       color: 'text-yellow-600',
-      icon: '📂'
+      icon: FolderOpen
     },
     {
       title: 'Critical Changes',
@@ -56,7 +57,7 @@ const EmployeeActivityDetails = () => {
     {
       id: 1,
       module: 'Recruitment Plan 2024',
-      moduleIcon: '📋',
+      moduleIcon: FileText,
       action: 'CREATE',
       actionColor: 'bg-green-100 text-green-800',
       details: 'Initiated candidate screening for...',
@@ -140,10 +141,12 @@ const EmployeeActivityDetails = () => {
           </div>
           <div className="flex items-center space-x-3">
             <Button variant="outline">
-              📞 Contact
+              <Phone className="w-4 h-4 mr-2" />
+              Contact
             </Button>
             <Button className="bg-orange-600 hover:bg-orange-700">
-              📥 Export Activity Data
+              <Download className="w-4 h-4 mr-2" />
+              Export Activity Data
             </Button>
           </div>
         </div>
@@ -161,7 +164,10 @@ const EmployeeActivityDetails = () => {
                   <p className="text-gray-600">{employee.designation}</p>
                   <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                     <span>{employee.employeeId}</span>
-                    <span>📍 {employee.location}</span>
+                    <span className="flex items-center">
+                      <MapPin className="w-4 h-4 mr-1" />
+                      {employee.location}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -180,7 +186,16 @@ const EmployeeActivityDetails = () => {
           {stats.map((stat, index) => (
             <Card key={index} className="bg-white">
               <div className="p-6 text-center">
-                <div className="text-2xl mb-2">{stat.icon}</div>
+                <div className="text-2xl mb-2">
+                  {typeof stat.icon === 'string' ? (
+                    stat.icon
+                  ) : (
+                    (() => {
+                      const IconComponent = stat.icon
+                      return <IconComponent className="w-6 h-6 mx-auto" />
+                    })()
+                  )}
+                </div>
                 <div className="text-xs font-medium text-gray-500 mb-1">{stat.title}</div>
                 <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
                 {stat.change && (
@@ -200,15 +215,24 @@ const EmployeeActivityDetails = () => {
             <Card className="bg-white">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-semibold text-gray-800">📋 Activity Audit Log</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <FileText className="w-5 h-5 mr-2" />
+                    Activity Audit Log
+                  </h3>
                   <div className="flex items-center space-x-3">
                     <select className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
-                      <option>📅 Date Range</option>
+                      <option>
+                        <Calendar className="w-4 h-4 mr-1 inline" />
+                        Date Range
+                      </option>
                       <option>Last 7 Days</option>
                       <option>Last 30 Days</option>
                     </select>
                     <select className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
-                      <option>📂 All Modules</option>
+                      <option>
+                        <FolderOpen className="w-4 h-4 mr-1 inline" />
+                        All Modules
+                      </option>
                       <option>Jobs</option>
                       <option>Applications</option>
                     </select>
@@ -225,7 +249,14 @@ const EmployeeActivityDetails = () => {
                   {activityLogs.map((log) => (
                     <div key={log.id} className="flex items-start space-x-4 p-4 border border-gray-100 rounded-lg hover:bg-gray-50">
                       <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        {log.moduleIcon}
+                        {typeof log.moduleIcon === 'string' ? (
+                          log.moduleIcon
+                        ) : (
+                          (() => {
+                            const IconComponent = log.moduleIcon
+                            return <IconComponent className="w-5 h-5 text-gray-600" />
+                          })()
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
@@ -236,8 +267,14 @@ const EmployeeActivityDetails = () => {
                         </div>
                         <div className="text-sm text-gray-600 mb-2">{log.details}</div>
                         <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span>🌐 IP ADDRESS: {log.ipAddress}</span>
-                          <span>📅 DATE & TIME: {log.timestamp}</span>
+                          <span className="flex items-center">
+                            <Globe className="w-3 h-3 mr-1" />
+                            IP ADDRESS: {log.ipAddress}
+                          </span>
+                          <span className="flex items-center">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            DATE & TIME: {log.timestamp}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -296,7 +333,10 @@ const EmployeeActivityDetails = () => {
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
-                          {device.device.includes('MacBook') ? '💻' : '📱'}
+                          {device.device.includes('MacBook') ? 
+                            <Laptop className="w-4 h-4 text-gray-600" /> : 
+                            <Smartphone className="w-4 h-4 text-gray-600" />
+                          }
                         </div>
                         <div>
                           <div className="font-medium text-sm text-gray-800">{device.device}</div>

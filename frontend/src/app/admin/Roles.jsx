@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Plus, Shield, Users, Eye, Edit, Trash2, Calendar, Server, CheckCircle } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -34,9 +35,9 @@ const Roles = () => {
       type: 'CRITICAL ROLE',
       description: 'Full system access, user management, and security overrides',
       assignedUsers: [
-        { name: 'User 1', avatar: '👤' },
-        { name: 'User 2', avatar: '👤' },
-        { name: 'User 3', avatar: '👤' },
+        { name: 'User 1', avatar: 'U1' },
+        { name: 'User 2', avatar: 'U2' },
+        { name: 'User 3', avatar: 'U3' },
         { name: '+6', avatar: '+6' }
       ],
       lastUpdated: 'Oct 24, 2023',
@@ -49,9 +50,9 @@ const Roles = () => {
       type: 'STANDARD ROLE',
       description: 'Manage applications, verify documents, and update candidate statuses',
       assignedUsers: [
-        { name: 'User 1', avatar: '👤' },
-        { name: 'User 2', avatar: '👤' },
-        { name: 'User 3', avatar: '👤' },
+        { name: 'User 1', avatar: 'U1' },
+        { name: 'User 2', avatar: 'U2' },
+        { name: 'User 3', avatar: 'U3' },
         { name: '+118', avatar: '+118' }
       ],
       lastUpdated: 'Nov 12, 2023',
@@ -64,7 +65,7 @@ const Roles = () => {
       type: 'RESTRICTED ROLE',
       description: 'View-only access to dashboards and recruitment reports for auditing',
       assignedUsers: [
-        { name: 'User 1', avatar: '👤' },
+        { name: 'User 1', avatar: 'U1' },
         { name: '+42', avatar: '+42' }
       ],
       lastUpdated: 'Dec 01, 2023',
@@ -86,7 +87,8 @@ const Roles = () => {
             onClick={() => navigate('/admin/roles/create')}
             className="bg-orange-600 hover:bg-orange-700"
           >
-            ➕ Create Role
+            <Plus className="w-4 h-4 mr-2" />
+            Create Role
           </Button>
         </div>
 
@@ -131,10 +133,9 @@ const Roles = () => {
                       <td className="py-4 px-4">
                         <div className="flex items-center space-x-3">
                           <div className={`w-12 h-12 ${role.color} rounded-lg flex items-center justify-center border-2`}>
-                            <span className="font-bold text-lg">
-                              {role.name === 'Admin' ? '🛡️' : 
-                               role.name === 'Staff' ? '👥' : '👁️'}
-                            </span>
+                            {role.name === 'Admin' ? <Shield className="w-6 h-6 text-red-600" /> : 
+                             role.name === 'Staff' ? <Users className="w-6 h-6 text-orange-600" /> : 
+                             <Eye className="w-6 h-6 text-blue-600" />}
                           </div>
                           <div>
                             <div className="font-semibold text-gray-800">{role.name}</div>
@@ -170,13 +171,13 @@ const Roles = () => {
                       <td className="py-4 px-4">
                         <div className="flex items-center space-x-2">
                           <Button variant="ghost" size="sm">
-                            👁️
+                            <Eye className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="sm">
-                            ✏️
+                            <Edit className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="sm" className="text-red-600">
-                            🗑️
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>
@@ -206,7 +207,7 @@ const Roles = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  📋
+                  <Calendar className="w-6 h-6 text-orange-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800">Quarterly Permission Audit</h3>
@@ -229,7 +230,7 @@ const Roles = () => {
             <span>UPTIME: 99.98%</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <CheckCircle className="w-3 h-3 text-green-500" />
             <span>DATA ENCRYPTED (AES-256)</span>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, RotateCcw, Link, MessageSquare, Clock, User, Mail, Phone, Paperclip } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import Button from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -183,7 +184,7 @@ const SupportTicketDetails = () => {
                         <div className="mt-2 space-y-1">
                           {message.attachments.map((attachment, index) => (
                             <div key={index} className="flex items-center space-x-2 text-xs">
-                              <span>📎</span>
+                              <Paperclip className="w-3 h-3 text-gray-400" />
                               <span>{attachment.name}</span>
                               <span className="text-gray-400">({attachment.size})</span>
                             </div>
@@ -302,16 +303,20 @@ const SupportTicketDetails = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-2">
                 <Button variant="outline" className="w-full justify-start">
-                  🔄 Escalate Ticket
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Escalate Ticket
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  📋 Create Internal Note
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Create Internal Note
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  🔗 Link Related Ticket
+                  <Link className="w-4 h-4 mr-2" />
+                  Link Related Ticket
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  📊 View Customer History
+                  <Clock className="w-4 h-4 mr-2" />
+                  View Customer History
                 </Button>
               </div>
             </Card>

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
+import { Smartphone, Phone, CreditCard, Building } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -32,7 +33,7 @@ const AddPaymentGateway = () => {
       description: 'Built for every business size. Seamless integration with India\'s most popular wallet.',
       status: 'not_configured',
       setupTime: 'ENTERPRISE GRADE',
-      icon: '📱',
+      icon: Smartphone,
       features: ['Paytm Wallet', 'UPI', 'Cards']
     },
     {
@@ -41,7 +42,7 @@ const AddPaymentGateway = () => {
       description: 'Accept payments from 500M+ users. Superior success rates for UPI transactions.',
       status: 'not_configured',
       setupTime: 'BEST-IN-CLASS UPI',
-      icon: '📞',
+      icon: Phone,
       features: ['PhonePe', 'UPI', 'Cards']
     }
   ]
@@ -71,7 +72,16 @@ const AddPaymentGateway = () => {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="text-3xl">{gateway.icon}</div>
+                    <div className="text-3xl">
+                      {typeof gateway.icon === 'string' ? (
+                        gateway.icon
+                      ) : (
+                        (() => {
+                          const IconComponent = gateway.icon
+                          return <IconComponent className="w-8 h-8 text-orange-600" />
+                        })()
+                      )}
+                    </div>
                     <div>
                       <h3 className="font-semibold text-text-primary">{gateway.name}</h3>
                       <div className="flex items-center space-x-2 mt-1">

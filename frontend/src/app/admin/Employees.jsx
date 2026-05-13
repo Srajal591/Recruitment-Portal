@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Plus, Search, Users, UserCheck, UserX, Eye, Edit, Trash2 } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -137,7 +138,10 @@ const Employees = () => {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium text-gray-700">🔍 Filters:</span>
+                <div className="flex items-center space-x-2">
+                  <Search className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">Filters:</span>
+                </div>
                 <select 
                   value={filters.department}
                   onChange={(e) => setFilters({...filters, department: e.target.value})}

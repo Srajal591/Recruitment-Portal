@@ -100,7 +100,8 @@ const Projects = () => {
 
   return (
     <AdminLayout title="Projects">
-      <div className="space-y-6">
+      <div className="p-6">
+        <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -278,6 +279,7 @@ const Projects = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </AdminLayout>
   )

@@ -1,152 +1,176 @@
 import { useState } from 'react'
-import { Plus, Filter, Calendar, Eye, Edit, MoreHorizontal } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/layouts/AdminLayout'
-import { Card, CardContent } from '../../components/ui/Card'
+import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
-import { formatCurrency, formatNumber } from '../../lib/utils'
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Eye, 
+  Edit, 
+  MoreHorizontal,
+  FolderOpen,
+  Rocket,
+  CheckCircle,
+  Calendar
+} from 'lucide-react'
 
 const Projects = () => {
-  const [projects] = useState([
+  const navigate = useNavigate()
+
+  const stats = [
     {
-      id: 1,
+      title: 'TOTAL PROJECTS',
+      value: '128',
+      icon: FolderOpen,
+      color: 'bg-blue-100 text-blue-600'
+    },
+    {
+      title: 'ACTIVE',
+      value: '42',
+      icon: Rocket,
+      color: 'bg-green-100 text-green-600'
+    },
+    {
+      title: 'COMPLETED',
+      value: '76',
+      icon: CheckCircle,
+      color: 'bg-purple-100 text-purple-600'
+    },
+    {
+      title: 'UPCOMING',
+      value: '10',
+      icon: Calendar,
+      color: 'bg-orange-100 text-orange-600'
+    }
+  ]
+
+  const projects = [
+    {
       name: 'Assistant Professor Recruitment 2024',
       department: 'Dept. of Higher Education',
       state: 'Bihar',
       totalJobs: 42,
-      applicants: 12450,
-      revenue: 120000000,
-      status: 'ACTIVE',
+      applicants: '12,450',
+      revenue: '₹1.2 Cr',
+      status: 'Active',
+      statusColor: 'bg-green-100 text-green-800',
       duration: '6 Months',
-      statusColor: 'success'
+      actions: ['view', 'edit']
     },
     {
-      id: 2,
       name: 'Village Council Executive Officers',
       department: 'Panchayati Raj Dept.',
       state: 'Bihar',
       totalJobs: 1500,
-      applicants: 84200,
-      revenue: 1840000000,
-      status: 'COMPLETED',
+      applicants: '84,200',
+      revenue: '₹8.4 Cr',
+      status: 'Completed',
+      statusColor: 'bg-blue-100 text-blue-800',
       duration: '12 Months',
-      statusColor: 'info'
+      actions: ['view', 'edit']
     },
     {
-      id: 3,
       name: 'Health Services - Nurses Grade-A',
       department: 'Health Department',
       state: 'Bihar',
       totalJobs: 320,
-      applicants: null,
-      revenue: 4500000,
-      status: 'UPCOMING',
+      applicants: '--',
+      revenue: '₹45 L',
+      status: 'Upcoming',
+      statusColor: 'bg-orange-100 text-orange-800',
       duration: '4 Months',
-      statusColor: 'warning'
+      actions: ['view', 'edit']
     },
     {
-      id: 4,
       name: 'Secondary Teacher Eligibility Test (STET)',
       department: 'BSEB Education Board',
       state: 'Bihar',
       totalJobs: 5400,
-      applicants: 3120000,
-      revenue: 1420000000,
-      status: 'ACTIVE',
+      applicants: '3,12,000',
+      revenue: '₹14.2 Cr',
+      status: 'Active',
+      statusColor: 'bg-green-100 text-green-800',
       duration: '8 Months',
-      statusColor: 'success'
-    }
-  ])
-
-  const stats = [
-    {
-      label: 'TOTAL PROJECTS',
-      value: '128',
-      icon: '📊',
-      color: 'blue'
-    },
-    {
-      label: 'ACTIVE',
-      value: '42',
-      icon: '🚀',
-      color: 'green'
-    },
-    {
-      label: 'COMPLETED',
-      value: '76',
-      icon: '✅',
-      color: 'purple'
-    },
-    {
-      label: 'UPCOMING',
-      value: '10',
-      icon: '📅',
-      color: 'orange'
+      actions: ['view', 'edit']
     }
   ]
-
-  const getStatusBadge = (status) => {
-    const variants = {
-      ACTIVE: 'success',
-      COMPLETED: 'info',
-      UPCOMING: 'warning'
-    }
-    return <Badge variant={variants[status]}>● {status}</Badge>
-  }
 
   return (
     <AdminLayout title="Projects">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-semibold text-text-primary mb-2">Projects</h1>
-            <p className="text-text-secondary">
-              Oversee and manage recruitment cycles across Bihar departments.
-            </p>
+            <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
+            <p className="text-gray-600">Oversee and manage recruitment cycles across Bihar departments.</p>
           </div>
-          <Button className="flex items-center space-x-2">
-            <Plus className="w-4 h-4" />
-            <span>Create Project</span>
+          <Button 
+            onClick={() => navigate('/admin/projects/create')}
+            className="bg-orange-600 hover:bg-orange-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Project
           </Button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-text-primary">{stat.value}</div>
-                    <div className="text-sm text-text-secondary mt-1">{stat.label}</div>
+          {stats.map((stat, index) => {
+            const Icon = stat.icon
+            return (
+              <Card key={index} className="bg-white">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">{stat.title}</p>
+                      <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+                    </div>
+                    <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
                   </div>
-                  <div className="text-2xl">{stat.icon}</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
         {/* Filters */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                <Filter className="w-4 h-4" />
-                <span>Filters</span>
-              </Button>
-              
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-text-secondary">All States</span>
-                <Button variant="outline" size="sm">Status: All</Button>
-                <Button variant="outline" size="sm">Department: All</Button>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center space-x-4">
+                <Button variant="ghost" size="sm" className="text-gray-600">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters
+                </Button>
+                <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option>All States</option>
+                  <option>Bihar</option>
+                </select>
+                <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option>Status: All</option>
+                  <option>Active</option>
+                  <option>Completed</option>
+                  <option>Upcoming</option>
+                </select>
+                <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option>Department: All</option>
+                  <option>Education</option>
+                  <option>Health</option>
+                </select>
               </div>
-              
-              <div className="flex items-center space-x-2 ml-auto">
-                <Calendar className="w-4 h-4 text-text-secondary" />
-                <span className="text-sm text-text-secondary">Jan 2024 - Jun 2024</span>
-                <Button variant="outline" size="sm">Reset Filters</Button>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Calendar className="w-4 h-4" />
+                  <span>Jan 2024 - Jun 2024</span>
+                </div>
+                <Button variant="ghost" size="sm" className="text-orange-600">
+                  Reset Filters
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -157,62 +181,74 @@ const Projects = () => {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-border">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left p-4 font-medium text-text-secondary text-sm">PROJECT NAME</th>
-                    <th className="text-left p-4 font-medium text-text-secondary text-sm">STATE</th>
-                    <th className="text-left p-4 font-medium text-text-secondary text-sm">TOTAL JOBS</th>
-                    <th className="text-left p-4 font-medium text-text-secondary text-sm">APPLICANTS</th>
-                    <th className="text-left p-4 font-medium text-text-secondary text-sm">REVENUE</th>
-                    <th className="text-left p-4 font-medium text-text-secondary text-sm">STATUS</th>
-                    <th className="text-left p-4 font-medium text-text-secondary text-sm">DURATION</th>
-                    <th className="text-left p-4 font-medium text-text-secondary text-sm">ACTIONS</th>
+                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      PROJECT NAME
+                    </th>
+                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      STATE
+                    </th>
+                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      TOTAL JOBS
+                    </th>
+                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      APPLICANTS
+                    </th>
+                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      REVENUE
+                    </th>
+                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      STATUS
+                    </th>
+                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      DURATION
+                    </th>
+                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      ACTIONS
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {projects.map((project) => (
-                    <tr key={project.id} className="border-b border-border hover:bg-gray-50">
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {projects.map((project, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
                       <td className="p-4">
                         <div>
-                          <div className="font-medium text-text-primary">{project.name}</div>
-                          <div className="text-sm text-text-secondary">{project.department}</div>
+                          <div className="font-medium text-gray-800">{project.name}</div>
+                          <div className="text-sm text-gray-500">{project.department}</div>
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="text-text-primary">{project.state}</span>
+                        <span className="text-sm text-gray-800">{project.state}</span>
                       </td>
                       <td className="p-4">
-                        <span className="text-text-primary font-medium">{formatNumber(project.totalJobs)}</span>
+                        <span className="text-sm font-medium text-gray-800">{project.totalJobs}</span>
                       </td>
                       <td className="p-4">
-                        {project.applicants ? (
-                          <div>
-                            <div className="font-medium text-text-primary">{formatNumber(project.applicants)}</div>
-                            <div className="text-xs text-green-600">↗ +14%</div>
-                          </div>
-                        ) : (
-                          <span className="text-text-secondary">--</span>
-                        )}
+                        <span className="text-sm font-medium text-gray-800">{project.applicants}</span>
                       </td>
                       <td className="p-4">
-                        <span className="font-medium text-text-primary">{formatCurrency(project.revenue)}</span>
+                        <span className="text-sm font-medium text-gray-800">{project.revenue}</span>
                       </td>
                       <td className="p-4">
-                        {getStatusBadge(project.status)}
+                        <Badge className={`${project.statusColor} text-xs`}>
+                          {project.status}
+                        </Badge>
                       </td>
                       <td className="p-4">
-                        <span className="text-text-primary">{project.duration}</span>
+                        <span className="text-sm text-gray-600">{project.duration}</span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate(`/admin/projects/${index + 1}`)}
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="sm">
                             <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>
@@ -223,17 +259,21 @@ const Projects = () => {
             </div>
             
             {/* Pagination */}
-            <div className="flex items-center justify-between p-4 border-t border-border">
-              <div className="text-sm text-text-secondary">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+              <div className="text-sm text-gray-500">
                 Showing 1 to 4 of 128 projects
               </div>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">Previous</Button>
-                <Button variant="primary" size="sm">1</Button>
-                <Button variant="outline" size="sm">2</Button>
-                <Button variant="outline" size="sm">3</Button>
-                <span className="text-text-secondary">...</span>
-                <Button variant="outline" size="sm">Next</Button>
+                <Button variant="outline" size="sm" className="w-8 h-8 p-0">
+                  1
+                </Button>
+                <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+                  2
+                </Button>
+                <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+                  3
+                </Button>
+                <span className="text-gray-500">...</span>
               </div>
             </div>
           </CardContent>

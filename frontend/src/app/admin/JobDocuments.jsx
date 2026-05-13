@@ -4,24 +4,19 @@ import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
+import JobStepProgress from './JobStepProgress'
 import { 
   ArrowRight,
   ArrowLeft,
   Plus,
   X,
   FileText,
-  Upload,
-  Image,
-  File,
-  Settings,
-  AlertCircle,
-  CheckCircle
 } from 'lucide-react'
 
 const JobDocuments = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const projectId = searchParams.get('projectId')
+  const projectId = searchParams.get('project')
   
   const [documents, setDocuments] = useState([
     {
@@ -90,53 +85,68 @@ const JobDocuments = () => {
   }
 
   const handleNext = () => {
-    navigate('/admin/jobs/create/payment')
+    navigate(`/admin/jobs/create/payment${projectId ? `?project=${projectId}` : ''}`)
   }
 
-  const handlePrevious = () => {
-    navigate('/admin/jobs/create/form-builder')
+  const handleBack = () => {
+    navigate(`/admin/jobs/create/form-builder${projectId ? `?project=${projectId}` : ''}`)
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Required Documents</h1>
-            <p className="text-gray-600">Configure documents that candidates need to upload</p>
-          </div>
-        </div>
-
-        <Card className="p-6">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Document Requirements</h3>
-              <Button
-                onClick={() => setShowAddForm(true)}
-                className="flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Document</span>
-              </Button>
+    <AdminLayout title="Create Job - Documents">
+      <div className="p-4 sm:p-6">
+        <div className="max-w-6xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex flex-wrap justify-between items-start gap-3">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Create Job Posting</h1>
+              <p className="text-gray-500 text-sm mt-0.5">Step 4 of 6: Required Documents</p>
             </div>
+          </div>
 
-            {/* Add Document Form */}
-            {showAddForm && (
-              <Card className="p-4 border-2 border-dashed border-gray-300">
-                <div className="space-y-4">
+          {/* Progress Steps */}
+          <JobStepProgress currentStep={4} projectId={projectId} clickable />
+
+          {/* Document Requirements */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <FileText className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800">Document Requirements</h3>
+                </div>
+                <Button
+                  onClick={() => setShowAddForm(true)}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Document
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Add Document Form */}
+              {showAddForm && (
+                <div className="p-4 border-2 border-dashed border-orange-300 rounded-lg bg-orange-50 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-800">New Document</h4>
+                    <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Document Name
+                      Document Name *
                     </label>
                     <input
                       type="text"
                       value={newDocument.name}
                       onChange={(e) => setNewDocument({...newDocument, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter document name"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      placeholder="e.g. Caste Certificate"
                     />
                   </div>
-                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Description
@@ -145,11 +155,10 @@ const JobDocuments = () => {
                       value={newDocument.description}
                       onChange={(e) => setNewDocument({...newDocument, description: e.target.value})}
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter document description"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      placeholder="Describe what this document should contain..."
                     />
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -162,7 +171,7 @@ const JobDocuments = () => {
                           ...newDocument, 
                           formats: Array.from(e.target.selectedOptions, option => option.value)
                         })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                       >
                         <option value="PDF">PDF</option>
                         <option value="DOC">DOC</option>
@@ -171,7 +180,6 @@ const JobDocuments = () => {
                         <option value="PNG">PNG</option>
                       </select>
                     </div>
-                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Max File Size
@@ -179,100 +187,93 @@ const JobDocuments = () => {
                       <select
                         value={newDocument.maxSize}
                         onChange={(e) => setNewDocument({...newDocument, maxSize: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                       >
-                        <option value="1MB">1MB</option>
-                        <option value="2MB">2MB</option>
-                        <option value="5MB">5MB</option>
-                        <option value="10MB">10MB</option>
+                        <option value="1MB">1 MB</option>
+                        <option value="2MB">2 MB</option>
+                        <option value="5MB">5 MB</option>
+                        <option value="10MB">10 MB</option>
                       </select>
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Required
-                      </label>
-                      <label className="flex items-center">
+                    <div className="flex items-end pb-3">
+                      <label className="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={newDocument.required}
                           onChange={(e) => setNewDocument({...newDocument, required: e.target.checked})}
-                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                          className="w-4 h-4 text-orange-600 rounded"
                         />
-                        <span className="ml-2 text-sm text-gray-700">Required document</span>
+                        <span className="text-sm font-medium text-gray-700">Required document</span>
                       </label>
                     </div>
                   </div>
-
                   <div className="flex justify-end space-x-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowAddForm(false)}
-                    >
+                    <Button variant="outline" onClick={() => setShowAddForm(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={handleAddDocument}>
+                    <Button
+                      onClick={handleAddDocument}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                      disabled={!newDocument.name.trim()}
+                    >
                       Add Document
                     </Button>
                   </div>
                 </div>
-              </Card>
-            )}
+              )}
 
-            {/* Documents List */}
-            <div className="space-y-4">
-              {documents.map((doc) => (
-                <Card key={doc.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-gray-600" />
+              {/* Documents List */}
+              <div className="space-y-3">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-orange-200 hover:bg-orange-50/30 transition-colors">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-medium text-gray-900">{doc.name}</h4>
+                        <Badge className={doc.required ? 'bg-red-100 text-red-800 text-xs' : 'bg-gray-100 text-gray-600 text-xs'}>
+                          {doc.required ? 'Required' : 'Optional'}
+                        </Badge>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="font-medium text-gray-900">{doc.name}</h4>
-                          {doc.required && (
-                            <Badge variant="danger" size="sm">Required</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">{doc.description}</p>
-                        <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                          <span>Formats: {doc.formats.join(', ')}</span>
-                          <span>Max Size: {doc.maxSize}</span>
-                        </div>
+                      <p className="text-sm text-gray-500 mt-0.5">{doc.description}</p>
+                      <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-400">
+                        <span>Formats: <span className="text-gray-600 font-medium">{doc.formats.join(', ')}</span></span>
+                        <span>Max: <span className="text-gray-600 font-medium">{doc.maxSize}</span></span>
                       </div>
                     </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveDocument(doc.id)}
-                      className="text-red-600 border-red-600 hover:bg-red-50"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                     >
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Previous</span>
-          </Button>
-          <Button
-            onClick={handleNext}
-            className="flex items-center space-x-2"
-          >
-            <span>Next: Payment</span>
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+            <Button 
+              onClick={handleBack}
+              variant="outline" 
+              className="px-6"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back: Form Builder
+            </Button>
+            <Button 
+              onClick={handleNext}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-8"
+            >
+              Next: Payment
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
         </div>
       </div>
     </AdminLayout>

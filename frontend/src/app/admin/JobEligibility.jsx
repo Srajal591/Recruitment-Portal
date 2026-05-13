@@ -4,6 +4,7 @@ import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
+import JobStepProgress from './JobStepProgress'
 import { 
   ArrowRight,
   ArrowLeft,
@@ -145,57 +146,22 @@ const JobEligibility = () => {
     navigate(`/admin/jobs/create/basic-info${projectId ? `?project=${projectId}` : ''}`)
   }
 
-  const steps = [
-    { id: 1, name: 'Basic Info', active: false },
-    { id: 2, name: 'Eligibility', active: true },
-    { id: 3, name: 'Form Builder', active: false },
-    { id: 4, name: 'Documents', active: false },
-    { id: 5, name: 'Payment', active: false },
-    { id: 6, name: 'Review', active: false }
-  ]
+
 
   return (
     <AdminLayout title="Create Job - Eligibility">
+      <div className="p-4 sm:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap justify-between items-start gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Create Job Posting</h1>
-            <p className="text-gray-600">Step 2 of 6: Eligibility Criteria</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Create Job Posting</h1>
+            <p className="text-gray-500 text-sm mt-0.5">Step 2 of 6: Eligibility Criteria</p>
           </div>
-          <Badge className="bg-orange-100 text-orange-800">
-            Project: Assistant Professor Recruitment 2024
-          </Badge>
         </div>
 
         {/* Progress Steps */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step.active 
-                      ? 'bg-orange-600 text-white' 
-                      : step.id < 2 
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {step.id < 2 ? '✓' : step.id}
-                  </div>
-                  <span className={`ml-2 text-sm font-medium ${
-                    step.active ? 'text-orange-600' : step.id < 2 ? 'text-green-600' : 'text-gray-500'
-                  }`}>
-                    {step.name}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <div className="w-12 h-0.5 bg-gray-200 mx-4"></div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <JobStepProgress currentStep={2} projectId={projectId} clickable />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Form */}
@@ -688,6 +654,7 @@ const JobEligibility = () => {
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
+      </div>
       </div>
     </AdminLayout>
   )

@@ -324,6 +324,7 @@ const SupportTicketDetails = () => {
           </div>
         </div>
       </div>
+      </div>
     </AdminLayout>
   )
 }

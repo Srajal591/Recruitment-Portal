@@ -16,8 +16,7 @@ const Home = () => {
   })
 
   const handleEligibilityCheck = () => {
-    // Navigate to OTP verification after eligibility check
-    navigate('/auth/verify-otp')
+    navigate('/eligible-jobs', { state: eligibilityForm })
   }
 
   const featuredJobs = [
@@ -263,8 +262,8 @@ const Home = () => {
                 </div>
                 
                 <div className="flex space-x-3">
-                  <Button className="flex-1 bg-orange-600 hover:bg-orange-700">Apply Now</Button>
-                  <Button variant="outline" className="border-orange-600 text-orange-600 hover:bg-orange-50">View Details</Button>
+                  <Button onClick={() => navigate('/auth/verify-otp', { state: { jobId: 1 } })} className="flex-1 bg-orange-600 hover:bg-orange-700">Apply Now</Button>
+                  <Button onClick={() => navigate('/jobs/1')} variant="outline" className="border-orange-600 text-orange-600 hover:bg-orange-50">View Details</Button>
                 </div>
               </CardContent>
             </Card>
@@ -293,8 +292,8 @@ const Home = () => {
                 </div>
                 
                 <div className="flex space-x-3">
-                  <Button className="flex-1 bg-orange-600 hover:bg-orange-700">Apply Now</Button>
-                  <Button variant="outline" className="border-orange-600 text-orange-600 hover:bg-orange-50">View Details</Button>
+                  <Button onClick={() => navigate('/auth/verify-otp', { state: { jobId: 2 } })} className="flex-1 bg-orange-600 hover:bg-orange-700">Apply Now</Button>
+                  <Button onClick={() => navigate('/jobs/2')} variant="outline" className="border-orange-600 text-orange-600 hover:bg-orange-50">View Details</Button>
                 </div>
               </CardContent>
             </Card>

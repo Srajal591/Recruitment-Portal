@@ -37,6 +37,7 @@ const Success = lazy(() => import('../app/application/Success'))
 const About = lazy(() => import('../app/public/About'))
 const Jobs = lazy(() => import('../app/public/Jobs'))
 const JobDetails = lazy(() => import('../app/public/JobDetails'))
+const EligibleJobs = lazy(() => import('../app/public/EligibleJobs'))
 const Results = lazy(() => import('../app/public/Results'))
 const Notices = lazy(() => import('../app/public/Notices'))
 const AdmitCards = lazy(() => import('../app/public/AdmitCards'))
@@ -115,6 +116,7 @@ const AppRoutes = () => {
         <Route path="/about" element={<About />} />
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
+        <Route path="/eligible-jobs" element={<EligibleJobs />} />
         <Route path="/results" element={<Results />} />
         <Route path="/notices" element={<Notices />} />
         <Route path="/admit-cards" element={<AdmitCards />} />

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import { authService } from '../../services/auth.service'
 
 const CandidateLogin = () => {
   const navigate = useNavigate()
@@ -12,6 +14,7 @@ const CandidateLogin = () => {
     password: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -22,13 +25,18 @@ const CandidateLogin = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault()
+    setError('')
     setIsLoading(true)
-    
-    // Simulate login - accept any email/password for demo
-    setTimeout(() => {
+
+    try {
+      await authService.candidateLogin(formData)
+      toast.success('Login successful')
+      navigate('/candidate/dashboard', { replace: true })
+    } catch (err) {
+      setError(err.message)
+    } finally {
       setIsLoading(false)
-      navigate('/candidate/dashboard')
-    }, 1000)
+    }
   }
 
   return (
@@ -109,6 +117,12 @@ const CandidateLogin = () => {
                 </Link>
               </div>
 
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
               {/* Login Button */}
               <Button 
                 type="submit" 
@@ -125,12 +139,8 @@ const CandidateLogin = () => {
                 )}
               </Button>
 
-              {/* Demo Credentials */}
-              <div className="p-4 bg-orange-50 rounded-lg">
-                <h4 className="font-medium text-orange-800 mb-2">Demo Credentials</h4>
-                <div className="text-sm text-orange-700">
-                  <p><strong>Any email/password works for demo</strong></p>
-                </div>
+              <div className="p-4 bg-orange-50 rounded-lg text-sm text-orange-700">
+                Use the email and password you registered with. Admin accounts can only use the admin login page.
               </div>
             </form>
 
@@ -138,7 +148,7 @@ const CandidateLogin = () => {
             <div className="mt-6 text-center">
               <p className="text-gray-600">
                 Don't have an account?{' '}
-                <Link to="/auth/candidate-register" className="text-orange-600 hover:text-orange-700 font-medium">
+                <Link to="/auth/register" className="text-orange-600 hover:text-orange-700 font-medium">
                   Create Account
                 </Link>
               </p>

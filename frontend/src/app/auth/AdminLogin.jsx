@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import { authService } from '../../services/auth.service'
 
 const AdminLogin = () => {
   const navigate = useNavigate()
@@ -12,6 +14,7 @@ const AdminLogin = () => {
     password: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -22,13 +25,18 @@ const AdminLogin = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault()
+    setError('')
     setIsLoading(true)
-    
-    // Simulate login - accept any email/password for demo
-    setTimeout(() => {
+
+    try {
+      await authService.adminLogin(formData)
+      toast.success('Admin login successful')
+      navigate('/admin/dashboard', { replace: true })
+    } catch (err) {
+      setError(err.message)
+    } finally {
       setIsLoading(false)
-      navigate('/admin/dashboard')
-    }, 1000)
+    }
   }
 
   return (
@@ -104,10 +112,16 @@ const AdminLogin = () => {
                   <input type="checkbox" className="rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
                   <span className="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
-                <Link to="/auth/admin-forgot-password" className="text-sm text-orange-600 hover:text-orange-700">
+                <Link to="/auth/forgot-password" className="text-sm text-orange-600 hover:text-orange-700">
                   Forgot password?
                 </Link>
               </div>
+
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
 
               {/* Login Button */}
               <Button 
@@ -126,12 +140,8 @@ const AdminLogin = () => {
                 )}
               </Button>
 
-              {/* Demo Credentials */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-800 mb-2">Demo Credentials</h4>
-                <div className="text-sm text-gray-700">
-                  <p><strong>Any email/password works for demo</strong></p>
-                </div>
+              <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-700">
+                Seeded admin: admin@recruitment.gov.in / Admin@123456
               </div>
             </form>
           </CardContent>

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
+import ProtectedRoute from '../components/common/ProtectedRoute'
 
 // Loading component
 const PageLoader = () => (
@@ -102,15 +103,15 @@ const AppRoutes = () => {
         <Route path="/auth/verify-otp" element={<VerifyOTP />} />
         
         {/* Application Flow Routes (after OTP verification) */}
-        <Route path="/application/personal-details" element={<PersonalDetails />} />
-        <Route path="/application/education" element={<Education />} />
-        <Route path="/application/additional-info" element={<AdditionalInfo />} />
-        <Route path="/application/address" element={<Address />} />
-        <Route path="/application/documents" element={<ApplicationDocuments />} />
-        <Route path="/application/review" element={<Review />} />
-        <Route path="/application/post-selection" element={<PostSelection />} />
-        <Route path="/application/payment" element={<Payment />} />
-        <Route path="/application/success" element={<Success />} />
+        <Route path="/application/personal-details" element={<ProtectedRoute role="candidate"><PersonalDetails /></ProtectedRoute>} />
+        <Route path="/application/education" element={<ProtectedRoute role="candidate"><Education /></ProtectedRoute>} />
+        <Route path="/application/additional-info" element={<ProtectedRoute role="candidate"><AdditionalInfo /></ProtectedRoute>} />
+        <Route path="/application/address" element={<ProtectedRoute role="candidate"><Address /></ProtectedRoute>} />
+        <Route path="/application/documents" element={<ProtectedRoute role="candidate"><ApplicationDocuments /></ProtectedRoute>} />
+        <Route path="/application/review" element={<ProtectedRoute role="candidate"><Review /></ProtectedRoute>} />
+        <Route path="/application/post-selection" element={<ProtectedRoute role="candidate"><PostSelection /></ProtectedRoute>} />
+        <Route path="/application/payment" element={<ProtectedRoute role="candidate"><Payment /></ProtectedRoute>} />
+        <Route path="/application/success" element={<ProtectedRoute role="candidate"><Success /></ProtectedRoute>} />
         
         {/* Public Routes */}
         <Route path="/about" element={<About />} />
@@ -126,46 +127,46 @@ const AppRoutes = () => {
         
         {/* Admin Routes */}
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/payment-settings" element={<PaymentSettings />} />
-        <Route path="/admin/payment-settings/razorpay" element={<RazorpayConfig />} />
-        <Route path="/admin/payment-settings/add-gateway" element={<AddPaymentGateway />} />
-        <Route path="/admin/projects" element={<Projects />} />
-        <Route path="/admin/projects/create" element={<CreateProject />} />
-        <Route path="/admin/projects/:id" element={<ProjectDetails />} />
-        <Route path="/admin/jobs" element={<AdminJobs />} />
-        <Route path="/admin/jobs/create" element={<JobCreate />} />
-        <Route path="/admin/jobs/create/basic-info" element={<JobBasicInfo />} />
-        <Route path="/admin/jobs/create/eligibility" element={<JobEligibility />} />
-        <Route path="/admin/jobs/create/form-builder" element={<JobFormBuilder />} />
-        <Route path="/admin/jobs/create/documents" element={<JobDocuments />} />
-        <Route path="/admin/jobs/create/payment" element={<JobPayment />} />
-        <Route path="/admin/jobs/create/review" element={<JobReview />} />
-        <Route path="/admin/applications" element={<AdminApplications />} />
-        <Route path="/admin/applications/:id" element={<ApplicationDetails />} />
-        <Route path="/admin/analytics" element={<Analytics />} />
-        <Route path="/admin/activity-logs" element={<ActivityLogs />} />
-        <Route path="/admin/activity-logs/:id" element={<EmployeeActivityDetails />} />
-        <Route path="/admin/employees" element={<Employees />} />
-        <Route path="/admin/employees/add" element={<AddEmployee />} />
-        <Route path="/admin/roles" element={<Roles />} />
-        <Route path="/admin/roles/create" element={<CreateRole />} />
-        <Route path="/admin/support" element={<AdminSupport />} />
-        <Route path="/admin/support/kanban" element={<SupportKanban />} />
-        <Route path="/admin/support/ticket/:id" element={<SupportTicketDetails />} />
+        <Route path="/admin/dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/payment-settings" element={<ProtectedRoute role="admin"><PaymentSettings /></ProtectedRoute>} />
+        <Route path="/admin/payment-settings/razorpay" element={<ProtectedRoute role="admin"><RazorpayConfig /></ProtectedRoute>} />
+        <Route path="/admin/payment-settings/add-gateway" element={<ProtectedRoute role="admin"><AddPaymentGateway /></ProtectedRoute>} />
+        <Route path="/admin/projects" element={<ProtectedRoute role="admin"><Projects /></ProtectedRoute>} />
+        <Route path="/admin/projects/create" element={<ProtectedRoute role="admin"><CreateProject /></ProtectedRoute>} />
+        <Route path="/admin/projects/:id" element={<ProtectedRoute role="admin"><ProjectDetails /></ProtectedRoute>} />
+        <Route path="/admin/jobs" element={<ProtectedRoute role="admin"><AdminJobs /></ProtectedRoute>} />
+        <Route path="/admin/jobs/create" element={<ProtectedRoute role="admin"><JobCreate /></ProtectedRoute>} />
+        <Route path="/admin/jobs/create/basic-info" element={<ProtectedRoute role="admin"><JobBasicInfo /></ProtectedRoute>} />
+        <Route path="/admin/jobs/create/eligibility" element={<ProtectedRoute role="admin"><JobEligibility /></ProtectedRoute>} />
+        <Route path="/admin/jobs/create/form-builder" element={<ProtectedRoute role="admin"><JobFormBuilder /></ProtectedRoute>} />
+        <Route path="/admin/jobs/create/documents" element={<ProtectedRoute role="admin"><JobDocuments /></ProtectedRoute>} />
+        <Route path="/admin/jobs/create/payment" element={<ProtectedRoute role="admin"><JobPayment /></ProtectedRoute>} />
+        <Route path="/admin/jobs/create/review" element={<ProtectedRoute role="admin"><JobReview /></ProtectedRoute>} />
+        <Route path="/admin/applications" element={<ProtectedRoute role="admin"><AdminApplications /></ProtectedRoute>} />
+        <Route path="/admin/applications/:id" element={<ProtectedRoute role="admin"><ApplicationDetails /></ProtectedRoute>} />
+        <Route path="/admin/analytics" element={<ProtectedRoute role="admin"><Analytics /></ProtectedRoute>} />
+        <Route path="/admin/activity-logs" element={<ProtectedRoute role="admin"><ActivityLogs /></ProtectedRoute>} />
+        <Route path="/admin/activity-logs/:id" element={<ProtectedRoute role="admin"><EmployeeActivityDetails /></ProtectedRoute>} />
+        <Route path="/admin/employees" element={<ProtectedRoute role="admin"><Employees /></ProtectedRoute>} />
+        <Route path="/admin/employees/add" element={<ProtectedRoute role="admin"><AddEmployee /></ProtectedRoute>} />
+        <Route path="/admin/roles" element={<ProtectedRoute role="admin"><Roles /></ProtectedRoute>} />
+        <Route path="/admin/roles/create" element={<ProtectedRoute role="admin"><CreateRole /></ProtectedRoute>} />
+        <Route path="/admin/support" element={<ProtectedRoute role="admin"><AdminSupport /></ProtectedRoute>} />
+        <Route path="/admin/support/kanban" element={<ProtectedRoute role="admin"><SupportKanban /></ProtectedRoute>} />
+        <Route path="/admin/support/ticket/:id" element={<ProtectedRoute role="admin"><SupportTicketDetails /></ProtectedRoute>} />
         
         {/* Candidate Routes (Dashboard only - no application flow) */}
         <Route path="/candidate" element={<Navigate to="/candidate/dashboard" replace />} />
-        <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
-        <Route path="/candidate/profile" element={<Profile />} />
-        <Route path="/candidate/jobs" element={<CandidateJobs />} />
-        <Route path="/candidate/applications" element={<CandidateApplications />} />
-        <Route path="/candidate/documents" element={<CandidateDocuments />} />
-        <Route path="/candidate/payments" element={<Payments />} />
-        <Route path="/candidate/admit-card" element={<AdmitCard />} />
-        <Route path="/candidate/results" element={<CandidateResults />} />
-        <Route path="/candidate/support" element={<CandidateSupport />} />
-        <Route path="/candidate/notifications" element={<Notifications />} />
+        <Route path="/candidate/dashboard" element={<ProtectedRoute role="candidate"><CandidateDashboard /></ProtectedRoute>} />
+        <Route path="/candidate/profile" element={<ProtectedRoute role="candidate"><Profile /></ProtectedRoute>} />
+        <Route path="/candidate/jobs" element={<ProtectedRoute role="candidate"><CandidateJobs /></ProtectedRoute>} />
+        <Route path="/candidate/applications" element={<ProtectedRoute role="candidate"><CandidateApplications /></ProtectedRoute>} />
+        <Route path="/candidate/documents" element={<ProtectedRoute role="candidate"><CandidateDocuments /></ProtectedRoute>} />
+        <Route path="/candidate/payments" element={<ProtectedRoute role="candidate"><Payments /></ProtectedRoute>} />
+        <Route path="/candidate/admit-card" element={<ProtectedRoute role="candidate"><AdmitCard /></ProtectedRoute>} />
+        <Route path="/candidate/results" element={<ProtectedRoute role="candidate"><CandidateResults /></ProtectedRoute>} />
+        <Route path="/candidate/support" element={<ProtectedRoute role="candidate"><CandidateSupport /></ProtectedRoute>} />
+        <Route path="/candidate/notifications" element={<ProtectedRoute role="candidate"><Notifications /></ProtectedRoute>} />
         
         {/* Fallback Route */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -13,9 +13,11 @@ import {
 } from 'lucide-react'
 
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 
 import PublicLayout from '../../components/layouts/PublicLayout'
 import heroBg from '../../assets/herobg.jpg'
+import { jobService } from '../../services/job.service'
 
 const Home = () => {
   const navigate = useNavigate()
@@ -33,7 +35,7 @@ const Home = () => {
     })
   }
 
-  const featuredJobs = [
+  const fallbackFeaturedJobs = [
     {
       id: 1,
       title: 'Assistant Section Officer (ASO)',
@@ -54,6 +56,19 @@ const Home = () => {
       applyFee: '₹500',
     },
   ]
+
+  const { data: jobsData, isLoading: jobsLoading } = useQuery({
+    queryKey: ['public-featured-jobs'],
+    queryFn: () => jobService.getPublicJobs({ limit: 2, sortBy: 'publishedAt', sortOrder: 'desc' }),
+  })
+
+  const featuredJobs = jobsData?.jobs || []
+
+  const formatDate = (date) => (date ? new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }) : 'Not announced')
 
   return (
     <PublicLayout>
@@ -351,9 +366,21 @@ const Home = () => {
             {/* CARDS */}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {jobsLoading && (
+                <div className="col-span-full bg-white rounded-[8px] border border-[#e0d7cd] p-6 text-[#6d6761]">
+                  Loading active opportunities...
+                </div>
+              )}
+
+              {!jobsLoading && featuredJobs.length === 0 && (
+                <div className="col-span-full bg-white rounded-[8px] border border-[#e0d7cd] p-6 text-[#6d6761]">
+                  No active job opportunities are published right now.
+                </div>
+              )}
+
               {featuredJobs.map((job) => (
                 <div
-                  key={job.id}
+                  key={job._id}
                   className="bg-white rounded-[8px] border border-[#e0d7cd] p-6"
                 >
                   {/* TOP */}
@@ -361,16 +388,16 @@ const Home = () => {
                   <div className="flex items-center justify-between mb-5">
                     <span
                       className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.12em] font-black ${
-                        job.category === 'ACTIVE'
+                        (job.daysLeft || 0) > 7
                           ? 'bg-[#e8fff0] text-[#13984b]'
                           : 'bg-[#fff4df] text-[#c28500]'
                       }`}
                     >
-                      {job.category}
+                      {(job.daysLeft || 0) > 7 ? 'ACTIVE' : 'CLOSING SOON'}
                     </span>
 
                     <span className="text-[11px] text-[#857d77]">
-                      Ref. No: BPSC2024
+                      Ref. No: {job.postCode || 'N/A'}
                     </span>
                   </div>
 
@@ -393,7 +420,7 @@ const Home = () => {
                       </div>
 
                       <div className="mt-2 text-[#1f1d1b] font-black text-[14px]">
-                        {job.vacancies}
+                        {job.totalPosts || 0}
                       </div>
                     </div>
 
@@ -403,7 +430,7 @@ const Home = () => {
                       </div>
 
                       <div className="mt-2 text-[#1f1d1b] font-black text-[14px]">
-                        {job.applyFee}
+                        {(job.applicationFee?.general || job.applicationFee?.amount || 0).toLocaleString('en-IN')}
                       </div>
                     </div>
 
@@ -413,7 +440,7 @@ const Home = () => {
                       </div>
 
                       <div className="mt-2 text-[#d85f14] font-black text-[14px]">
-                        {job.lastDate}
+                        {formatDate(job.applicationDeadline)}
                       </div>
                     </div>
                   </div>
@@ -423,7 +450,7 @@ const Home = () => {
                   <div className="flex gap-4 mt-7">
                     <button
                       onClick={() =>
-                        navigate(`/jobs/${job.id}`)
+                        navigate(`/jobs/${job._id}`)
                       }
                       className="flex-1 h-[46px] border border-[#e0d7cd] hover:bg-[#f6f1ea] text-[#1f1d1b] rounded-[4px] uppercase tracking-[0.12em] text-[11px] font-black transition-all"
                     >
@@ -433,10 +460,10 @@ const Home = () => {
                     <button
                       onClick={() =>
                         navigate(
-                          '/auth/verify-otp',
+                          '/auth/candidate-login',
                           {
                             state: {
-                              jobId: job.id,
+                              jobId: job._id,
                             },
                           }
                         )

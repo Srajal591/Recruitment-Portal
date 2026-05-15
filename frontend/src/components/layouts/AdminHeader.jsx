@@ -1,7 +1,18 @@
 import { Search, Bell, HelpCircle, Menu, Settings, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { authService, getStoredUser } from '../../services/auth.service'
 
 const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) => {
+  const navigate = useNavigate()
+  const user = getStoredUser()
+  const displayName = user?.fullName || user?.officialEmail || 'Admin Central'
+  const roleName = user?.systemRole?.roleName || user?.roleDesignation || 'Admin'
+
+  const handleLogout = async () => {
+    await authService.logout()
+    navigate('/auth/admin-login', { replace: true })
+  }
+
   return (
     <header className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3 shadow-sm">
       <div className="flex items-center justify-between gap-4">
@@ -67,8 +78,8 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
           {/* User profile */}
           <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-gray-200 ml-1">
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-gray-800 leading-tight">Admin Central</div>
-              <div className="text-[10px] text-orange-600 font-bold uppercase tracking-wide">Super Admin</div>
+              <div className="text-sm font-semibold text-gray-800 leading-tight">{displayName}</div>
+              <div className="text-[10px] text-orange-600 font-bold uppercase tracking-wide">{roleName}</div>
             </div>
             <div className="relative group">
               <button className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-700 rounded-full flex items-center justify-center shadow-md">
@@ -78,8 +89,8 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
               {/* Dropdown */}
               <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="p-3 border-b border-gray-100">
-                  <div className="font-semibold text-gray-900 text-sm">Admin Central</div>
-                  <div className="text-xs text-gray-500">admin@portal.gov.in</div>
+                  <div className="font-semibold text-gray-900 text-sm">{displayName}</div>
+                  <div className="text-xs text-gray-500">{user?.officialEmail || user?.email || ''}</div>
                 </div>
                 <div className="p-2">
                   <Link
@@ -89,13 +100,14 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
                     <Settings className="w-4 h-4 text-gray-400" />
                     <span>Profile Settings</span>
                   </Link>
-                  <Link
-                    to="/auth/login"
+                  <button
+                    type="button"
+                    onClick={handleLogout}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Sign Out</span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>

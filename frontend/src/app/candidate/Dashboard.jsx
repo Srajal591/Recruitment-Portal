@@ -1,301 +1,169 @@
-import { useState } from 'react'
-import { Plus, Download, Eye, AlertTriangle, CheckCircle, Clock, FileText } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Bell, Briefcase, Clock, Download, Eye, FileText, Plus } from 'lucide-react'
+import CandidateLayout from '../../components/layouts/CandidateLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
+import { dashboardService } from '../../services/dashboard.service'
+import { getStoredUser } from '../../services/auth.service'
 
 const CandidateDashboard = () => {
-  const [applications] = useState([
-    {
-      id: '#BR-2023-1120',
-      title: 'Senior Clerk',
-      department: 'Finance Department',
-      date: 'Dec 12, 2023',
-      status: 'ACCEPTED',
-      statusColor: 'success'
-    },
-    {
-      id: '#BR-2024-0045',
-      title: 'Revenue Officer',
-      department: 'Revenue & Land Reforms',
-      date: 'Jan 19, 2024',
-      status: 'UNDER REVIEW',
-      statusColor: 'warning'
-    }
-  ])
+  const user = getStoredUser()
+  const { data, isLoading } = useQuery({
+    queryKey: ['candidate-dashboard'],
+    queryFn: dashboardService.candidateDashboard,
+  })
 
-  const alerts = [
-    {
-      type: 'warning',
-      title: 'Complete Document Verification',
-      message: 'Application #BR-2024-8892 requires additional certificates for the Junior Engineer post.',
-      action: 'Resolve Now'
-    },
-    {
-      type: 'error',
-      title: 'Payment Pending',
-      message: 'Your draft application for "District Coordinator" is incomplete. Payment gateway closes in 14 hours.',
-      action: 'Pay Fees'
-    }
-  ]
+  const applications = data?.applications || []
+  const jobs = data?.jobs || []
+  const notifications = data?.notifications?.notifications || []
+  const unreadCount = data?.notifications?.unreadCount || 0
+  const submittedCount = applications.filter((app) => app.status !== 'draft').length
+  const draftCount = applications.filter((app) => app.status === 'draft').length
 
   return (
-    <div className="min-h-screen bg-orange-50">
-      {/* Header */}
-      <header className="bg-white border-b border-orange-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">RP</span>
-            </div>
+    <CandidateLayout title="Candidate Dashboard">
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-lg p-6 text-white">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <div className="font-bold text-gray-800">Recruitment Portal</div>
-              <div className="text-sm text-gray-600">GOVERNMENT OF INDIA</div>
+              <h1 className="text-2xl font-bold mb-2">Welcome, {user?.fullName || user?.email || 'Candidate'}</h1>
+              <p className="text-orange-100">Track applications, active jobs, and recruitment notifications.</p>
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-600">Welcome, Candidate</span>
-            <Button className="bg-orange-600 hover:bg-orange-700">
-              New Application
+            <Button asChild className="bg-white text-orange-600 hover:bg-orange-50">
+              <Link to="/jobs">
+                <Plus className="w-4 h-4 mr-2" />
+                Apply for New Job
+              </Link>
             </Button>
           </div>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-2xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">Dashboard Overview</h1>
-              <p className="text-orange-100">Track your recruitment progress and pending actions.</p>
-              <div className="mt-4 flex items-center space-x-4 text-sm">
-                <span className="bg-orange-500/30 px-3 py-1 rounded-full">📅 October 24, 2024</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <Button className="bg-white text-orange-600 hover:bg-orange-50">
-                Apply for New Job
-              </Button>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Stat icon={FileText} label="Applications" value={applications.length} />
+          <Stat icon={Clock} label="Drafts" value={draftCount} />
+          <Stat icon={Briefcase} label="Submitted" value={submittedCount} />
+          <Stat icon={Bell} label="Unread Alerts" value={unreadCount} />
         </div>
 
-        {/* Alert Cards */}
-        <div className="space-y-4">
-          {alerts.map((alert, index) => (
-            <Card key={index} className={`border-l-4 ${
-              alert.type === 'warning' ? 'border-l-yellow-500 bg-yellow-50' : 'border-l-red-500 bg-red-50'
-            }`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3">
-                    <AlertTriangle className={`w-5 h-5 mt-0.5 ${
-                      alert.type === 'warning' ? 'text-yellow-600' : 'text-red-600'
-                    }`} />
-                    <div>
-                      <h3 className={`font-medium ${
-                        alert.type === 'warning' ? 'text-yellow-800' : 'text-red-800'
-                      }`}>
-                        {alert.title}
-                      </h3>
-                      <p className={`text-sm mt-1 ${
-                        alert.type === 'warning' ? 'text-yellow-700' : 'text-red-700'
-                      }`}>
-                        {alert.message}
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    className={`ml-4 ${
-                      alert.type === 'warning' 
-                        ? 'bg-yellow-600 hover:bg-yellow-700' 
-                        : 'bg-red-600 hover:bg-red-700'
-                    }`}
-                  >
-                    {alert.action}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {isLoading && <Card><CardContent className="p-6">Loading dashboard...</CardContent></Card>}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Application */}
-          <div className="lg:col-span-2">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold text-gray-800">My Applications</h3>
+                  <p className="text-sm text-orange-600">Latest records from backend</p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="border-orange-200 text-orange-600">
+                  <Link to="/candidate/applications">View All</Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!isLoading && applications.length === 0 && (
+                <div className="rounded-lg border border-orange-100 bg-orange-50 p-4 text-sm text-orange-700">
+                  You have not started any applications yet.
+                </div>
+              )}
+              <div className="space-y-4">
+                {applications.map((application) => (
+                  <div key={application._id} className="flex items-center justify-between p-4 border border-orange-100 rounded-lg hover:bg-orange-50 transition-colors">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-800">{application.jobId?.title || 'Application'}</div>
+                        <div className="text-sm text-orange-600">{application.jobId?.department || 'Department pending'}</div>
+                        <div className="text-xs text-gray-500">{application.applicationId}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <Badge variant={application.status === 'submitted' ? 'success' : 'warning'}>
+                          {application.status}
+                        </Badge>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {application.createdAt ? new Date(application.createdAt).toLocaleDateString('en-IN') : ''}
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-orange-600 hover:bg-orange-100">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold text-gray-800">Submitted Applications</h3>
-                    <p className="text-sm text-orange-600">#BR-2024-8892 - Primary Active Application</p>
-                  </div>
-                  <Badge variant="success">SUBMITTED</Badge>
-                </div>
+                <h3 className="font-semibold text-gray-800">Active Jobs</h3>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-medium text-gray-800">Applied Posts</h4>
-                      <div className="space-y-2 mt-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="w-2 h-2 bg-orange-600 rounded-full"></span>
-                          <span className="text-sm text-gray-700">Assistant Section Officer</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="w-2 h-2 bg-orange-600 rounded-full"></span>
-                          <span className="text-sm text-gray-700">Junior Engineer</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-orange-600">Last Update</div>
-                      <div className="font-medium text-gray-800">Yesterday, 4:30 PM</div>
-                      <div className="text-xs text-gray-500">System verified documents</div>
-                    </div>
-                  </div>
-
-                  <div className="bg-orange-50 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-800 mb-3">Application Progress</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-orange-700">65% Complete</span>
-                      </div>
-                      <div className="w-full bg-orange-200 rounded-full h-2">
-                        <div className="bg-orange-600 h-2 rounded-full" style={{ width: '65%' }}></div>
-                      </div>
-                      <div className="flex justify-between text-xs text-orange-600">
-                        <span>REGISTRATION</span>
-                        <span>VERIFICATION</span>
-                        <span>FEES</span>
-                        <span>FINAL</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-3">
-                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download Acknowledgement
-                    </Button>
-                    <Button variant="outline" size="sm" className="border-orange-200 text-orange-600 hover:bg-orange-50">
-                      View Full Details
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Continue Draft */}
-            <Card className="bg-gradient-to-br from-gray-800 to-gray-900 text-white">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="w-6 h-6" />
-                    <h3 className="font-semibold">Continue Draft</h3>
-                  </div>
-                  <p className="text-gray-300 text-sm">
-                    Complete your pending application for Administrative Head.
-                  </p>
-                  <Button className="w-full bg-orange-600 text-white hover:bg-orange-700">
-                    Resume Application →
-                  </Button>
-                </div>
+              <CardContent className="space-y-3">
+                {jobs.length === 0 && <p className="text-sm text-gray-600">No active jobs available.</p>}
+                {jobs.slice(0, 3).map((job) => (
+                  <Link key={job._id} to={`/jobs/${job._id}`} className="block p-3 bg-orange-50 rounded-lg hover:bg-orange-100">
+                    <div className="font-medium text-gray-800 text-sm">{job.title}</div>
+                    <div className="text-xs text-orange-600">{job.department}</div>
+                  </Link>
+                ))}
               </CardContent>
             </Card>
 
-            {/* Admit Cards */}
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold text-gray-800">Notifications</h3>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {notifications.length === 0 && <p className="text-sm text-gray-600">No notifications yet.</p>}
+                {notifications.slice(0, 4).map((notification) => (
+                  <div key={notification._id} className="p-3 bg-orange-50 rounded-lg">
+                    <div className="font-medium text-gray-800 text-sm">{notification.title || notification.message}</div>
+                    {notification.message && <div className="text-xs text-gray-600 mt-1">{notification.message}</div>}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <h3 className="font-semibold text-gray-800">Admit Cards</h3>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-gray-800 text-sm">ARO Prelims 2024</div>
-                      <div className="text-xs text-orange-600">AVAILABLE NOW</div>
-                    </div>
-                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Support Snapshot */}
-            <Card>
-              <CardHeader>
-                <h3 className="font-semibold text-gray-800">Support Snapshot</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <div className="text-2xl font-bold text-gray-800">12</div>
-                    <div className="text-sm text-orange-600">OPEN</div>
+                    <div className="font-medium text-gray-800 text-sm">Available after verification</div>
+                    <div className="text-xs text-gray-500">Backend record dependent</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">33</div>
-                    <div className="text-sm text-green-600">RESOLVED</div>
-                  </div>
+                  <Button size="sm" disabled className="bg-orange-600 hover:bg-orange-700">
+                    <Download className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button variant="outline" className="w-full border-orange-200 text-orange-600 hover:bg-orange-50">
-                  📞 Get Help & Support
-                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
-
-        {/* Application History */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-gray-800">Application History</h3>
-              <Button variant="outline" size="sm" className="border-orange-200 text-orange-600">
-                View All
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {applications.map((app) => (
-                <div key={app.id} className="flex items-center justify-between p-4 border border-orange-100 rounded-lg hover:bg-orange-50 transition-colors">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-800">{app.title}</div>
-                      <div className="text-sm text-orange-600">{app.department}</div>
-                      <div className="text-xs text-gray-500">{app.id}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <Badge variant={app.statusColor}>{app.status}</Badge>
-                      <div className="text-xs text-gray-500 mt-1">{app.date}</div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="text-orange-600 hover:bg-orange-100">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </CandidateLayout>
   )
 }
+
+const Stat = ({ icon: Icon, label, value }) => (
+  <Card>
+    <CardContent className="p-5 flex items-center justify-between">
+      <div>
+        <div className="text-2xl font-bold text-gray-800">{value}</div>
+        <div className="text-sm text-orange-600">{label}</div>
+      </div>
+      <Icon className="w-6 h-6 text-orange-500" />
+    </CardContent>
+  </Card>
+)
 
 export default CandidateDashboard

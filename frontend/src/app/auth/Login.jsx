@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import Input from '../../components/ui/Input'
+import { authService } from '../../services/auth.service'
 
 const Login = () => {
   const navigate = useNavigate()
@@ -14,6 +15,7 @@ const Login = () => {
     userType: 'candidate'
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -24,19 +26,24 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault()
+    setError('')
     setIsLoading(true)
-    
-    // Simulate login - accept any email/password for demo
-    setTimeout(() => {
-      setIsLoading(false)
-      
-      // Route based on user type
+
+    try {
       if (formData.userType === 'admin') {
-        navigate('/admin/dashboard')
+        await authService.adminLogin({ email: formData.email, password: formData.password })
+        toast.success('Admin login successful')
+        navigate('/admin/dashboard', { replace: true })
       } else {
-        navigate('/candidate/dashboard')
+        await authService.candidateLogin({ email: formData.email, password: formData.password })
+        toast.success('Login successful')
+        navigate('/candidate/dashboard', { replace: true })
       }
-    }, 1000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -153,6 +160,12 @@ const Login = () => {
                 </Link>
               </div>
 
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
               {/* Login Button */}
               <Button 
                 type="submit" 
@@ -169,13 +182,9 @@ const Login = () => {
                 )}
               </Button>
 
-              {/* Demo Credentials */}
               <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-800 mb-2">Demo Credentials</h4>
-                <div className="text-sm text-blue-700 space-y-1">
-                  <p><strong>Any email/password works for demo</strong></p>
-                  <p>• Select "Candidate" for candidate portal</p>
-                  <p>• Select "Admin" for admin panel</p>
+                <div className="text-sm text-blue-700">
+                  Candidate accounts use public login. Admin employees can also use the dedicated admin login page.
                 </div>
               </div>
             </form>

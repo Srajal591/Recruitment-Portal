@@ -1,16 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/auth.controller");
-const validate = require("../../../../packages/common/middlewares/validate");
-const authenticate = require("../../../../packages/common/middlewares/authenticate");
-const { authLimiter, otpLimiter } = require("../../../../packages/common/middlewares/rateLimiter");
+const validate = require("../shared/middlewares/validate");
+const authenticate = require("../shared/middlewares/authenticate");
+const { authLimiter, otpLimiter } = require("../shared/middlewares/rateLimiter");
 const {
   registerSchema,
   verifyOTPSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-} = require("../../../../packages/common/validations/auth.validation");
+} = require("../shared/validations/auth.validation");
 
 // ── Public routes ─────────────────────────────────────────────
 router.post(

@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const supportController = require("../../controllers/candidate/support.controller");
-const authenticate = require("../../../../../packages/common/middlewares/authenticate");
-const { authorize } = require("../../../../../packages/common/middlewares/authorize");
-const validate = require("../../../../../packages/common/middlewares/validate");
+const authenticate = require("../../shared/middlewares/authenticate");
+const { authorize } = require("../../shared/middlewares/authorize");
+const validate = require("../../shared/middlewares/validate");
 const {
   createTicketSchema,
   addReplySchema,
-} = require("../../../../../packages/common/validations/support.validation");
+} = require("../../shared/validations/support.validation");
 
 router.use(authenticate, authorize("candidate"));
 

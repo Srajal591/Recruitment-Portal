@@ -1,10 +1,10 @@
 const { StatusCodes } = require("http-status-codes");
-const Job = require("../../../../../packages/common/models/Job");
-const Project = require("../../../../../packages/common/models/Project");
-const Application = require("../../../../../packages/common/models/Application");
-const ApiError = require("../../../../../packages/common/utils/ApiError");
-const ApiResponse = require("../../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../../packages/common/utils/asyncHandler");
+const Job = require("../../shared/models/Job");
+const Project = require("../../shared/models/Project");
+const Application = require("../../shared/models/Application");
+const ApiError = require("../../shared/utils/ApiError");
+const ApiResponse = require("../../shared/utils/ApiResponse");
+const asyncHandler = require("../../shared/utils/asyncHandler");
 
 /**
  * @desc    Get all active jobs (public)

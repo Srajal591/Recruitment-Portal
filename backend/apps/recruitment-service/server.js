@@ -10,17 +10,17 @@ require("dotenv").config({
 require("express-async-errors");
 
 // ── Packages (shared) ─────────────────────────────────────────
-const connectDB = require("../../packages/config/database");
-const { connectRedis } = require("../../packages/config/redis");
-const { connectCloudinary } = require("../../packages/config/cloudinary");
-const { initSocket } = require("../../packages/common/socket/index");
-const logger = require("../../packages/common/utils/logger");
-const errorHandler = require("../../packages/common/middlewares/errorHandler");
-const notFound = require("../../packages/common/middlewares/notFound");
-const { apiLimiter } = require("../../packages/common/middlewares/rateLimiter");
+const connectDB = require("./src/shared/config/database");
+const { connectRedis } = require("./src/shared/config/redis");
+const { connectCloudinary } = require("./src/shared/config/cloudinary");
+const { initSocket } = require("./src/shared/socket/index");
+const logger = require("./src/shared/utils/logger");
+const errorHandler = require("./src/shared/middlewares/errorHandler");
+const notFound = require("./src/shared/middlewares/notFound");
+const { apiLimiter } = require("./src/shared/middlewares/rateLimiter");
 
 // ── Swagger (uses shared docs) ────────────────────────────────
-const swaggerSpec = require("../../src/docs/swagger");
+const swaggerSpec = require("./src/docs/swagger");
 
 // ── Service-local routes ──────────────────────────────────────
 const publicJobRoutes = require("./src/routes/public/job.routes");

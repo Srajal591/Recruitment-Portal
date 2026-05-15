@@ -1,7 +1,10 @@
 version: "3.8"
 
 services:
-  # MongoDB
+  # ═══════════════════════════════════════════════════════════
+  # Infrastructure Services
+  # ═══════════════════════════════════════════════════════════
+
   mongodb:
     image: mongo:7.0
     container_name: recruitment_mongodb
@@ -9,15 +12,19 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password123}
       MONGO_INITDB_DATABASE: recruitment_portal
     volumes:
       - mongodb_data:/data/db
     networks:
       - recruitment_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Redis
   redis:
     image: redis:7.2-alpine
     container_name: recruitment_redis
@@ -29,8 +36,12 @@ services:
       - redis_data:/data
     networks:
       - recruitment_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
-  # RabbitMQ
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: recruitment_rabbitmq
@@ -39,12 +50,164 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: password123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-password123}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - recruitment_network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ═══════════════════════════════════════════════════════════
+  # Microservices
+  # ═══════════════════════════════════════════════════════════
+
+  api-gateway:
+    build:
+      context: ./backend/apps/api-gateway
+      dockerfile: Dockerfile
+    container_name: api_gateway
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - API_GATEWAY_PORT=5000
+      - IDENTITY_SERVICE_PORT=5001
+      - RECRUITMENT_SERVICE_PORT=5002
+      - COMMUNICATION_SERVICE_PORT=5003
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
+    depends_on:
+      - identity-service
+      - recruitment-service
+      - communication-service
+    networks:
+      - recruitment_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:5000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  identity-service:
+    build:
+      context: ./backend/apps/identity-service
+      dockerfile: Dockerfile
+    container_name: identity_service
+    restart: unless-stopped
+    expose:
+      - "5001"
+    environment:
+      - NODE_ENV=production
+      - IDENTITY_SERVICE_PORT=5001
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/recruitment_portal?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_ACCESS_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - recruitment_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:5001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  recruitment-service:
+    build:
+      context: ./backend/apps/recruitment-service
+      dockerfile: Dockerfile
+    container_name: recruitment_service
+    restart: unless-stopped
+    expose:
+      - "5002"
+    environment:
+      - NODE_ENV=production
+      - RECRUITMENT_SERVICE_PORT=5002
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/recruitment_portal?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - recruitment_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:5002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  communication-service:
+    build:
+      context: ./backend/apps/communication-payment-service
+      dockerfile: Dockerfile
+    container_name: communication_service
+    restart: unless-stopped
+    expose:
+      - "5003"
+    environment:
+      - NODE_ENV=production
+      - COMMUNICATION_SERVICE_PORT=5003
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/recruitment_portal?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://admin:password123@rabbitmq:5672
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - recruitment_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:5003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
 
 volumes:
   mongodb_data:

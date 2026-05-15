@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const applicationController = require("../../controllers/candidate/application.controller");
-const authenticate = require("../../../../../packages/common/middlewares/authenticate");
-const { authorize } = require("../../../../../packages/common/middlewares/authorize");
-const { upload } = require("../../../../../src/services/upload.service");
-const validate = require("../../../../../packages/common/middlewares/validate");
+const authenticate = require("../../shared/middlewares/authenticate");
+const { authorize } = require("../../shared/middlewares/authorize");
+const { upload } = require("../../shared/services/upload.service");
+const validate = require("../../shared/middlewares/validate");
 const {
   createApplicationSchema,
   personalDetailsSchema,
@@ -13,7 +13,7 @@ const {
   addressSchema,
   postSelectionSchema,
   submitApplicationSchema,
-} = require("../../../../../packages/common/validations/application.validation");
+} = require("../../shared/validations/application.validation");
 
 router.use(authenticate, authorize("candidate"));
 

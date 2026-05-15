@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const paymentController = require("../../controllers/admin/payment.controller");
-const authenticate = require("../../../../../packages/common/middlewares/authenticate");
-const { authorize, checkPermission } = require("../../../../../packages/common/middlewares/authorize");
-const { auditLog } = require("../../../../../packages/common/middlewares/auditLog");
+const authenticate = require("../../shared/middlewares/authenticate");
+const { authorize, checkPermission } = require("../../shared/middlewares/authorize");
+const { auditLog } = require("../../shared/middlewares/auditLog");
 
 router.use(authenticate, authorize("admin", "employee"));
 

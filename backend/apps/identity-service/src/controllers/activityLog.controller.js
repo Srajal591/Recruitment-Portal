@@ -1,8 +1,8 @@
 const { StatusCodes } = require("http-status-codes");
-const ActivityLog = require("../../../../packages/common/models/ActivityLog");
-const { ApiResponse, paginationMeta } = require("../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../packages/common/utils/asyncHandler");
-const { getPaginationParams } = require("../../../../packages/common/utils/helpers");
+const ActivityLog = require("../shared/models/ActivityLog");
+const { ApiResponse, paginationMeta } = require("../shared/utils/ApiResponse");
+const asyncHandler = require("../shared/utils/asyncHandler");
+const { getPaginationParams } = require("../shared/utils/helpers");
 
 /**
  * @swagger

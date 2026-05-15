@@ -1,8 +1,8 @@
 const { StatusCodes } = require("http-status-codes");
-const paymentService = require("../../../../../src/services/payment.service");
-const { ApiResponse } = require("../../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../../packages/common/utils/asyncHandler");
-const { saveAuditLog } = require("../../../../../packages/common/middlewares/auditLog");
+const paymentService = require("../../shared/services/payment.service");
+const { ApiResponse } = require("../../shared/utils/ApiResponse");
+const asyncHandler = require("../../shared/utils/asyncHandler");
+const { saveAuditLog } = require("../../shared/middlewares/auditLog");
 
 /**
  * @swagger
@@ -132,7 +132,7 @@ const upsertGateway = asyncHandler(async (req, res) => {
  *       200: { description: Payment stats }
  */
 const getPaymentStats = asyncHandler(async (req, res) => {
-  const Payment = require("../../../../../packages/common/models/Payment");
+  const Payment = require("../../shared/models/Payment");
 
   const [statusStats, gatewayStats, dailyRevenue, totalRevenue] =
     await Promise.all([

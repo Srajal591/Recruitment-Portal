@@ -1,9 +1,9 @@
 const { StatusCodes } = require("http-status-codes");
-const authService = require("../../../../src/services/auth.service");
-const { ApiResponse } = require("../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../packages/common/utils/asyncHandler");
-const { emitToAdmins, SOCKET_EVENTS } = require("../../../../packages/common/socket/index");
-const logger = require("../../../../packages/common/utils/logger");
+const authService = require("../shared/services/auth.service");
+const { ApiResponse } = require("../shared/utils/ApiResponse");
+const asyncHandler = require("../shared/utils/asyncHandler");
+const { emitToAdmins, SOCKET_EVENTS } = require("../shared/socket/index");
+const logger = require("../shared/utils/logger");
 
 /**
  * @swagger
@@ -257,10 +257,10 @@ const logout = asyncHandler(async (req, res) => {
 const getMe = asyncHandler(async (req, res) => {
   let user;
   if (req.user.role === "candidate") {
-    const User = require("../../../../packages/common/models/User");
+    const User = require("../shared/models/User");
     user = await User.findById(req.user.id);
   } else {
-    const Employee = require("../../../../packages/common/models/Employee");
+    const Employee = require("../shared/models/Employee");
     user = await Employee.findById(req.user.id).populate(
       "systemRole",
       "roleName permissions",
@@ -268,7 +268,7 @@ const getMe = asyncHandler(async (req, res) => {
   }
 
   if (!user) {
-    const ApiError = require("../../../../packages/common/utils/ApiError");
+    const ApiError = require("../shared/utils/ApiError");
     throw new ApiError(404, "User not found");
   }
 

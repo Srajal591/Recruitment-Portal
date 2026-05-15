@@ -3,10 +3,13 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const compression = require("compression");
+const swaggerUi = require("swagger-ui-express");
 require("dotenv").config({
   path: require("path").join(__dirname, "../../.env"),
 });
 require("express-async-errors");
+
+const swaggerSpec = require("./src/docs/swagger");
 
 // ── Packages (shared) ─────────────────────────────────────────
 const connectDB = require("./src/shared/config/database");
@@ -35,6 +38,9 @@ app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ── Swagger Documentation ─────────────────────────────────────
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ── Routes ────────────────────────────────────────────────────
 app.use("/api", apiLimiter);
@@ -77,6 +83,7 @@ const startServer = async () => {
   httpServer.listen(PORT, () => {
     logger.info(`💬 Communication & Payment Service running on port ${PORT}`);
     console.log(`💬 Communication & Payment Service: http://localhost:${PORT}`);
+    console.log(`   Swagger: http://localhost:${PORT}/api/docs`);
   });
 };
 

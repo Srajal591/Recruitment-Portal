@@ -24,7 +24,9 @@
     "zod": "^3.23.8",
     "http-status-codes": "^2.3.0",
     "express-rate-limit": "^7.4.1",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

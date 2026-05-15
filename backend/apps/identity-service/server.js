@@ -3,10 +3,13 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const compression = require("compression");
+const swaggerUi = require("swagger-ui-express");
 require("dotenv").config({
   path: require("path").join(__dirname, "../../.env"),
 });
 require("express-async-errors");
+
+const swaggerSpec = require("./src/docs/swagger");
 
 // ── Packages (shared) ─────────────────────────────────────────
 const connectDB = require("./src/shared/config/database");
@@ -15,9 +18,7 @@ const { initSocket } = require("./src/shared/socket/index");
 const logger = require("./src/shared/utils/logger");
 const errorHandler = require("./src/shared/middlewares/errorHandler");
 const notFound = require("./src/shared/middlewares/notFound");
-const {
-  authLimiter,
-} = require("./src/shared/middlewares/rateLimiter");
+const { authLimiter } = require("./src/shared/middlewares/rateLimiter");
 
 // ── Service-local routes ──────────────────────────────────────
 const authRoutes = require("./src/routes/auth.routes");
@@ -35,6 +36,9 @@ app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ── Swagger Documentation ─────────────────────────────────────
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ── Routes ────────────────────────────────────────────────────
 app.use("/api/auth", authLimiter, authRoutes);
@@ -74,6 +78,7 @@ const startServer = async () => {
   httpServer.listen(PORT, () => {
     logger.info(`🔐 Identity Service running on port ${PORT}`);
     console.log(`🔐 Identity Service: http://localhost:${PORT}`);
+    console.log(`   Swagger: http://localhost:${PORT}/api/docs`);
   });
 };
 

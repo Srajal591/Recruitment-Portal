@@ -8,7 +8,10 @@ const {
   emitToUser,
   SOCKET_EVENTS,
 } = require("../socket/index");
-const { publishToQueue, QUEUES } = require("../config/rabbitmq");
+const {
+  sendTicketReplyEmail,
+  sendTicketResolvedEmail,
+} = require("./email.service");
 
 let ticketCounter = 1000;
 const generateTicketId = () => `TKT-${Date.now()}-${++ticketCounter}`;
@@ -76,11 +79,8 @@ const updateTicket = async (id, data, updatedBy) => {
       message: "Your support ticket has been resolved.",
     });
 
-    await publishToQueue(QUEUES.EMAIL, {
-      type: "ticket_resolved",
-      to: ticket.raisedByEmail,
-      ticketId: ticket.ticketId,
-    });
+    // Send email notification
+    await sendTicketResolvedEmail(ticket.raisedByEmail, ticket.ticketId);
   }
 
   return ticket;
@@ -102,12 +102,9 @@ const addReply = async (ticketId, message, sentBy, sentByModel, sentByName) => {
       message,
       from: sentByName,
     });
-    await publishToQueue(QUEUES.EMAIL, {
-      type: "ticket_reply",
-      to: ticket.raisedByEmail,
-      ticketId: ticket.ticketId,
-      message,
-    });
+
+    // Send email notification
+    await sendTicketReplyEmail(ticket.raisedByEmail, ticket.ticketId, message);
   } else {
     // Candidate replied — notify assigned admin
     emitToAdmins(SOCKET_EVENTS.TICKET_REPLY, {
@@ -145,4 +142,3 @@ module.exports = {
   addReply,
   getCandidateTickets,
 };
-

@@ -3,7 +3,7 @@ const Role = require("../models/Role");
 const ApiError = require("../utils/ApiError");
 const { getPaginationParams, generateEmployeeId } = require("../utils/helpers");
 const { paginationMeta } = require("../utils/ApiResponse");
-const { publishToQueue, QUEUES } = require("../config/rabbitmq");
+const { sendWelcomeEmail } = require("./email.service");
 
 const createEmployee = async (data) => {
   const existing = await Employee.findOne({
@@ -24,13 +24,12 @@ const createEmployee = async (data) => {
   });
 
   // Send welcome email with temp password
-  await publishToQueue(QUEUES.EMAIL, {
-    type: "employee_welcome",
-    to: data.officialEmail,
-    name: data.fullName,
+  await sendWelcomeEmail(
+    data.officialEmail,
+    data.fullName,
     employeeId,
-    tempPassword: data.password,
-  });
+    data.password,
+  );
 
   return employee.toSafeObject();
 };
@@ -87,4 +86,3 @@ module.exports = {
   updateEmployee,
   deleteEmployee,
 };
-

@@ -24,7 +24,7 @@ const connectRabbitMQ = async () => {
       await channel.assertQueue(queue, { durable: true });
     }
 
-    logger.info("RabbitMQ connected and queues asserted");
+    logger.info("🐰 RabbitMQ connected and queues asserted");
 
     connection.on("error", (err) => {
       logger.error(`RabbitMQ connection error: ${err.message}`);
@@ -35,7 +35,11 @@ const connectRabbitMQ = async () => {
       setTimeout(connectRabbitMQ, 5000);
     });
   } catch (error) {
-    logger.error(`RabbitMQ connection failed: ${error.message}`);
+    if (error.code === "ECONNREFUSED") {
+      logger.warn("⚠️  RabbitMQ not running. Queue features disabled.");
+    } else {
+      logger.error(`RabbitMQ connection failed: ${error.message}`);
+    }
     logger.warn("Continuing without RabbitMQ — queue features disabled");
   }
 };

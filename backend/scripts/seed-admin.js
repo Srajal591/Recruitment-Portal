@@ -1,6 +1,6 @@
 /**
  * Simple Seed Script — Creates Super Admin + default roles
- * Run: node scripts/seed-admin-simple.js
+ * Run: node scripts/seed-admin.js
  */
 
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });

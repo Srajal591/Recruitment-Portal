@@ -1,4 +1,6 @@
-require("dotenv").config();
+require("dotenv").config({
+  path: require("path").join(__dirname, "../../../../.env"),
+});
 
 const env = {
   NODE_ENV: process.env.NODE_ENV || "development",

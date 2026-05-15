@@ -9,7 +9,7 @@ const {
   emitToAdmins,
   SOCKET_EVENTS,
 } = require("../socket/index");
-const { publishToQueue, QUEUES } = require("../config/rabbitmq");
+const { sendPaymentSuccessEmail } = require("./email.service");
 
 const initiatePayment = async (
   applicationId,
@@ -95,15 +95,13 @@ const verifyPayment = async ({
         amount: payment.amount,
       });
 
-      // Queue confirmation email
-      await publishToQueue(QUEUES.EMAIL, {
-        type: "payment_success",
-        to: application.candidateId.email,
-        name: application.candidateId.fullName,
+      // Send confirmation email
+      await sendPaymentSuccessEmail(
+        application.candidateId.email,
+        application.candidateId.fullName,
         transactionId,
-        amount: payment.amount,
-        applicationId: application.applicationId,
-      });
+        payment.amount,
+      );
     } else {
       emitToCandidate(candidateId, SOCKET_EVENTS.PAYMENT_FAILED, {
         transactionId,
@@ -186,4 +184,3 @@ module.exports = {
   getGateways,
   upsertGateway,
 };
-

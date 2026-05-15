@@ -89,6 +89,9 @@ const startServer = async () => {
   connectRedis();
   connectCloudinary();
 
+  // Initialize email service
+  const { sendEmail } = require("./src/shared/services/email.service");
+
   const httpServer = http.createServer(app);
   initSocket(httpServer);
 

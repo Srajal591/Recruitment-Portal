@@ -5,7 +5,6 @@
 
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
 
 // ── Colors ────────────────────────────────────────────────────
 const C = {
@@ -28,8 +27,8 @@ async function seed() {
     await mongoose.connect(process.env.MONGODB_URI);
     info("Connected to MongoDB");
 
-    const Role = require("../src/models/Role");
-    const Employee = require("../src/models/Employee");
+    const Role = require("../apps/identity-service/src/shared/models/Role");
+    const Employee = require("../apps/identity-service/src/shared/models/Employee");
 
     // ── 1. Create default roles ───────────────────────────────
     const allPerms = {

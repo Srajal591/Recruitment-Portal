@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:7.0
+    container_name: recruitment_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: recruitment_portal
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - recruitment_network
+
+  # Redis
+  redis:
+    image: redis:7.2-alpine
+    container_name: recruitment_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - recruitment_network
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: recruitment_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - recruitment_network
+
+volumes:
+  mongodb_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  recruitment_network:
+    driver: bridge

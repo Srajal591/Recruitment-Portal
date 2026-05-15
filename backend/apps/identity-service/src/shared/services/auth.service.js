@@ -5,6 +5,7 @@ const ApiError = require("../utils/ApiError");
 const { generateOTP } = require("../utils/helpers");
 const { publishToQueue, QUEUES } = require("../config/rabbitmq");
 const { getRedis } = require("../config/redis");
+const { sendOTPEmail, sendPasswordResetEmail } = require("./email.service");
 const env = require("../config/env");
 
 // ── Token helpers ─────────────────────────────────────────────
@@ -69,13 +70,8 @@ const registerCandidate = async ({ email, password, registeredMobile }) => {
   user.otpExpiry = otpExpiry;
   await user.save({ validateBeforeSave: false });
 
-  // Queue email
-  await publishToQueue(QUEUES.EMAIL, {
-    type: "otp_verification",
-    to: email,
-    otp,
-    name: email,
-  });
+  // Send OTP email directly (not queued for immediate delivery)
+  await sendOTPEmail(email, otp, email);
 
   return { userId: user._id, email: user.email };
 };
@@ -237,4 +233,3 @@ module.exports = {
   setAuthCookies,
   clearAuthCookies,
 };
-

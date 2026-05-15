@@ -14,6 +14,7 @@ const swaggerSpec = require("./src/docs/swagger");
 // ── Packages (shared) ─────────────────────────────────────────
 const connectDB = require("./src/shared/config/database");
 const { connectRedis } = require("./src/shared/config/redis");
+const { connectCloudinary } = require("./src/shared/config/cloudinary");
 const { initSocket } = require("./src/shared/socket/index");
 const logger = require("./src/shared/utils/logger");
 const errorHandler = require("./src/shared/middlewares/errorHandler");
@@ -64,6 +65,10 @@ app.use(errorHandler);
 const startServer = async () => {
   await connectDB();
   connectRedis();
+  connectCloudinary();
+
+  // Initialize email service
+  const { sendEmail } = require("./src/shared/services/email.service");
 
   const httpServer = http.createServer(app);
   initSocket(httpServer);

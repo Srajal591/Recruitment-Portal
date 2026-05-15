@@ -1,22 +1,36 @@
 import { useState } from 'react'
-import { Search, ArrowRight, Users, FileText, Award, Phone, ChevronDown } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+
+import {
+  Search,
+  ArrowRight,
+  Users,
+  ShieldCheck,
+  LogIn,
+  CircleHelp,
+  Phone,
+  ChevronDown,
+  Calendar,
+} from 'lucide-react'
+
+import { useNavigate } from 'react-router-dom'
+
 import PublicLayout from '../../components/layouts/PublicLayout'
-import { Card, CardContent } from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
 import heroBg from '../../assets/herobg.jpg'
 
 const Home = () => {
   const navigate = useNavigate()
-  const [eligibilityForm, setEligibilityForm] = useState({
-    qualification: '',
-    age: '',
-    category: ''
-  })
+
+  const [eligibilityForm, setEligibilityForm] =
+    useState({
+      qualification: '',
+      age: '',
+      category: '',
+    })
 
   const handleEligibilityCheck = () => {
-    navigate('/eligible-jobs', { state: eligibilityForm })
+    navigate('/eligible-jobs', {
+      state: eligibilityForm,
+    })
   }
 
   const featuredJobs = [
@@ -24,345 +38,489 @@ const Home = () => {
       id: 1,
       title: 'Assistant Section Officer (ASO)',
       department: 'Bihar State Secretariat',
-      category: 'BPSC',
+      category: 'ACTIVE',
       vacancies: 45,
       lastDate: 'Nov 30, 2024',
-      status: 'ACTIVE',
-      applyFee: '₹750'
+      applyFee: '₹750',
     },
+
     {
       id: 2,
       title: 'Junior Engineer (Mechanical)',
       department: 'Public Works Department',
-      category: 'BSSC',
+      category: 'CLOSING SOON',
       vacancies: 120,
       lastDate: 'Dec 15, 2024',
-      status: 'ACTIVE',
-      applyFee: '₹500'
-    }
-  ]
-
-  const quickStats = [
-    { icon: '👥', label: 'New User?', desc: 'Create your account and start your job search experience.', action: 'Register Now →' },
-    { icon: '📋', label: 'Already Applied?', desc: 'Check your application status and track your progress.', action: 'Login Here →' },
-    { icon: '❓', label: 'Need Help?', desc: 'Get help from our support team for guidance and support.', action: 'Get Help →' }
-  ]
-
-  const supportFeatures = [
-    { icon: '📞', title: 'Technical Helpline', desc: 'Our technical support team is available to resolve any issues.' },
-    { icon: '📚', title: 'User Manual', desc: 'Step-by-step guidance for a seamless application experience.' },
-    { icon: '🎯', title: 'Strategic Profile', desc: 'Optimize your profile to increase your chances of selection.' }
-  ]
-
-  const faqItems = [
-    { question: 'How do I verify my eligibility for multiple exams?', answer: 'You can verify eligibility by using our Smart Eligibility Filter...' },
-    { question: 'How can Smart Eligibility Filter on the home page, Enter your details, and the system will show relevant job openings for you.', answer: 'The Smart Eligibility Filter helps you find jobs...' },
-    { question: 'Can I edit my application after submission?', answer: 'Applications can be edited before the final submission...' },
-    { question: 'What documents are mandatory for registration?', answer: 'Basic documents include Aadhar card, educational certificates...' }
+      applyFee: '₹500',
+    },
   ]
 
   return (
     <PublicLayout>
-      {/* Hero Section */}
-      <section 
-        className="relative min-h-screen bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${heroBg})` }}
-      >
-        <div className="absolute inset-0 bg-black/50"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-[80vh]">
-            <div className="text-white">
-              <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-                Your Career in Public Service<br />
-                Starts Here.
-              </h1>
-              <p className="text-xl mb-8 text-white/90 leading-relaxed">
-                Transparent, accessible, and reliable government job opportunities for every citizen. Start your journey today.
-              </p>
-              
-              <div className="mb-8">
-                <div className="inline-flex items-center text-white text-sm font-medium">
-                  🏛️ Official Government Employment Gateway
+      <div className="min-h-screen bg-[#f3efe8]">
+        {/* HERO */}
+
+        <section
+          className="relative bg-cover bg-center overflow-hidden h-[88vh]"
+          style={{
+            backgroundImage: `url(${heroBg})`,
+          }}
+        >
+          {/* OVERLAY */}
+
+          <div className="absolute inset-0 bg-black/55" />
+
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/20" />
+
+          {/* CONTENT */}
+
+          <div className="relative max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 pt-10 lg:pt-14 pb-10">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10 items-center h-[78vh]">
+              {/* LEFT */}
+
+              <div className="max-w-[560px]">
+                <h1 className="text-[28px] sm:text-[42px] lg:text-[52px] leading-[0.95] tracking-[-1.5px] font-black text-white">
+                  Your Career in Public Service
+                  <br />
+                  Starts Here.
+                </h1>
+
+                <p className="mt-5 text-[13px] sm:text-[15px] leading-7 text-white/80 max-w-[500px]">
+                  Transparent, accessible, and reliable
+                  government job opportunities for every
+                  qualified citizen. Find your role today.
+                </p>
+
+                <div className="mt-7 inline-flex items-center gap-2 text-orange-300 text-[12px] font-bold">
+                  <ShieldCheck className="w-4 h-4" />
+
+                  Official Government Employment Gateway
                 </div>
               </div>
-            </div>
-            
-            {/* Smart Eligibility Filter Card */}
-            <div className="lg:ml-auto">
-              <Card className="bg-orange-50 shadow-2xl max-w-xl w-full border border-orange-200">
-                <CardContent className="p-8">
-                  <div className="mb-6">
-                    <h3 className="font-bold text-xl text-gray-800 mb-2">Smart Eligibility Filter</h3>
-                    <p className="text-sm text-gray-600">Find jobs that match your profile</p>
+
+              {/* FILTER CARD */}
+
+              <div className="bg-[#f8f5f0] rounded-[6px] border border-[#d8d0c6] shadow-[0_25px_50px_rgba(0,0,0,0.35)] overflow-hidden">
+                <div className="px-6 pt-6">
+                  <h3 className="text-[20px] tracking-[-0.5px] font-black text-[#1f1d1b]">
+                    Smart Eligibility Filter
+                  </h3>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  {/* QUALIFICATION */}
+
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-[#3f3b37] mb-2">
+                      Qualification
+                    </label>
+
+                    <select
+                      value={
+                        eligibilityForm.qualification
+                      }
+                      onChange={(e) =>
+                        setEligibilityForm({
+                          ...eligibilityForm,
+                          qualification:
+                            e.target.value,
+                        })
+                      }
+                      className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
+                    >
+                      <option>
+                        Select Highest Qualification
+                      </option>
+
+                      <option>
+                        10th Pass
+                      </option>
+
+                      <option>
+                        12th Pass
+                      </option>
+
+                      <option>
+                        Graduation
+                      </option>
+
+                      <option>
+                        Post Graduation
+                      </option>
+                    </select>
                   </div>
-                  
-                  <div className="space-y-5">
+
+                  {/* GRID */}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* AGE */}
+
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Qualification
-                      </label>
-                      <select 
-                        className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-700 bg-white"
-                        value={eligibilityForm.qualification}
-                        onChange={(e) => setEligibilityForm({...eligibilityForm, qualification: e.target.value})}
-                      >
-                        <option value="">Select Highest Qualification</option>
-                        <option value="10th">10th Pass</option>
-                        <option value="12th">12th Pass</option>
-                        <option value="graduation">Graduation</option>
-                        <option value="post-graduation">Post Graduation</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-[#3f3b37] mb-2">
                         Age
                       </label>
-                      <select 
-                        className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-700 bg-white"
+
+                      <select
                         value={eligibilityForm.age}
-                        onChange={(e) => setEligibilityForm({...eligibilityForm, age: e.target.value})}
+                        onChange={(e) =>
+                          setEligibilityForm({
+                            ...eligibilityForm,
+                            age: e.target.value,
+                          })
+                        }
+                        className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
                       >
-                        <option value="">Enter Age</option>
-                        <option value="18-21">18-21 Years</option>
-                        <option value="21-25">21-25 Years</option>
-                        <option value="25-30">25-30 Years</option>
-                        <option value="30-35">30-35 Years</option>
-                        <option value="35-40">35-40 Years</option>
+                        <option>
+                          Enter Age
+                        </option>
+
+                        <option>
+                          18-25
+                        </option>
+
+                        <option>
+                          25-30
+                        </option>
                       </select>
                     </div>
-                    
+
+                    {/* CATEGORY */}
+
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category (Optional)
+                      <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-[#3f3b37] mb-2">
+                        Category
                       </label>
-                      <select 
-                        className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-700 bg-white"
-                        value={eligibilityForm.category}
-                        onChange={(e) => setEligibilityForm({...eligibilityForm, category: e.target.value})}
+
+                      <select
+                        value={
+                          eligibilityForm.category
+                        }
+                        onChange={(e) =>
+                          setEligibilityForm({
+                            ...eligibilityForm,
+                            category:
+                              e.target.value,
+                          })
+                        }
+                        className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
                       >
-                        <option value="">Select</option>
-                        <option value="general">General</option>
-                        <option value="obc">OBC</option>
-                        <option value="sc">SC</option>
-                        <option value="st">ST</option>
-                        <option value="ews">EWS</option>
+                        <option>
+                          General
+                        </option>
+
+                        <option>OBC</option>
+
+                        <option>SC</option>
+
+                        <option>ST</option>
                       </select>
                     </div>
-                    
-                    <Button 
-                      onClick={handleEligibilityCheck}
-                      className="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 text-base font-medium mt-6"
-                    >
-                      Check Eligible Jobs
-                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Notification Banner */}
-      <div className="bg-orange-600 text-white py-3">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center space-x-8">
-              <span className="bg-orange-700 px-3 py-1 rounded">IMPORTANT</span>
-              <span>Latest Govt Job Vacancies Manager from Bihar BSSC & other portals for download</span>
-              <span>Last date for Application Submission for Junior Engineer (Civil) extended to 30th October</span>
-            </div>
-          </div>
-        </div>
-      </div>
+                  {/* BUTTON */}
 
-      {/* Quick Actions */}
-      <section className="py-16 bg-orange-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="text-center hover:shadow-lg transition-shadow bg-white border border-orange-100">
-              <CardContent className="p-8">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="font-semibold text-lg mb-2 text-gray-800">New User?</h3>
-                <p className="text-gray-600 mb-4">Create your account and start your job search experience.</p>
-                <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-                  Register Now →
-                </Button>
-              </CardContent>
-            </Card>
+                  <button
+                    onClick={
+                      handleEligibilityCheck
+                    }
+                    className="w-full h-[52px] bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] text-[12px] uppercase tracking-[0.12em] font-black transition-all flex items-center justify-center gap-2"
+                  >
+                    <Search className="w-4 h-4" />
 
-            <Card className="text-center hover:shadow-lg transition-shadow bg-white border border-orange-100">
-              <CardContent className="p-8">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="font-semibold text-lg mb-2 text-gray-800">Already Applied?</h3>
-                <p className="text-gray-600 mb-4">Check your application status and track your progress.</p>
-                <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-                  Login Here →
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-shadow bg-white border border-orange-100">
-              <CardContent className="p-8">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Award className="w-8 h-8 text-purple-600" />
-                </div>
-                <h3 className="font-semibold text-lg mb-2 text-gray-800">Need Help?</h3>
-                <p className="text-gray-600 mb-4">Get help from our support team for guidance and support.</p>
-                <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-                  Get Help →
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Opportunities */}
-      <section className="py-16 bg-orange-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">Featured Opportunities</h2>
-              <p className="text-gray-600">Handpicked active recruitment notices</p>
-            </div>
-            <Button variant="outline" className="flex items-center space-x-2 text-orange-600 border-orange-600 hover:bg-orange-100">
-              <span>View All Openings</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="hover:shadow-lg transition-shadow border border-orange-200 bg-white">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <Badge className="bg-green-100 text-green-800 text-xs font-medium">
-                    BPSC
-                  </Badge>
-                  <span className="text-xs text-gray-500">45 Vacancies</span>
-                </div>
-                
-                <h3 className="font-semibold text-lg text-gray-800 mb-2">Assistant Section Officer (ASO)</h3>
-                <p className="text-gray-600 text-sm mb-4">Bihar State Secretariat</p>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
-                  <div>
-                    <span className="font-medium">Application Fee:</span>
-                    <div className="text-gray-800 font-semibold">₹750</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Last Date:</span>
-                    <div className="text-red-600 font-semibold">Nov 30, 2024</div>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-3">
-                  <Button onClick={() => navigate('/auth/verify-otp', { state: { jobId: 1 } })} className="flex-1 bg-orange-600 hover:bg-orange-700">Apply Now</Button>
-                  <Button onClick={() => navigate('/jobs/1')} variant="outline" className="border-orange-600 text-orange-600 hover:bg-orange-50">View Details</Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow border border-orange-200 bg-white">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <Badge className="bg-orange-100 text-orange-800 text-xs font-medium">
-                    BSSC
-                  </Badge>
-                  <span className="text-xs text-gray-500">120 Vacancies</span>
-                </div>
-                
-                <h3 className="font-semibold text-lg text-gray-800 mb-2">Junior Engineer (Mechanical)</h3>
-                <p className="text-gray-600 text-sm mb-4">Public Works Department</p>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
-                  <div>
-                    <span className="font-medium">Application Fee:</span>
-                    <div className="text-gray-800 font-semibold">₹500</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Last Date:</span>
-                    <div className="text-red-600 font-semibold">Dec 15, 2024</div>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-3">
-                  <Button onClick={() => navigate('/auth/verify-otp', { state: { jobId: 2 } })} className="flex-1 bg-orange-600 hover:bg-orange-700">Apply Now</Button>
-                  <Button onClick={() => navigate('/jobs/2')} variant="outline" className="border-orange-600 text-orange-600 hover:bg-orange-50">View Details</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Support & Guidance */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">SUPPORT & GUIDANCE</h2>
-            <p className="text-gray-600">Comprehensive assistance throughout your recruitment journey</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            {supportFeatures.map((feature, index) => (
-              <Card key={index} className="text-center border border-orange-100 bg-orange-50">
-                <CardContent className="p-8">
-                  <div className="text-4xl mb-4">{feature.icon}</div>
-                  <h3 className="font-semibold text-lg mb-2 text-gray-800">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.desc}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Technical Support Helpline */}
-          <Card className="bg-orange-600 text-white border-0">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Phone className="w-8 h-8" />
-                  <div>
-                    <h3 className="text-xl font-bold">Technical Support Helpline</h3>
-                    <p className="text-orange-100">Our technical support team is available to resolve any issues</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold">1800-123-4567</div>
-                  <p className="text-orange-100 text-sm">FREE HELPLINE</p>
+                    Check Eligible Jobs
+                  </button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="py-16 bg-orange-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Frequently Asked Questions</h2>
+            </div>
           </div>
+        </section>
 
-          <div className="space-y-4">
-            {faqItems.map((faq, index) => (
-              <Card key={index} className="border border-orange-200 bg-white">
-                <CardContent className="p-6">
-                  <button className="w-full text-left flex justify-between items-center">
-                    <h3 className="font-medium text-gray-800">{faq.question}</h3>
-                    <ChevronDown className="w-5 h-5 text-gray-600" />
+        {/* NEWS BAR */}
+
+        <div className="bg-[#111111] border-y border-[#2a2a2a]">
+          <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 py-2.5 text-white text-[11px] uppercase tracking-[0.08em]">
+              <span className="bg-[#e46a1d] px-3 py-1 rounded text-white font-black w-fit">
+                Latest Updates
+              </span>
+
+              <div className="flex flex-wrap items-center gap-6 text-white/80">
+                <span>
+                  Admit Card for Assistant Manager
+                  Exam 2024 now available
+                </span>
+
+                <span>
+                  Junior Engineer application extended
+                  till 30th October
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* QUICK ACTIONS */}
+
+        <section className="py-12">
+          <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {[
+                {
+                  icon: Users,
+                  color: 'text-[#4f6ef7]',
+                  bg: 'bg-[#eef2ff]',
+                  title: 'New User?',
+                  desc:
+                    'Create your profile and apply to multiple openings.',
+                  action: 'Register Now',
+                },
+
+                {
+                  icon: LogIn,
+                  color: 'text-[#19a452]',
+                  bg: 'bg-[#ecfff2]',
+                  title: 'Already Applied?',
+                  desc:
+                    'Check status, download admit cards, and results.',
+                  action: 'Login Here',
+                },
+
+                {
+                  icon: CircleHelp,
+                  color: 'text-[#9257ff]',
+                  bg: 'bg-[#f3ecff]',
+                  title: 'Need Help?',
+                  desc:
+                    'Get recruitment assistance and support resources.',
+                  action: 'Get Help',
+                },
+              ].map((card, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-[8px] border border-[#e0d7cd] p-7 text-center"
+                >
+                  <div
+                    className={`w-14 h-14 rounded-full ${card.bg} flex items-center justify-center mx-auto`}
+                  >
+                    <card.icon
+                      className={`w-7 h-7 ${card.color}`}
+                    />
+                  </div>
+
+                  <h3 className="mt-5 text-[20px] tracking-[-0.5px] font-black text-[#1f1d1b]">
+                    {card.title}
+                  </h3>
+
+                  <p className="mt-3 text-[#6d6761] text-[14px] leading-7">
+                    {card.desc}
+                  </p>
+
+                  <button className="mt-5 text-[#e46a1d] text-[12px] uppercase tracking-[0.12em] font-black">
+                    {card.action}
                   </button>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* FEATURED JOBS */}
+
+        <section className="pb-14">
+          <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+            {/* HEADER */}
+
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-[28px] font-black tracking-[-1px] text-[#1f1d1b]">
+                  Featured Opportunities
+                </h2>
+
+                <p className="mt-2 text-[#6d6761] text-[14px]">
+                  Handpicked active recruitment notices
+                </p>
+              </div>
+
+              <button className="hidden sm:flex items-center gap-2 text-[#e46a1d] text-[12px] uppercase tracking-[0.12em] font-black">
+                View All Openings
+
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* CARDS */}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {featuredJobs.map((job) => (
+                <div
+                  key={job.id}
+                  className="bg-white rounded-[8px] border border-[#e0d7cd] p-6"
+                >
+                  {/* TOP */}
+
+                  <div className="flex items-center justify-between mb-5">
+                    <span
+                      className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.12em] font-black ${
+                        job.category === 'ACTIVE'
+                          ? 'bg-[#e8fff0] text-[#13984b]'
+                          : 'bg-[#fff4df] text-[#c28500]'
+                      }`}
+                    >
+                      {job.category}
+                    </span>
+
+                    <span className="text-[11px] text-[#857d77]">
+                      Ref. No: BPSC2024
+                    </span>
+                  </div>
+
+                  {/* TITLE */}
+
+                  <h3 className="text-[22px] tracking-[-0.5px] font-black text-[#1f1d1b]">
+                    {job.title}
+                  </h3>
+
+                  <p className="mt-2 text-[#6d6761] text-[14px]">
+                    {job.department}
+                  </p>
+
+                  {/* STATS */}
+
+                  <div className="grid grid-cols-3 gap-4 mt-6">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.12em] text-[#8a8179] font-black">
+                        Vacancies
+                      </div>
+
+                      <div className="mt-2 text-[#1f1d1b] font-black text-[14px]">
+                        {job.vacancies}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.12em] text-[#8a8179] font-black">
+                        Fee
+                      </div>
+
+                      <div className="mt-2 text-[#1f1d1b] font-black text-[14px]">
+                        {job.applyFee}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.12em] text-[#8a8179] font-black">
+                        Last Date
+                      </div>
+
+                      <div className="mt-2 text-[#d85f14] font-black text-[14px]">
+                        {job.lastDate}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BUTTONS */}
+
+                  <div className="flex gap-4 mt-7">
+                    <button
+                      onClick={() =>
+                        navigate(`/jobs/${job.id}`)
+                      }
+                      className="flex-1 h-[46px] border border-[#e0d7cd] hover:bg-[#f6f1ea] text-[#1f1d1b] rounded-[4px] uppercase tracking-[0.12em] text-[11px] font-black transition-all"
+                    >
+                      View Details
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        navigate(
+                          '/auth/verify-otp',
+                          {
+                            state: {
+                              jobId: job.id,
+                            },
+                          }
+                        )
+                      }
+                      className="flex-1 h-[46px] bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] uppercase tracking-[0.12em] text-[11px] font-black transition-all"
+                    >
+                      Apply Now
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* HELPLINE */}
+
+        <section className="pb-14">
+          <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-[#e46a1d] rounded-[8px] px-7 py-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 text-white">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center">
+                  <Phone className="w-7 h-7" />
+                </div>
+
+                <div>
+                  <p className="uppercase tracking-[0.12em] text-[10px] font-black text-orange-100">
+                    Technical Support Helpline
+                  </p>
+
+                  <p className="mt-2 text-orange-100 text-[14px]">
+                    Monday to Friday, 9:00 AM to 6:00 PM
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <p className="uppercase tracking-[0.12em] text-[10px] font-black text-orange-100">
+                  Toll Free Number
+                </p>
+
+                <h3 className="mt-2 text-[34px] tracking-[-1px] font-black">
+                  1800-123-4567
+                </h3>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+
+        <section className="pb-20">
+          <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-white rounded-[8px] border border-[#e0d7cd] overflow-hidden">
+              {/* HEADER */}
+
+              <div className="px-7 py-6 border-b border-[#ebe2d8]">
+                <h2 className="text-[26px] tracking-[-1px] font-black text-[#1f1d1b]">
+                  Frequently Asked Questions
+                </h2>
+              </div>
+
+              {/* ITEMS */}
+
+              {[
+                'How do I verify my eligibility for multiple posts?',
+                'Can I edit my application after submission?',
+                'What documents are mandatory for registration?',
+              ].map((item, index) => (
+                <button
+                  key={index}
+                  className="w-full px-7 py-5 border-b border-[#ebe2d8] last:border-0 flex items-center justify-between hover:bg-[#faf7f2] transition-all text-left"
+                >
+                  <span className="text-[#2a2724] text-[14px]">
+                    {item}
+                  </span>
+
+                  <ChevronDown className="w-5 h-5 text-[#8a8179]" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
     </PublicLayout>
   )
 }

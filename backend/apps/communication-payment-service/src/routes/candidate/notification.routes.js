@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const notificationController = require("../../controllers/candidate/notification.controller");
-const authenticate = require("../../../../../packages/common/middlewares/authenticate");
-const { authorize } = require("../../../../../packages/common/middlewares/authorize");
+const authenticate = require("../../shared/middlewares/authenticate");
+const { authorize } = require("../../shared/middlewares/authorize");
 
 router.use(authenticate, authorize("candidate"));
 

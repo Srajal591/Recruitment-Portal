@@ -1,8 +1,8 @@
 const { StatusCodes } = require("http-status-codes");
-const supportService = require("../../../../../src/services/support.service");
-const { ApiResponse } = require("../../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../../packages/common/utils/asyncHandler");
-const { saveAuditLog } = require("../../../../../packages/common/middlewares/auditLog");
+const supportService = require("../../shared/services/support.service");
+const { ApiResponse } = require("../../shared/utils/ApiResponse");
+const asyncHandler = require("../../shared/utils/asyncHandler");
+const { saveAuditLog } = require("../../shared/middlewares/auditLog");
 
 /**
  * @swagger
@@ -151,7 +151,7 @@ const updateTicket = asyncHandler(async (req, res) => {
  *       200: { description: Reply added }
  */
 const addReply = asyncHandler(async (req, res) => {
-  const Employee = require("../../../../../packages/common/models/Employee");
+  const Employee = require("../../shared/models/Employee");
   const employee = await Employee.findById(req.user.id).select("fullName");
   const ticket = await supportService.addReply(
     req.params.id,
@@ -177,7 +177,7 @@ const addReply = asyncHandler(async (req, res) => {
  *       200: { description: Support stats }
  */
 const getStats = asyncHandler(async (req, res) => {
-  const SupportTicket = require("../../../../../packages/common/models/SupportTicket");
+  const SupportTicket = require("../../shared/models/SupportTicket");
 
   const [statusStats, priorityStats, categoryStats, recentTickets] =
     await Promise.all([

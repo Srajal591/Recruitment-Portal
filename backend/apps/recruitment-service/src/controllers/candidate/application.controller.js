@@ -1,25 +1,25 @@
 const { StatusCodes } = require("http-status-codes");
-const Application = require("../../../../../packages/common/models/Application");
-const Job = require("../../../../../packages/common/models/Job");
-const User = require("../../../../../packages/common/models/User");
-const ApiError = require("../../../../../packages/common/utils/ApiError");
-const { ApiResponse, paginationMeta } = require("../../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../../packages/common/utils/asyncHandler");
+const Application = require("../../shared/models/Application");
+const Job = require("../../shared/models/Job");
+const User = require("../../shared/models/User");
+const ApiError = require("../../shared/utils/ApiError");
+const { ApiResponse, paginationMeta } = require("../../shared/utils/ApiResponse");
+const asyncHandler = require("../../shared/utils/asyncHandler");
 const {
   emitToAdmins,
   emitToCandidate,
   SOCKET_EVENTS,
-} = require("../../../../../packages/common/socket/index");
+} = require("../../shared/socket/index");
 const {
   generateApplicationId,
   calculateFee,
   getPaginationParams,
-} = require("../../../../../packages/common/utils/helpers");
+} = require("../../shared/utils/helpers");
 const {
   uploadToCloudinary,
   validateFileSize,
   deleteFromCloudinary,
-} = require("../../../../../src/services/upload.service");
+} = require("../../shared/services/upload.service");
 
 // ── Helpers ───────────────────────────────────────────────────
 

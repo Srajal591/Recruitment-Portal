@@ -1,13 +1,13 @@
 const { StatusCodes } = require("http-status-codes");
-const Project = require("../../../../../packages/common/models/Project");
-const Job = require("../../../../../packages/common/models/Job");
-const Application = require("../../../../../packages/common/models/Application");
-const ApiError = require("../../../../../packages/common/utils/ApiError");
-const { ApiResponse, paginationMeta } = require("../../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../../packages/common/utils/asyncHandler");
-const { emitToAdmins, SOCKET_EVENTS } = require("../../../../../packages/common/socket/index");
-const { getPaginationParams } = require("../../../../../packages/common/utils/helpers");
-const { saveAuditLog } = require("../../../../../packages/common/middlewares/auditLog");
+const Project = require("../../shared/models/Project");
+const Job = require("../../shared/models/Job");
+const Application = require("../../shared/models/Application");
+const ApiError = require("../../shared/utils/ApiError");
+const { ApiResponse, paginationMeta } = require("../../shared/utils/ApiResponse");
+const asyncHandler = require("../../shared/utils/asyncHandler");
+const { emitToAdmins, SOCKET_EVENTS } = require("../../shared/socket/index");
+const { getPaginationParams } = require("../../shared/utils/helpers");
+const { saveAuditLog } = require("../../shared/middlewares/auditLog");
 
 /**
  * @desc    Get all projects with stats

@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const paymentController = require("../../controllers/candidate/payment.controller");
-const authenticate = require("../../../../../packages/common/middlewares/authenticate");
-const { authorize } = require("../../../../../packages/common/middlewares/authorize");
-const validate = require("../../../../../packages/common/middlewares/validate");
+const authenticate = require("../../shared/middlewares/authenticate");
+const { authorize } = require("../../shared/middlewares/authorize");
+const validate = require("../../shared/middlewares/validate");
 const {
   initiatePaymentSchema,
   verifyPaymentSchema,
-} = require("../../../../../packages/common/validations/payment.validation");
+} = require("../../shared/validations/payment.validation");
 
 router.use(authenticate, authorize("candidate"));
 

@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const employeeController = require("../controllers/employee.controller");
-const authenticate = require("../../../../packages/common/middlewares/authenticate");
-const { authorize } = require("../../../../packages/common/middlewares/authorize");
-const { auditLog } = require("../../../../packages/common/middlewares/auditLog");
-const validate = require("../../../../packages/common/middlewares/validate");
+const authenticate = require("../shared/middlewares/authenticate");
+const { authorize } = require("../shared/middlewares/authorize");
+const { auditLog } = require("../shared/middlewares/auditLog");
+const validate = require("../shared/middlewares/validate");
 const {
   createEmployeeSchema,
   updateEmployeeSchema,
-} = require("../../../../packages/common/validations/employee.validation");
+} = require("../shared/validations/employee.validation");
 
 router.use(authenticate, authorize("admin"));
 

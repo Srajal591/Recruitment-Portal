@@ -1,7 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
-const notificationService = require("../../../../../src/services/notification.service");
-const { ApiResponse } = require("../../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../../packages/common/utils/asyncHandler");
+const notificationService = require("../../shared/services/notification.service");
+const { ApiResponse } = require("../../shared/utils/ApiResponse");
+const asyncHandler = require("../../shared/utils/asyncHandler");
 
 /**
  * @swagger

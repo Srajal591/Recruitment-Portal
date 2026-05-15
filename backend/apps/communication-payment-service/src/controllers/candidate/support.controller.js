@@ -1,7 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
-const supportService = require("../../../../../src/services/support.service");
-const { ApiResponse } = require("../../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../../packages/common/utils/asyncHandler");
+const supportService = require("../../shared/services/support.service");
+const { ApiResponse } = require("../../shared/utils/ApiResponse");
+const asyncHandler = require("../../shared/utils/asyncHandler");
 
 /**
  * @swagger
@@ -70,7 +70,7 @@ const getMyTickets = asyncHandler(async (req, res) => {
  *       201: { description: Ticket created }
  */
 const createTicket = asyncHandler(async (req, res) => {
-  const User = require("../../../../../packages/common/models/User");
+  const User = require("../../shared/models/User");
   const user = await User.findById(req.user.id).select("email");
   const ticket = await supportService.createTicket(
     req.body,
@@ -108,7 +108,7 @@ const getTicket = asyncHandler(async (req, res) => {
   const ticket = await supportService.getTicketById(req.params.id);
   // Ensure candidate can only see their own ticket
   if (ticket.raisedBy._id.toString() !== req.user.id) {
-    const ApiError = require("../../../../../packages/common/utils/ApiError");
+    const ApiError = require("../../shared/utils/ApiError");
     throw new ApiError(403, "Access denied");
   }
   res
@@ -144,7 +144,7 @@ const getTicket = asyncHandler(async (req, res) => {
  *       200: { description: Reply added }
  */
 const addReply = asyncHandler(async (req, res) => {
-  const User = require("../../../../../packages/common/models/User");
+  const User = require("../../shared/models/User");
   const user = await User.findById(req.user.id).select("fullName");
   const ticket = await supportService.addReply(
     req.params.id,

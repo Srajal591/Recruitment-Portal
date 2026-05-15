@@ -1,10 +1,10 @@
 const { StatusCodes } = require("http-status-codes");
-const Application = require("../../../../../packages/common/models/Application");
-const Job = require("../../../../../packages/common/models/Job");
-const Project = require("../../../../../packages/common/models/Project");
-const User = require("../../../../../packages/common/models/User");
-const { ApiResponse } = require("../../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../../packages/common/utils/asyncHandler");
+const Application = require("../../shared/models/Application");
+const Job = require("../../shared/models/Job");
+const Project = require("../../shared/models/Project");
+const User = require("../../shared/models/User");
+const { ApiResponse } = require("../../shared/utils/ApiResponse");
+const asyncHandler = require("../../shared/utils/asyncHandler");
 
 /**
  * @swagger

@@ -1,12 +1,12 @@
 const { StatusCodes } = require("http-status-codes");
-const Employee = require("../../../../packages/common/models/Employee");
-const Role = require("../../../../packages/common/models/Role");
-const ApiError = require("../../../../packages/common/utils/ApiError");
-const { ApiResponse, paginationMeta } = require("../../../../packages/common/utils/ApiResponse");
-const asyncHandler = require("../../../../packages/common/utils/asyncHandler");
-const { emitToAdmins, SOCKET_EVENTS } = require("../../../../packages/common/socket/index");
-const { getPaginationParams } = require("../../../../packages/common/utils/helpers");
-const { saveAuditLog } = require("../../../../packages/common/middlewares/auditLog");
+const Employee = require("../shared/models/Employee");
+const Role = require("../shared/models/Role");
+const ApiError = require("../shared/utils/ApiError");
+const { ApiResponse, paginationMeta } = require("../shared/utils/ApiResponse");
+const asyncHandler = require("../shared/utils/asyncHandler");
+const { emitToAdmins, SOCKET_EVENTS } = require("../shared/socket/index");
+const { getPaginationParams } = require("../shared/utils/helpers");
+const { saveAuditLog } = require("../shared/middlewares/auditLog");
 
 /**
  * @swagger

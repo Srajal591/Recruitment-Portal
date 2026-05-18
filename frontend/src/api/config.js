@@ -1,8 +1,6 @@
-const DEFAULT_BASE_URL = 'http://localhost:5000/api/v1'
-
-export const rawBaseUrl = import.meta.env.VITE_BASE_URL || DEFAULT_BASE_URL
-
-export const API_BASE_URL = rawBaseUrl.replace(/\/$/, '').replace(/\/api\/v1$/, '/api')
+// All API calls go to /api/... — Vite's dev proxy (vite.config.js) routes each
+// prefix to the correct microservice, so no CORS issues and no gateway path-stripping.
+export const API_BASE_URL = '/api'
 
 export const STORAGE_KEYS = {
   accessToken: 'rp_access_token',

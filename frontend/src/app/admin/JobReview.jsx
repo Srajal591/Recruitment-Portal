@@ -15,6 +15,34 @@ import { adminService } from '../../services/admin.service'
 
 const STORAGE_KEY = 'job_draft'
 
+// Build the update payload — strips create-only fields and cleans empty values
+// so Zod doesn't reject them on the update call
+const buildUpdatePayload = (draft) => {
+  const {
+    projectId: _pid, title: _t, postCode: _pc, department: _d,
+    ...rest
+  } = draft
+
+  // Remove keys with undefined, null, or empty string values at top level
+  const clean = {}
+  for (const [key, value] of Object.entries(rest)) {
+    if (value === undefined || value === null || value === '') continue
+    // For nested objects, only include if they have at least one meaningful value
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      const nested = {}
+      for (const [k, v] of Object.entries(value)) {
+        if (v !== undefined && v !== null && v !== '') nested[k] = v
+      }
+      if (Object.keys(nested).length > 0) clean[key] = nested
+    } else if (Array.isArray(value)) {
+      if (value.length > 0) clean[key] = value
+    } else {
+      clean[key] = value
+    }
+  }
+  return clean
+}
+
 const JobReview = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -29,6 +57,13 @@ const JobReview = () => {
   })()
 
   const missingRequired = !draft.title || !draft.postCode || !draft.department || !draft.projectId
+
+  const missingFields = [
+    !draft.projectId && 'Project (go back to Jobs and select a project)',
+    !draft.title && 'Job Title',
+    !draft.postCode && 'Post Code',
+    !draft.department && 'Department',
+  ].filter(Boolean)
 
   // Step 1: Create job as draft
   const { mutateAsync: createJob } = useMutation({
@@ -52,19 +87,24 @@ const JobReview = () => {
     }
     try {
       setIsPublishing(true)
-      // Create job as draft
-      const createRes = await createJob({
+
+      // Build the full payload for create — only required fields
+      const createPayload = {
         projectId: draft.projectId,
         title: draft.title,
         postCode: draft.postCode,
         department: draft.department,
-      })
-      const jobId = createRes?.job?._id
-      if (!jobId) throw new Error('Job creation failed')
+      }
 
-      // Update with all remaining fields
-      const { projectId: _pid, title: _t, postCode: _pc, department: _d, ...rest } = draft
-      await updateJob({ id: jobId, data: rest })
+      const createRes = await createJob(createPayload)
+      const jobId = createRes?.job?._id
+      if (!jobId) throw new Error('Job creation failed — no job ID returned')
+
+      // Build update payload — everything except the 4 create fields
+      const updatePayload = buildUpdatePayload(draft)
+      if (Object.keys(updatePayload).length > 0) {
+        await updateJob({ id: jobId, data: updatePayload })
+      }
 
       toast.success('Job saved as draft')
       sessionStorage.removeItem(STORAGE_KEY)
@@ -92,21 +132,23 @@ const JobReview = () => {
     }
     try {
       setIsPublishing(true)
-      // Create job as draft
-      const createRes = await createJob({
+
+      const createPayload = {
         projectId: draft.projectId,
         title: draft.title,
         postCode: draft.postCode,
         department: draft.department,
-      })
+      }
+
+      const createRes = await createJob(createPayload)
       const jobId = createRes?.job?._id
-      if (!jobId) throw new Error('Job creation failed')
+      if (!jobId) throw new Error('Job creation failed — no job ID returned')
 
-      // Update with all remaining fields
-      const { projectId: _pid, title: _t, postCode: _pc, department: _d, ...rest } = draft
-      await updateJob({ id: jobId, data: rest })
+      const updatePayload = buildUpdatePayload(draft)
+      if (Object.keys(updatePayload).length > 0) {
+        await updateJob({ id: jobId, data: updatePayload })
+      }
 
-      // Publish
       await publishJob(jobId)
 
       toast.success('Job published successfully!')
@@ -144,9 +186,15 @@ const JobReview = () => {
           <JobStepProgress currentStep={6} projectId={projectId} clickable />
 
           {missingRequired && (
-            <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
-              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-              <p className="text-sm">Basic info (title, post code, department) is missing. Please go back to Step 1.</p>
+            <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Missing required fields:</p>
+                <ul className="text-sm mt-1 list-disc list-inside">
+                  {missingFields.map(f => <li key={f}>{f}</li>)}
+                </ul>
+                <p className="text-sm mt-2">Go back to Step 1 to complete these fields.</p>
+              </div>
             </div>
           )}
 

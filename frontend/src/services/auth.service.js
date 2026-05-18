@@ -62,4 +62,9 @@ export const authService = {
       localStorage.removeItem(STORAGE_KEYS.user)
     }
   },
+
+  async forgotPassword(email) {
+    const response = await apiClient.post('/auth/forgot-password', { email })
+    return unwrapData(response)
+  },
 }

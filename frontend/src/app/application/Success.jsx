@@ -1,30 +1,22 @@
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { CheckCircle, Download, Calendar, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import { CheckCircle, Download, Calendar, FileText, CreditCard } from 'lucide-react'
 
 const Success = () => {
   const navigate = useNavigate()
+  const location = useLocation()
 
-  const applicationDetails = {
-    applicationId: 'BR-2024-8892',
-    transactionId: 'TXN-789456123',
-    amount: 1275,
-    paymentMethod: 'Credit Card',
-    timestamp: '24 Oct 2024, 2:15 PM',
-    posts: [
-      'Assistant Section Officer',
-      'Junior Engineer (Civil)'
-    ]
-  }
-
-  const handleGoToDashboard = () => {
-    navigate('/candidate/dashboard')
-  }
+  const applicationId = location.state?.applicationId || '—'
+  const transactionId = location.state?.transactionId || '—'
+  const amount = location.state?.amount || 0
+  const selectedPosts = location.state?.selectedPosts || []
+  const submittedAt = location.state?.submittedAt
+    ? new Date(location.state.submittedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="min-h-screen bg-orange-50">
-      {/* Header */}
       <header className="bg-white border-b border-orange-200 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -40,7 +32,7 @@ const Success = () => {
       </header>
 
       <div className="max-w-4xl mx-auto p-6">
-        {/* Success Message */}
+        {/* Success Banner */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-12 h-12 text-green-600" />
@@ -61,12 +53,14 @@ const Success = () => {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-600">Application ID</label>
-                  <div className="text-lg font-semibold text-orange-600">{applicationDetails.applicationId}</div>
+                  <div className="text-lg font-semibold text-orange-600">{applicationId}</div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Transaction ID</label>
-                  <div className="text-lg font-mono text-gray-800">{applicationDetails.transactionId}</div>
-                </div>
+                {transactionId !== '—' && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Transaction ID</label>
+                    <div className="text-lg font-mono text-gray-800">{transactionId}</div>
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-medium text-gray-600">Payment Status</label>
                   <div className="flex items-center space-x-2">
@@ -75,79 +69,79 @@ const Success = () => {
                   </div>
                 </div>
               </div>
-              
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Amount Paid</label>
-                  <div className="text-lg font-semibold text-gray-800">₹{applicationDetails.amount}</div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Payment Method</label>
-                  <div className="text-lg text-gray-800">{applicationDetails.paymentMethod}</div>
-                </div>
+                {amount > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Amount Paid</label>
+                    <div className="text-lg font-semibold text-gray-800">₹{amount.toLocaleString('en-IN')}</div>
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-medium text-gray-600">Submitted On</label>
-                  <div className="text-lg text-gray-800">{applicationDetails.timestamp}</div>
+                  <div className="text-lg text-gray-800">{submittedAt}</div>
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-gray-200 pt-6">
-              <label className="text-sm font-medium text-gray-600 block mb-2">Applied Posts</label>
-              <div className="space-y-2">
-                {applicationDetails.posts.map((post, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
-                    <span className="text-gray-800">{post}</span>
-                  </div>
-                ))}
+            {selectedPosts.length > 0 && (
+              <div className="border-t border-gray-200 pt-6">
+                <label className="text-sm font-medium text-gray-600 block mb-2">Applied Posts</label>
+                <div className="space-y-2">
+                  {selectedPosts.map((post, i) => (
+                    <div key={i} className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-orange-600 rounded-full" />
+                      <span className="text-gray-800">{post.title} — {post.department}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <Download className="w-8 h-8 text-orange-600 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-800 mb-2">Download Receipt</h3>
-              <p className="text-sm text-gray-600 mb-4">Get your payment receipt and application acknowledgment</p>
-              <Button className="w-full bg-orange-600 hover:bg-orange-700">
-                Download PDF
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <Calendar className="w-8 h-8 text-blue-600 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-800 mb-2">Exam Schedule</h3>
-              <p className="text-sm text-gray-600 mb-4">Check important dates and exam schedule</p>
-              <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50">
-                View Schedule
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-6 text-center">
               <FileText className="w-8 h-8 text-green-600 mx-auto mb-3" />
               <h3 className="font-semibold text-gray-800 mb-2">Track Application</h3>
               <p className="text-sm text-gray-600 mb-4">Monitor your application status and updates</p>
-              <Button variant="outline" className="w-full border-green-200 text-green-600 hover:bg-green-50">
-                Track Status
+              <Button variant="outline" className="w-full border-green-200 text-green-600 hover:bg-green-50"
+                onClick={() => navigate('/candidate/applications')}>
+                View Applications
+              </Button>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6 text-center">
+              <Calendar className="w-8 h-8 text-blue-600 mx-auto mb-3" />
+              <h3 className="font-semibold text-gray-800 mb-2">Notifications</h3>
+              <p className="text-sm text-gray-600 mb-4">Stay updated with exam dates and results</p>
+              <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+                onClick={() => navigate('/candidate/notifications')}>
+                View Notifications
+              </Button>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6 text-center">
+              <Download className="w-8 h-8 text-orange-600 mx-auto mb-3" />
+              <h3 className="font-semibold text-gray-800 mb-2">Dashboard</h3>
+              <p className="text-sm text-gray-600 mb-4">Go to your candidate dashboard</p>
+              <Button className="w-full bg-orange-600 hover:bg-orange-700"
+                onClick={() => navigate('/candidate/dashboard')}>
+                Go to Dashboard
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Important Information */}
+        {/* Important Info */}
         <Card className="shadow-sm bg-blue-50 border-blue-200 mb-6">
           <CardContent className="p-6">
             <h3 className="font-semibold text-blue-800 mb-3">Important Information</h3>
             <ul className="text-sm text-blue-700 space-y-2">
-              <li>• Keep your Application ID ({applicationDetails.applicationId}) safe for future reference</li>
+              <li>• Keep your Application ID <strong>{applicationId}</strong> safe for future reference</li>
               <li>• Admit cards will be available 15 days before the examination date</li>
               <li>• Check your registered email and SMS for important updates</li>
               <li>• Document verification will be conducted after the written examination</li>
@@ -155,16 +149,6 @@ const Success = () => {
             </ul>
           </CardContent>
         </Card>
-
-        {/* Navigation */}
-        <div className="text-center">
-          <Button 
-            onClick={handleGoToDashboard}
-            className="px-8 py-3 bg-orange-600 hover:bg-orange-700 text-lg"
-          >
-            Go to Dashboard
-          </Button>
-        </div>
       </div>
     </div>
   )

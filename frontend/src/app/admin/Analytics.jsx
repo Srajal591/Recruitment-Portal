@@ -1,184 +1,67 @@
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
+import { adminService } from '../../services/admin.service'
 
 const Analytics = () => {
-  const [dateRange, setDateRange] = useState('Last 30 Days Oct 1 - Oct 30')
-  const [selectedCategory, setSelectedCategory] = useState('Senior Administrative Officer')
+  const { data: overviewData } = useQuery({
+    queryKey: ['admin-analytics-overview'],
+    queryFn: adminService.getAnalyticsOverview,
+  })
+  const { data: funnelData } = useQuery({
+    queryKey: ['admin-analytics-funnel'],
+    queryFn: adminService.getAnalyticsFunnel,
+  })
+  const { data: topJobsData } = useQuery({
+    queryKey: ['admin-analytics-top-jobs'],
+    queryFn: () => adminService.getTopJobs({ limit: 5 }),
+  })
+  const { data: supportData } = useQuery({
+    queryKey: ['admin-support-stats'],
+    queryFn: adminService.getSupportStats,
+  })
+
+  const overview = overviewData?.overview || {}
+  const appsByStatus = overviewData?.applicationsByStatus || []
+  const funnel = funnelData?.funnel || {}
+  const topJobs = topJobsData?.topJobs || []
+  const support = supportData || {}
+
+  const countByStatus = (s) => appsByStatus.find(x => x._id === s)?.count || 0
 
   const mainStats = [
-    {
-      title: 'TOTAL APPLICATIONS',
-      value: '128.4k',
-      change: '+12%',
-      trend: 'up',
-      color: 'border-l-orange-500'
-    },
-    {
-      title: 'COMPLETED APPLICATIONS',
-      value: '94.2k',
-      change: '+73%',
-      trend: 'up',
-      color: 'border-l-green-500'
-    },
-    {
-      title: 'PENDING APPLICATIONS',
-      value: '31.2k',
-      status: 'Processing...',
-      color: 'border-l-yellow-500'
-    },
-    {
-      title: 'PAYMENT SUCCESS RATE',
-      value: '98.4%',
-      change: 'High',
-      trend: 'high',
-      color: 'border-l-blue-500'
-    }
+    { title: 'TOTAL APPLICATIONS', value: (overview.totalApplications || 0).toLocaleString('en-IN'), color: 'border-l-orange-500' },
+    { title: 'VERIFIED', value: countByStatus('verified').toLocaleString('en-IN'), color: 'border-l-green-500' },
+    { title: 'UNDER REVIEW', value: countByStatus('under_review').toLocaleString('en-IN'), color: 'border-l-yellow-500' },
+    { title: 'TOTAL CANDIDATES', value: (overview.totalCandidates || 0).toLocaleString('en-IN'), color: 'border-l-blue-500' },
   ]
 
-  const secondaryStats = [
-    {
-      title: 'DROPPED',
-      value: '3,102',
-      icon: '❌',
-      color: 'text-red-600'
-    },
-    {
-      title: 'PAYMENT FAILURES',
-      value: '842',
-      icon: '❌',
-      color: 'text-red-600'
-    },
-    {
-      title: 'TICKETS RAISED',
-      value: '1,240',
-      icon: '🎫',
-      color: 'text-yellow-600'
-    },
-    {
-      title: 'TICKETS RESOLVED',
-      value: '1,195',
-      icon: '✅',
-      color: 'text-green-600'
-    }
+  const funnelStages = [
+    ['STARTED', funnel.started],
+    ['PERSONAL', funnel.personalDetailsCompleted],
+    ['EDUCATION', funnel.educationCompleted],
+    ['DOCUMENTS', funnel.documentsUploaded],
+    ['PAID', funnel.paymentCompleted],
+    ['SUBMITTED', funnel.submitted],
   ]
 
-  const conversionFunnel = [
-    { stage: 'Started', value: '156k', percentage: '100%', color: 'bg-orange-500' },
-    { stage: 'Filled', value: '142k', percentage: '91%', color: 'bg-orange-500' },
-    { stage: 'Uploaded', value: '138k', percentage: '97%', color: 'bg-orange-500' },
-    { stage: 'Paid', value: '129k', percentage: '93%', color: 'bg-orange-500' },
-    { stage: 'Submitted', value: '128.4k', percentage: '99%', color: 'bg-yellow-600' }
-  ]
-
-  const topJobs = [
-    {
-      title: 'Senior Administrative Officer (Group A)',
-      applicants: '42,105 applicants',
-      progress: 85
-    },
-    {
-      title: 'Information Technology Manager',
-      applicants: '28,940 applicants',
-      progress: 70
-    },
-    {
-      title: 'Public Relations Specialist',
-      applicants: '18,211 applicants',
-      progress: 60
-    },
-    {
-      title: 'General Assistant (Finance)',
-      applicants: '12,400 applicants',
-      progress: 45
-    },
-    {
-      title: 'Statistical Research Officer',
-      applicants: '9,820 applicants',
-      progress: 35
-    }
-  ]
-
-  const supportStats = [
-    {
-      title: 'Open Tickets',
-      value: '45',
-      subtitle: 'Require immediate attention',
-      icon: '🎫'
-    },
-    {
-      title: 'Resolved Today',
-      value: '1,195',
-      subtitle: 'Solved within 24 hours',
-      icon: '✅'
-    },
-    {
-      title: 'Pending Response',
-      value: '128',
-      subtitle: 'Awaiting user action',
-      icon: '⏳'
-    }
-  ]
+  const maxFunnel = Math.max(...funnelStages.map(([, v]) => v || 0), 1)
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Analytics">
       <div className="space-y-6 bg-orange-50 min-h-screen p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Analytics Overview</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <select 
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            >
-              <option>Last 30 Days Oct 1 - Oct 30</option>
-              <option>Last 7 Days</option>
-              <option>Last 90 Days</option>
-            </select>
-            <select 
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            >
-              <option>Senior Administrative Officer</option>
-              <option>IT Manager</option>
-              <option>Finance Officer</option>
-            </select>
-            <Button className="bg-orange-600 hover:bg-orange-700">
-              Filter
-            </Button>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Analytics Overview</h1>
+          <p className="text-gray-600">Live recruitment metrics from backend services.</p>
         </div>
 
         {/* Main Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {mainStats.map((stat, index) => (
-            <Card key={index} className={`border-l-4 ${stat.color} bg-white`}>
+          {mainStats.map((stat) => (
+            <Card key={stat.title} className={`border-l-4 ${stat.color} bg-white`}>
               <div className="p-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-                    {stat.status && (
-                      <p className="text-xs text-gray-500 mt-1">{stat.status}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    {stat.change && (
-                      <span className={`text-xs font-medium ${
-                        stat.trend === 'up' ? 'text-green-600' : 
-                        stat.trend === 'high' ? 'text-orange-600' : 'text-gray-600'
-                      }`}>
-                        {stat.change}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <p className="text-xs font-medium text-gray-500 mb-1">{stat.title}</p>
+                <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
               </div>
             </Card>
           ))}
@@ -186,12 +69,16 @@ const Analytics = () => {
 
         {/* Secondary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {secondaryStats.map((stat, index) => (
-            <Card key={index} className="bg-white">
+          {[
+            { title: 'ACTIVE JOBS', value: overview.totalJobs || 0, color: 'text-orange-600' },
+            { title: 'REJECTED', value: countByStatus('rejected'), color: 'text-red-600' },
+            { title: 'SUPPORT OPEN', value: support.open || 0, color: 'text-yellow-600' },
+            { title: 'SUPPORT RESOLVED', value: support.resolved || 0, color: 'text-green-600' },
+          ].map((s) => (
+            <Card key={s.title} className="bg-white">
               <div className="p-6 text-center">
-                <div className="text-2xl mb-2">{stat.icon}</div>
-                <div className="text-xs font-medium text-gray-500 mb-1">{stat.title}</div>
-                <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                <div className="text-xs font-medium text-gray-500 mb-1">{s.title}</div>
+                <div className={`text-2xl font-bold ${s.color}`}>{Number(s.value).toLocaleString('en-IN')}</div>
               </div>
             </Card>
           ))}
@@ -200,79 +87,44 @@ const Analytics = () => {
         {/* Conversion Funnel */}
         <Card className="bg-white">
           <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">Application Conversion Funnel</h3>
-              <Button variant="ghost" className="text-orange-600">
-                Detailed View →
-              </Button>
-            </div>
-            
-            <div className="space-y-4">
-              {conversionFunnel.map((stage, index) => (
-                <div key={index} className="flex items-center space-x-4">
-                  <div className="w-20 text-sm font-medium text-gray-600">
-                    STAGE {index + 1}
+            <h3 className="text-lg font-semibold text-gray-800 mb-6">Application Conversion Funnel</h3>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              {funnelStages.map(([label, value], i) => {
+                const pct = maxFunnel > 0 ? Math.round(((value || 0) / maxFunnel) * 100) : 0
+                return (
+                  <div key={label} className={`rounded-lg p-4 text-center ${i === funnelStages.length - 1 ? 'bg-gray-900 text-white' : 'bg-orange-50 text-gray-800'}`}>
+                    <div className="font-bold text-lg">{(value || 0).toLocaleString('en-IN')}</div>
+                    <div className="text-[10px] font-bold tracking-wide mt-1">{label}</div>
+                    <div className="text-[10px] mt-1 opacity-70">{pct}%</div>
                   </div>
-                  <div className="w-24 text-sm font-medium text-gray-800">
-                    {stage.stage}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4">
-                      <div className={`h-12 ${stage.color} rounded flex items-center justify-center text-white font-bold min-w-[120px]`}>
-                        {stage.value}
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm">
-                        <span className="text-green-600 font-medium">{stage.percentage}</span>
-                        <span className="text-gray-500">of Previous</span>
-                        {index > 0 && (
-                          <span className="text-red-500 text-xs">
-                            ↓ -{Math.floor(Math.random() * 10 + 1)}.{Math.floor(Math.random() * 9)}K Drop-off ({Math.floor(Math.random() * 5 + 1)}%)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 grid grid-cols-3 gap-8 text-center">
-              <div>
-                <div className="text-2xl font-bold text-gray-800">156.0K</div>
-                <div className="text-sm text-gray-500">TOTAL INFLOW</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-orange-600">128.4K</div>
-                <div className="text-sm text-gray-500">TOTAL CONVERTED</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-red-600">27.6K</div>
-                <div className="text-sm text-gray-500">TOTAL LEAKAGE</div>
-              </div>
+                )
+              })}
             </div>
           </div>
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Jobs by Applicants */}
+          {/* Top Jobs */}
           <Card className="bg-white">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-6">Top Jobs by Applicants</h3>
+              {topJobs.length === 0 && <p className="text-sm text-gray-500">No data yet.</p>}
               <div className="space-y-4">
-                {topJobs.map((job, index) => (
-                  <div key={index}>
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="font-medium text-sm text-gray-800">{job.title}</div>
-                      <div className="text-sm font-bold text-gray-800">{job.applicants}</div>
+                {topJobs.map((job, i) => {
+                  const maxApps = topJobs[0]?.totalApplications || 1
+                  const pct = Math.round(((job.totalApplications || 0) / maxApps) * 100)
+                  return (
+                    <div key={job._id || i}>
+                      <div className="flex justify-between items-center mb-1">
+                        <div className="font-medium text-sm text-gray-800 truncate max-w-[200px]">{job.jobTitle || job.title}</div>
+                        <div className="text-sm font-bold text-gray-800 ml-2">{(job.totalApplications || 0).toLocaleString('en-IN')}</div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-orange-500 h-2 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-orange-500 h-2 rounded-full" 
-                        style={{ width: `${job.progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </Card>
@@ -281,19 +133,23 @@ const Analytics = () => {
           <Card className="bg-white">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-6">Support Snapshot</h3>
-              <div className="space-y-4">
-                {supportStats.map((stat, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-2xl">{stat.icon}</div>
-                      <div>
-                        <div className="font-semibold text-gray-800">{stat.title}</div>
-                        <div className="text-sm text-gray-600">{stat.subtitle}</div>
-                      </div>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-800">{stat.value}</div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">{support.open || 0}</div>
+                  <div className="text-xs text-gray-500 mt-1">OPEN</div>
+                </div>
+                <div className="p-4 bg-yellow-50 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">{support.inProgress || support.pending || 0}</div>
+                  <div className="text-xs text-gray-500 mt-1">IN PROGRESS</div>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{support.resolved || 0}</div>
+                  <div className="text-xs text-gray-500 mt-1">RESOLVED</div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+                <div className="text-sm text-gray-500">Total Tickets</div>
+                <div className="text-xl font-bold text-gray-800">{support.total || 0}</div>
               </div>
             </div>
           </Card>

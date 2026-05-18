@@ -11,7 +11,10 @@ const STORAGE_KEY = 'job_draft'
 const JobBasicInfo = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const projectId = searchParams.get('project')
+  // Use URL param first, fall back to whatever was already saved in the draft
+  const urlProjectId = searchParams.get('project')
+  const savedDraft = (() => { try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}') } catch { return {} } })()
+  const projectId = urlProjectId || savedDraft.projectId || null
 
   const [formData, setFormData] = useState(() => {
     try {

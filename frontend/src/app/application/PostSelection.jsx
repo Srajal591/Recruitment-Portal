@@ -1,64 +1,81 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { Loader2 } from 'lucide-react'
 import ApplicationLayout from '../../components/layouts/ApplicationLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
+import { candidateService } from '../../services/candidate.service'
+
+const APP_KEY = 'app_draft'
+const getAppId = () => { try { return JSON.parse(sessionStorage.getItem(APP_KEY) || '{}').applicationId } catch { return null } }
 
 const PostSelection = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const applicationId = location.state?.applicationId || getAppId()
   const [selectedPosts, setSelectedPosts] = useState([])
 
-  const availablePosts = [
-    {
-      id: 1,
-      title: 'Assistant Section Officer',
-      department: 'General Administration Department',
-      vacancies: 45,
-      fee: 500,
-      category: 'Group C',
-      eligibility: 'Graduate',
-      selected: true
-    },
-    {
-      id: 2,
-      title: 'Junior Engineer (Civil)',
-      department: 'Public Works Department',
-      vacancies: 32,
-      fee: 750,
-      category: 'Group C',
-      eligibility: 'B.E./B.Tech Civil',
-      selected: false
-    },
-    {
-      id: 3,
-      title: 'Revenue Officer',
-      department: 'Revenue & Land Reforms',
-      vacancies: 28,
-      fee: 600,
-      category: 'Group C',
-      eligibility: 'Graduate',
-      selected: false
-    }
-  ]
+  // Load the application to get the job details
+  const { data: appData, isLoading } = useQuery({
+    queryKey: ['application-post-selection', applicationId],
+    queryFn: () => candidateService.getApplication(applicationId),
+    enabled: Boolean(applicationId),
+  })
 
-  const handlePostToggle = (postId) => {
-    const post = availablePosts.find(p => p.id === postId)
-    if (selectedPosts.find(p => p.id === postId)) {
-      setSelectedPosts(selectedPosts.filter(p => p.id !== postId))
+  const app = appData?.application || appData
+  const job = app?.jobId
+
+  // The job itself is the post to apply for
+  const availablePosts = job ? [{
+    jobId: job._id,
+    postCode: job.postCode,
+    title: job.title,
+    department: job.department,
+    vacancies: job.totalPosts,
+    fee: job.applicationFee?.general || 0,
+    category: job.category,
+  }] : []
+
+  const togglePost = (post) => {
+    const exists = selectedPosts.find(p => p.jobId === post.jobId)
+    if (exists) {
+      setSelectedPosts(selectedPosts.filter(p => p.jobId !== post.jobId))
     } else {
       setSelectedPosts([...selectedPosts, post])
     }
   }
 
-  const totalFee = selectedPosts.reduce((sum, post) => sum + post.fee, 0)
+  const totalFee = selectedPosts.reduce((sum, p) => sum + (p.fee || 0), 0)
+
+  const { mutate: savePostSelection, isPending } = useMutation({
+    mutationFn: (data) => candidateService.savePostSelection(applicationId, data),
+    onSuccess: (result) => {
+      toast.success('Post selection saved')
+      navigate('/application/payment', {
+        state: {
+          applicationId,
+          totalFee: result?.totalFee || totalFee,
+          selectedPosts,
+        }
+      })
+    },
+    onError: (err) => toast.error(err.message || 'Failed to save post selection'),
+  })
 
   const handleNext = () => {
-    navigate('/application/payment')
-  }
-
-  const handlePrevious = () => {
-    navigate('/application/review')
+    if (!applicationId) { toast.error('Application not found'); navigate('/jobs'); return }
+    if (selectedPosts.length === 0) { toast.error('Please select at least one post'); return }
+    savePostSelection({
+      appliedPosts: selectedPosts.map(p => ({
+        jobId: p.jobId,
+        postCode: p.postCode,
+        title: p.title,
+        department: p.department,
+      }))
+    })
   }
 
   return (
@@ -67,46 +84,38 @@ const PostSelection = () => {
         <Card className="shadow-sm">
           <CardHeader>
             <h2 className="text-xl font-semibold text-gray-800">Select Posts to Apply</h2>
-            <p className="text-gray-600">Choose the posts you want to apply for. You can select multiple posts.</p>
+            <p className="text-gray-600">Choose the posts you want to apply for.</p>
           </CardHeader>
-          
           <CardContent className="space-y-4">
+            {isLoading && <div className="flex items-center gap-2 text-gray-500"><Loader2 className="w-4 h-4 animate-spin" />Loading job details...</div>}
+            {!isLoading && availablePosts.length === 0 && (
+              <p className="text-gray-500 text-sm">No posts available for this application.</p>
+            )}
             {availablePosts.map((post) => (
-              <div 
-                key={post.id}
+              <div key={post.jobId}
+                onClick={() => togglePost(post)}
                 className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                  selectedPosts.find(p => p.id === post.id)
+                  selectedPosts.find(p => p.jobId === post.jobId)
                     ? 'border-orange-500 bg-orange-50'
                     : 'border-gray-200 hover:border-orange-300'
-                }`}
-                onClick={() => handlePostToggle(post.id)}
-              >
+                }`}>
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedPosts.find(p => p.id === post.id) ? true : false}
-                      onChange={() => handlePostToggle(post.id)}
-                      className="mt-1 w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                    />
-                    <div className="flex-1">
+                  <div className="flex items-start gap-3">
+                    <input type="checkbox" readOnly
+                      checked={Boolean(selectedPosts.find(p => p.jobId === post.jobId))}
+                      className="mt-1 w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500" />
+                    <div>
                       <h3 className="font-medium text-gray-800">{post.title}</h3>
                       <p className="text-sm text-gray-600 mt-1">{post.department}</p>
-                      <div className="flex items-center space-x-4 mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          {post.category}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          Vacancies: {post.vacancies}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Eligibility: {post.eligibility}
-                        </span>
+                      <div className="flex items-center gap-4 mt-2">
+                        {post.category && <Badge variant="outline" className="text-xs">{post.category}</Badge>}
+                        {post.vacancies && <span className="text-xs text-gray-500">Vacancies: {post.vacancies}</span>}
+                        <span className="text-xs text-gray-500">Code: {post.postCode}</span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold text-orange-600">₹{post.fee}</div>
+                    <div className="font-semibold text-orange-600">₹{(post.fee || 0).toLocaleString('en-IN')}</div>
                     <div className="text-xs text-gray-500">Application Fee</div>
                   </div>
                 </div>
@@ -115,37 +124,30 @@ const PostSelection = () => {
           </CardContent>
         </Card>
 
-        {/* Fee Summary */}
         {selectedPosts.length > 0 && (
           <Card className="shadow-sm bg-orange-50 border-orange-200">
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-800">Fee Summary</h3>
-            </CardHeader>
+            <CardHeader><h3 className="text-lg font-semibold text-gray-800">Fee Summary</h3></CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {selectedPosts.map((post) => (
-                  <div key={post.id} className="flex justify-between items-center">
+                  <div key={post.jobId} className="flex justify-between items-center">
                     <span className="text-sm text-gray-700">{post.title}</span>
-                    <span className="font-medium text-gray-800">₹{post.fee}</span>
+                    <span className="font-medium text-gray-800">₹{(post.fee || 0).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
-                <div className="border-t border-orange-200 pt-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-800">Total Amount</span>
-                    <span className="font-bold text-orange-600 text-lg">₹{totalFee}</span>
-                  </div>
+                <div className="border-t border-orange-200 pt-3 flex justify-between items-center">
+                  <span className="font-semibold text-gray-800">Total Amount</span>
+                  <span className="font-bold text-orange-600 text-lg">₹{totalFee.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Important Instructions */}
         <Card className="shadow-sm border-blue-200 bg-blue-50">
           <CardContent className="p-4">
             <h4 className="font-medium text-blue-800 mb-2">Important Instructions</h4>
             <ul className="text-sm text-blue-700 space-y-1">
-              <li>• You can apply for multiple posts with a single application</li>
               <li>• Application fee is non-refundable once payment is completed</li>
               <li>• Ensure you meet the eligibility criteria for selected posts</li>
               <li>• Fee payment must be completed within 24 hours of selection</li>
@@ -153,32 +155,11 @@ const PostSelection = () => {
           </CardContent>
         </Card>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-green-600">
-            <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-            <span className="text-sm">Changes saved as draft 14:05</span>
-          </div>
-          
-          <div className="flex space-x-4">
-            <Button 
-              variant="outline" 
-              onClick={handlePrevious}
-              className="px-6"
-            >
-              ← Back
-            </Button>
-            <Button variant="outline" className="px-6">
-              Save
-            </Button>
-            <Button 
-              onClick={handleNext}
-              disabled={selectedPosts.length === 0}
-              className="px-6 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400"
-            >
-              Proceed to Payment →
-            </Button>
-          </div>
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={() => navigate('/application/review')}>← Back</Button>
+          <Button onClick={handleNext} disabled={isPending || selectedPosts.length === 0} className="px-6 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400">
+            {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Proceed to Payment →'}
+          </Button>
         </div>
       </div>
     </ApplicationLayout>

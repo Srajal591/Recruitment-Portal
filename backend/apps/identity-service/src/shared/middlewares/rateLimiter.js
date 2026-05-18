@@ -14,10 +14,10 @@ const apiLimiter = rateLimit({
   },
 });
 
-// Stricter limiter for auth endpoints
+// Stricter limiter for auth endpoints (login/register/forgot-password)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per window
+  max: env.NODE_ENV === "production" ? 20 : 100, // 20 in prod, 100 in dev
   standardHeaders: true,
   legacyHeaders: false,
   message: {

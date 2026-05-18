@@ -19,7 +19,6 @@ const { initSocket } = require("./src/shared/socket/index");
 const logger = require("./src/shared/utils/logger");
 const errorHandler = require("./src/shared/middlewares/errorHandler");
 const notFound = require("./src/shared/middlewares/notFound");
-const { authLimiter } = require("./src/shared/middlewares/rateLimiter");
 
 // ── Service-local routes ──────────────────────────────────────
 const authRoutes = require("./src/routes/auth.routes");
@@ -42,7 +41,7 @@ app.use(cookieParser());
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ── Routes ────────────────────────────────────────────────────
-app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/auth", authRoutes);  // authLimiter is applied per-route inside auth.routes.js
 app.use("/api/admin/employees", employeeRoutes);
 app.use("/api/admin/roles", roleRoutes);
 app.use("/api/admin/activity-logs", activityLogRoutes);

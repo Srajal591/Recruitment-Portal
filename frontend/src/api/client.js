@@ -6,7 +6,6 @@ const getStoredToken = () => localStorage.getItem(STORAGE_KEYS.accessToken)
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -42,7 +41,6 @@ apiClient.interceptors.response.use(
         const refreshResponse = await axios.post(
           `${API_BASE_URL}/auth/refresh-token`,
           {},
-          { withCredentials: true },
         )
         const accessToken = refreshResponse.data?.data?.accessToken
         if (accessToken) {

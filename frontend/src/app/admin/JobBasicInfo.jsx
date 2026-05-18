@@ -56,9 +56,13 @@ const JobBasicInfo = () => {
 
   const validate = () => {
     const e = {}
+    if (!projectId) e.projectId = 'No project selected — go back to Jobs and select a project first'
     if (!formData.jobTitle.trim()) e.jobTitle = 'Job title is required'
+    else if (formData.jobTitle.trim().length < 3) e.jobTitle = 'Job title must be at least 3 characters'
     if (!formData.postCode.trim()) e.postCode = 'Post code is required'
+    else if (formData.postCode.trim().length < 2) e.postCode = 'Post code must be at least 2 characters'
     if (!formData.department.trim()) e.department = 'Department is required'
+    else if (formData.department.trim().length < 2) e.department = 'Department must be at least 2 characters'
     if (!formData.totalPosts || Number(formData.totalPosts) < 1) e.totalPosts = 'At least 1 post required'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -114,6 +118,28 @@ const JobBasicInfo = () => {
           </div>
 
           <JobStepProgress currentStep={1} projectId={projectId} clickable />
+
+          {/* Project warning */}
+          {!projectId && (
+            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+              <span className="text-red-500 font-bold text-lg leading-none">!</span>
+              <div>
+                <p className="text-sm font-semibold">No project selected</p>
+                <p className="text-sm mt-1">You must select a project before creating a job. Go to <button onClick={() => navigate('/admin/jobs')} className="underline font-medium">Jobs</button> and click "Create Job" to pick a project first.</p>
+              </div>
+            </div>
+          )}
+
+          {projectId && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
+              <span className="text-green-600">✓</span>
+              <span>Project selected: <strong>{projectId}</strong></span>
+            </div>
+          )}
+
+          {errors.projectId && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{errors.projectId}</div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">

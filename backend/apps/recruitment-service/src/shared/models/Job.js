@@ -163,7 +163,7 @@ const jobSchema = new mongoose.Schema(
     description: { type: String, trim: true },
 
     // Vacancy details
-    totalPosts: { type: Number, required: true, min: 1 },
+    totalPosts: { type: Number, default: 0 },
     reservedPosts: { type: reservedPostsSchema, default: () => ({}) },
     salaryRange: { type: salaryRangeSchema, default: () => ({}) },
     applicationFee: { type: applicationFeeSchema, default: () => ({}) },

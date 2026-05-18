@@ -35,9 +35,11 @@ export const candidateService = {
   async uploadDocument(id, type, file) {
     const formData = new FormData()
     formData.append('file', file)
-    const response = await apiClient.post(`/candidate/applications/${id}/documents/${type}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const response = await apiClient.post(
+      `/candidate/applications/${id}/documents/${type}`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
     return unwrapData(response)
   },
   async savePostSelection(id, data) {
@@ -48,45 +50,6 @@ export const candidateService = {
     const response = await apiClient.post(`/candidate/applications/${id}/submit`, { declaration })
     return unwrapData(response)
   },
-
-  // ── Notifications ─────────────────────────────────────────
-  async getNotifications(params = {}) {
-    const response = await apiClient.get('/candidate/notifications', { params })
-    return unwrapData(response)
-  },
-  async markNotificationRead(id) {
-    const response = await apiClient.patch(`/candidate/notifications/${id}/read`)
-    return unwrapData(response)
-  },
-  async markAllNotificationsRead() {
-    const response = await apiClient.patch('/candidate/notifications/read-all')
-    return unwrapData(response)
-  },
-
-  // ── Support ───────────────────────────────────────────────
-  async getMyTickets(params = {}) {
-    const response = await apiClient.get('/candidate/support/tickets', { params })
-    return unwrapData(response)
-  },
-  async getTicket(id) {
-    const response = await apiClient.get(`/candidate/support/tickets/${id}`)
-    return unwrapData(response)
-  },
-  async createTicket(data) {
-    const response = await apiClient.post('/candidate/support/tickets', data)
-    return unwrapData(response)
-  },
-  async replyToTicket(id, data) {
-    const response = await apiClient.post(`/candidate/support/tickets/${id}/reply`, data)
-    return unwrapData(response)
-  },
-
-  // ── Payments ──────────────────────────────────────────────
-  async getMyPayments(params = {}) {
-    const response = await apiClient.get('/candidate/payments', { params })
-    return unwrapData(response)
-  },
-}
 
   // ── Notifications ─────────────────────────────────────────
   async getNotifications(params = {}) {

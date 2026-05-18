@@ -2,51 +2,46 @@
 // FILE: PublicLayout.jsx
 // ============================
 
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from "react-router-dom";
 
-import {
-  Menu,
-  X,
-  Bell,
-  Phone,
-  Mail,
-  MapPin,
-} from 'lucide-react'
+import { Menu, X, Bell, Phone, Mail, MapPin } from "lucide-react";
 
-import { useState } from 'react'
+import { useState } from "react";
+import { getStoredUser } from "../../services/auth.service";
 
 const PublicLayout = ({ children }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] =
-    useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const user = getStoredUser();
+  const isLoggedIn = !!user;
 
-  const location = useLocation()
+  const location = useLocation();
 
   const navItems = [
     {
-      label: 'Home',
-      path: '/',
+      label: "Home",
+      path: "/",
     },
 
     {
-      label: 'About Us',
-      path: '/about',
+      label: "About Us",
+      path: "/about",
     },
 
     {
-      label: 'How to Apply',
-      path: '/how-to-apply',
+      label: "How to Apply",
+      path: "/how-to-apply",
     },
 
     {
-      label: 'FAQ',
-      path: '/faq',
+      label: "FAQ",
+      path: "/faq",
     },
 
     {
-      label: 'Contact Us',
-      path: '/contact',
+      label: "Contact Us",
+      path: "/contact",
     },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-[#f3efe8] overflow-hidden">
@@ -61,17 +56,13 @@ const PublicLayout = ({ children }) => {
               <div className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5" />
 
-                <span>
-                  1800-123-4567
-                </span>
+                <span>1800-123-4567</span>
               </div>
 
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5" />
 
-                <span>
-                  support@recruitment.gov.in
-                </span>
+                <span>support@recruitment.gov.in</span>
               </div>
             </div>
 
@@ -79,7 +70,6 @@ const PublicLayout = ({ children }) => {
 
             <div className="flex items-center gap-2 text-orange-300 font-semibold">
               <Bell className="w-3.5 h-3.5" />
-
               Latest Notifications Available
             </div>
           </div>
@@ -93,14 +83,9 @@ const PublicLayout = ({ children }) => {
           <div className="h-[72px] flex items-center justify-between">
             {/* LOGO */}
 
-            <Link
-              to="/"
-              className="flex items-center gap-4"
-            >
+            <Link to="/" className="flex items-center gap-4">
               <div className="w-11 h-11 rounded-[6px] bg-[#e46a1d] flex items-center justify-center shadow-md">
-                <span className="text-white font-black text-sm">
-                  RP
-                </span>
+                <span className="text-white font-black text-sm">RP</span>
               </div>
 
               <div>
@@ -118,9 +103,7 @@ const PublicLayout = ({ children }) => {
 
             <nav className="hidden lg:flex items-center gap-8">
               {navItems.map((item) => {
-                const active =
-                  location.pathname ===
-                  item.path
+                const active = location.pathname === item.path;
 
                 return (
                   <Link
@@ -128,8 +111,8 @@ const PublicLayout = ({ children }) => {
                     to={item.path}
                     className={`relative text-[12px] uppercase tracking-[0.14em] font-black transition-all ${
                       active
-                        ? 'text-[#e46a1d]'
-                        : 'text-[#5f5752] hover:text-[#e46a1d]'
+                        ? "text-[#e46a1d]"
+                        : "text-[#5f5752] hover:text-[#e46a1d]"
                     }`}
                   >
                     {item.label}
@@ -138,28 +121,34 @@ const PublicLayout = ({ children }) => {
                       <div className="absolute left-0 right-0 -bottom-[28px] h-[3px] bg-[#e46a1d]" />
                     )}
                   </Link>
-                )
+                );
               })}
             </nav>
 
             {/* RIGHT */}
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {!isLoggedIn && (
+                <Link
+                  to="/auth/register"
+                  className="hidden sm:flex h-[42px] px-6 bg-white border-2 border-[#e46a1d] text-[#e46a1d] hover:bg-[#e46a1d] hover:text-white rounded-[4px] items-center justify-center text-[11px] uppercase tracking-[0.12em] font-black transition-all"
+                >
+                  Register
+                </Link>
+              )}
               <Link
-                to="/auth/login"
+                to={
+                  isLoggedIn ? "/candidate/dashboard" : "/auth/candidate-login"
+                }
                 className="hidden sm:flex h-[42px] px-6 bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] items-center justify-center text-[11px] uppercase tracking-[0.12em] font-black transition-all shadow-lg shadow-orange-200"
               >
-                Login
+                {isLoggedIn ? "Dashboard" : "Login"}
               </Link>
 
               {/* MOBILE */}
 
               <button
-                onClick={() =>
-                  setIsMobileMenuOpen(
-                    !isMobileMenuOpen
-                  )
-                }
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="lg:hidden w-11 h-11 rounded-[4px] border border-[#ddd4ca] flex items-center justify-center text-[#1f1d1b]"
               >
                 {isMobileMenuOpen ? (
@@ -181,9 +170,7 @@ const PublicLayout = ({ children }) => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  onClick={() =>
-                    setIsMobileMenuOpen(false)
-                  }
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="block px-4 py-3 rounded-[4px] text-[12px] uppercase tracking-[0.12em] font-black text-[#3f3a36] hover:bg-[#ece5dc]"
                 >
                   {item.label}
@@ -191,7 +178,7 @@ const PublicLayout = ({ children }) => {
               ))}
 
               <Link
-                to="/auth/login"
+                to="/auth/candidate-login"
                 className="mt-4 flex h-[46px] bg-[#e46a1d] text-white rounded-[4px] items-center justify-center text-[12px] uppercase tracking-[0.12em] font-black"
               >
                 Login
@@ -215,15 +202,11 @@ const PublicLayout = ({ children }) => {
             <div>
               <div className="flex items-center gap-4">
                 <div className="w-11 h-11 rounded-[6px] bg-[#e46a1d] flex items-center justify-center">
-                  <span className="text-white font-black text-sm">
-                    RP
-                  </span>
+                  <span className="text-white font-black text-sm">RP</span>
                 </div>
 
                 <div>
-                  <h3 className="text-[18px] font-black">
-                    Recruitment Portal
-                  </h3>
+                  <h3 className="text-[18px] font-black">Recruitment Portal</h3>
 
                   <p className="text-[10px] uppercase tracking-[0.12em] text-white/50 mt-1">
                     Government of India
@@ -232,9 +215,8 @@ const PublicLayout = ({ children }) => {
               </div>
 
               <p className="mt-6 text-white/65 text-[14px] leading-7">
-                Official government recruitment
-                platform for transparent, accessible,
-                and trusted hiring.
+                Official government recruitment platform for transparent,
+                accessible, and trusted hiring.
               </p>
             </div>
 
@@ -246,19 +228,16 @@ const PublicLayout = ({ children }) => {
               </h3>
 
               <div className="mt-6 space-y-4">
-                {[
-                  'Latest Jobs',
-                  'Results',
-                  'Admit Cards',
-                  'Notifications',
-                ].map((item) => (
-                  <button
-                    key={item}
-                    className="block text-white/65 hover:text-orange-300 transition-colors text-[14px]"
-                  >
-                    {item}
-                  </button>
-                ))}
+                {["Latest Jobs", "Results", "Admit Cards", "Notifications"].map(
+                  (item) => (
+                    <button
+                      key={item}
+                      className="block text-white/65 hover:text-orange-300 transition-colors text-[14px]"
+                    >
+                      {item}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
 
@@ -270,19 +249,16 @@ const PublicLayout = ({ children }) => {
               </h3>
 
               <div className="mt-6 space-y-4">
-                {[
-                  'FAQ',
-                  'Contact Us',
-                  'Help Center',
-                  'Technical Support',
-                ].map((item) => (
-                  <button
-                    key={item}
-                    className="block text-white/65 hover:text-orange-300 transition-colors text-[14px]"
-                  >
-                    {item}
-                  </button>
-                ))}
+                {["FAQ", "Contact Us", "Help Center", "Technical Support"].map(
+                  (item) => (
+                    <button
+                      key={item}
+                      className="block text-white/65 hover:text-orange-300 transition-colors text-[14px]"
+                    >
+                      {item}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
 
@@ -297,9 +273,7 @@ const PublicLayout = ({ children }) => {
                 <div className="flex items-start gap-3 text-white/70">
                   <Phone className="w-5 h-5 mt-0.5 text-orange-400" />
 
-                  <span className="text-[14px]">
-                    1800-123-4567
-                  </span>
+                  <span className="text-[14px]">1800-123-4567</span>
                 </div>
 
                 <div className="flex items-start gap-3 text-white/70">
@@ -313,9 +287,7 @@ const PublicLayout = ({ children }) => {
                 <div className="flex items-start gap-3 text-white/70">
                   <MapPin className="w-5 h-5 mt-0.5 text-orange-400" />
 
-                  <span className="text-[14px]">
-                    New Delhi, India
-                  </span>
+                  <span className="text-[14px]">New Delhi, India</span>
                 </div>
               </div>
             </div>
@@ -325,8 +297,7 @@ const PublicLayout = ({ children }) => {
 
           <div className="mt-14 pt-8 border-t border-white/10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <p className="text-white/50 text-[13px]">
-              © 2024 Bihar State Recruitment
-              Board. All Rights Reserved.
+              © 2024 Bihar State Recruitment Board. All Rights Reserved.
             </p>
 
             <div className="flex items-center gap-6 text-white/40 text-[12px]">
@@ -346,7 +317,7 @@ const PublicLayout = ({ children }) => {
         </div>
       </footer>
     </div>
-  )
-}
+  );
+};
 
-export default PublicLayout
+export default PublicLayout;

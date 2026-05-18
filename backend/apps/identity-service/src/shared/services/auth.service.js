@@ -51,7 +51,14 @@ const clearAuthCookies = (res) => {
 
 // ── Candidate Auth ────────────────────────────────────────────
 
-const registerCandidate = async ({ email, password, registeredMobile }) => {
+const registerCandidate = async ({
+  email,
+  password,
+  registeredMobile,
+  fullName,
+  dateOfBirth,
+  gender,
+}) => {
   const existing = await User.findOne({ email });
   if (existing) throw new ApiError(409, "Email already registered");
 
@@ -59,6 +66,9 @@ const registerCandidate = async ({ email, password, registeredMobile }) => {
     email,
     password,
     registeredMobile,
+    fullName,
+    dateOfBirth,
+    gender,
     role: "candidate",
   });
 
@@ -71,7 +81,7 @@ const registerCandidate = async ({ email, password, registeredMobile }) => {
   await user.save({ validateBeforeSave: false });
 
   // Send OTP email directly (not queued for immediate delivery)
-  await sendOTPEmail(email, otp, email);
+  await sendOTPEmail(email, otp, fullName || email);
 
   return { userId: user._id, email: user.email };
 };
@@ -197,11 +207,8 @@ const forgotPassword = async (email) => {
   user.otpExpiry = otpExpiry;
   await user.save({ validateBeforeSave: false });
 
-  await publishToQueue(QUEUES.EMAIL, {
-    type: "forgot_password",
-    to: email,
-    otp,
-  });
+  // Send OTP email directly for immediate delivery
+  await sendPasswordResetEmail(email, otp, user.fullName || email);
 
   return { message: "OTP sent to your email" };
 };
@@ -220,6 +227,23 @@ const resetPassword = async ({ email, otp, newPassword }) => {
   return { message: "Password reset successful" };
 };
 
+const resendOTP = async (email) => {
+  const user = await User.findOne({ email });
+  if (!user) throw new ApiError(404, "User not found");
+
+  const otp = generateOTP();
+  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+  user.otp = otp;
+  user.otpExpiry = otpExpiry;
+  await user.save({ validateBeforeSave: false });
+
+  // Send OTP email directly
+  await sendOTPEmail(email, otp, user.fullName || email);
+
+  return { message: "OTP resent successfully" };
+};
+
 module.exports = {
   registerCandidate,
   verifyOTP,
@@ -229,6 +253,7 @@ module.exports = {
   logout,
   forgotPassword,
   resetPassword,
+  resendOTP,
   generateTokenPair,
   setAuthCookies,
   clearAuthCookies,

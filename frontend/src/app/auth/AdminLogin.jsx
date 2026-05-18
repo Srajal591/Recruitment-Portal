@@ -1,43 +1,43 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield } from 'lucide-react'
-import toast from 'react-hot-toast'
-import { Card, CardContent, CardHeader } from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import { authService } from '../../services/auth.service'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield } from "lucide-react";
+import toast from "react-hot-toast";
+import { Card, CardContent, CardHeader } from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import { authService } from "../../services/auth.service";
 
 const AdminLogin = () => {
-  const navigate = useNavigate()
-  const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+    email: "",
+    password: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
-    }))
-  }
+      [field]: value,
+    }));
+  };
 
   const handleLogin = async (e) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
     try {
-      await authService.adminLogin(formData)
-      toast.success('Admin login successful')
-      navigate('/admin/dashboard', { replace: true })
+      await authService.adminLogin(formData);
+      toast.success("Admin login successful");
+      window.location.href = "/admin/dashboard";
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-4">
@@ -57,10 +57,12 @@ const AdminLogin = () => {
 
         <Card className="shadow-xl">
           <CardHeader className="text-center pb-4">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Admin Login</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              Admin Login
+            </h1>
             <p className="text-gray-600">Access the administrative dashboard</p>
           </CardHeader>
-          
+
           <CardContent className="p-6">
             <form onSubmit={handleLogin} className="space-y-6">
               {/* Email */}
@@ -76,7 +78,7 @@ const AdminLogin = () => {
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="Enter your admin email"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
                   />
                 </div>
               </div>
@@ -89,19 +91,25 @@ const AdminLogin = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     required
                     className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="Enter your password"
                     value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -109,10 +117,18 @@ const AdminLogin = () => {
               {/* Remember Me & Forgot Password */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
-                  <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-600">
+                    Remember me
+                  </span>
                 </label>
-                <Link to="/auth/forgot-password" className="text-sm text-orange-600 hover:text-orange-700">
+                <Link
+                  to="/auth/forgot-password"
+                  className="text-sm text-orange-600 hover:text-orange-700"
+                >
                   Forgot password?
                 </Link>
               </div>
@@ -124,8 +140,8 @@ const AdminLogin = () => {
               )}
 
               {/* Login Button */}
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full py-3 flex items-center justify-center space-x-2 bg-orange-600 hover:bg-orange-700"
                 disabled={isLoading}
               >
@@ -155,7 +171,7 @@ const AdminLogin = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AdminLogin
+export default AdminLogin;

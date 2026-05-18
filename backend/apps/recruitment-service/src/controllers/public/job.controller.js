@@ -37,34 +37,16 @@ const getJobs = asyncHandler(async (req, res) => {
     filter.projectId = { $in: projects };
   }
 
-  // Build search filter
-  const searchFilters = [];
   if (search) {
-    searchFilters.push(
+    filter.$or = [
       { title: new RegExp(search, "i") },
       { description: new RegExp(search, "i") },
       { department: new RegExp(search, "i") },
-    );
+    ];
   }
 
-  // Build deadline filter - show jobs with future deadlines or no deadline
-  const deadlineFilters = [
-    { applicationDeadline: { $gte: new Date() } },
-    { applicationDeadline: null },
-  ];
-
-  // Combine all filters
-  const combinedFilters = [];
-  if (searchFilters.length > 0) {
-    combinedFilters.push({ $or: searchFilters });
-  }
-  combinedFilters.push({ $or: deadlineFilters });
-
-  if (combinedFilters.length > 0) {
-    filter.$and = combinedFilters;
-  } else {
-    filter.$or = deadlineFilters;
-  }
+  // Only show jobs with future application deadlines
+  filter.applicationDeadline = { $gte: new Date() };
 
   // Build sort
   const sort = {};
@@ -75,7 +57,7 @@ const getJobs = asyncHandler(async (req, res) => {
   const jobs = await Job.find(filter)
     .populate("projectId", "name department state")
     .select(
-      "title postCode department category totalPosts salaryRange applicationDeadline examDate workLocation publishedAt",
+      "title postCode department category totalPosts salaryRange applicationDeadline examDate workLocation publishedAt applicationFee",
     )
     .sort(sort)
     .skip(skip)
@@ -104,7 +86,7 @@ const getJobs = asyncHandler(async (req, res) => {
   );
 
   res.status(StatusCodes.OK).json(
-    new ApiResponse(StatusCodes.OK, {
+    new ApiResponse(StatusCodes.OK, "Jobs fetched successfully", {
       jobs: jobsWithStats,
       pagination: {
         currentPage: parseInt(page),
@@ -171,9 +153,11 @@ const getJob = asyncHandler(async (req, res) => {
     isApplicationOpen: job.applicationDeadline > new Date(),
   };
 
-  res
-    .status(StatusCodes.OK)
-    .json(new ApiResponse(StatusCodes.OK, { job: jobWithStats }));
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Job details fetched successfully", {
+      job: jobWithStats,
+    }),
+  );
 });
 
 /**
@@ -214,7 +198,7 @@ const getJobStats = asyncHandler(async (req, res) => {
     .limit(5);
 
   res.status(StatusCodes.OK).json(
-    new ApiResponse(StatusCodes.OK, {
+    new ApiResponse(StatusCodes.OK, "Job statistics fetched successfully", {
       totalActiveJobs,
       totalVacancies: totalVacancies[0]?.total || 0,
       departmentStats,
@@ -270,7 +254,9 @@ const searchJobs = asyncHandler(async (req, res) => {
     .sort({ applicationDeadline: 1 })
     .limit(20);
 
-  res.status(StatusCodes.OK).json(new ApiResponse(StatusCodes.OK, { jobs }));
+  res
+    .status(StatusCodes.OK)
+    .json(new ApiResponse(StatusCodes.OK, "Jobs found", { jobs }));
 });
 
 /**
@@ -283,7 +269,11 @@ const getDepartments = asyncHandler(async (req, res) => {
 
   res
     .status(StatusCodes.OK)
-    .json(new ApiResponse(StatusCodes.OK, { departments: departments.sort() }));
+    .json(
+      new ApiResponse(StatusCodes.OK, "Departments fetched", {
+        departments: departments.sort(),
+      }),
+    );
 });
 
 /**
@@ -296,7 +286,11 @@ const getCategories = asyncHandler(async (req, res) => {
 
   res
     .status(StatusCodes.OK)
-    .json(new ApiResponse(StatusCodes.OK, { categories: categories.sort() }));
+    .json(
+      new ApiResponse(StatusCodes.OK, "Categories fetched", {
+        categories: categories.sort(),
+      }),
+    );
 });
 
 module.exports = {
@@ -307,5 +301,3 @@ module.exports = {
   getDepartments,
   getCategories,
 };
-
-

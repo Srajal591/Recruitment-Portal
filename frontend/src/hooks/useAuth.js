@@ -1,50 +1,61 @@
-import { useEffect, useState } from 'react'
-import { authService, getStoredUser } from '../services/auth.service'
-import { STORAGE_KEYS } from '../api/config'
+import { useState, useEffect } from "react";
+import { getStoredUser } from "../services/auth.service";
+import { STORAGE_KEYS } from "../api/config";
 
-export const getAuthState = () => ({
-  token: localStorage.getItem(STORAGE_KEYS.accessToken),
-  user: getStoredUser(),
-})
+/**
+ * Helper functions to check user roles
+ */
+export const isAdminUser = (user) => {
+  return user?.role === "employee" || user?.employeeId || user?.officialEmail;
+};
 
-// Employee objects from the backend have no `role` field — auth.service normalises
-// them to role: 'employee', but we also check employeeId / officialEmail as fallback.
-export const isAdminUser = (user) =>
-  ['admin', 'employee'].includes(user?.role) ||
-  Boolean(user?.employeeId) ||
-  Boolean(user?.officialEmail)
+export const isCandidateUser = (user) => {
+  return user?.role === "candidate" && !user?.employeeId;
+};
 
-export const isCandidateUser = (user) =>
-  user?.role === 'candidate' || Boolean(user?.registeredMobile)
-
+/**
+ * Custom hook for authentication state management
+ * Simple and fast - just reads from localStorage
+ */
 export const useAuth = () => {
-  const [state, setState] = useState(() => ({
-    ...getAuthState(),
-    isLoading: Boolean(localStorage.getItem(STORAGE_KEYS.accessToken)) && !getStoredUser(),
-  }))
+  const [user, setUser] = useState(() => getStoredUser());
+  const [token, setToken] = useState(() =>
+    localStorage.getItem(STORAGE_KEYS.accessToken),
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const storedUser = getStoredUser();
+    const storedToken = localStorage.getItem(STORAGE_KEYS.accessToken);
+    return !!(storedUser && storedToken);
+  });
 
+  // Listen to storage changes (for multi-tab sync)
   useEffect(() => {
-    let active = true
-    const token = localStorage.getItem(STORAGE_KEYS.accessToken)
-    if (!token) {
-      setState((prev) => ({ ...prev, isLoading: false }))
-      return undefined
-    }
+    const handleStorageChange = () => {
+      const storedUser = getStoredUser();
+      const storedToken = localStorage.getItem(STORAGE_KEYS.accessToken);
+      setUser(storedUser);
+      setToken(storedToken);
+      setIsAuthenticated(!!(storedUser && storedToken));
+    };
 
-    authService
-      .me()
-      .then((user) => {
-        if (active)
-          setState({ token: localStorage.getItem(STORAGE_KEYS.accessToken), user, isLoading: false })
-      })
-      .catch(() => {
-        if (active) setState({ token: null, user: null, isLoading: false })
-      })
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
-    return () => {
-      active = false
-    }
-  }, [])
+  const updateAuth = () => {
+    const storedUser = getStoredUser();
+    const storedToken = localStorage.getItem(STORAGE_KEYS.accessToken);
+    setUser(storedUser);
+    setToken(storedToken);
+    setIsAuthenticated(!!(storedUser && storedToken));
+  };
 
-  return state
-}
+  return {
+    user,
+    token,
+    isLoading,
+    isAuthenticated,
+    updateAuth,
+  };
+};

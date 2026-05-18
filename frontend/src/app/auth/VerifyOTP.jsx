@@ -1,111 +1,117 @@
-import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Mail, Send, CheckCircle } from 'lucide-react'
-import toast from 'react-hot-toast'
-import Button from '../../components/ui/Button'
-import { Card, CardContent } from '../../components/ui/Card'
-import heroBg from '../../assets/herobg.jpg'
-import { authService } from '../../services/auth.service'
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowRight, Mail, Send, CheckCircle } from "lucide-react";
+import toast from "react-hot-toast";
+import Button from "../../components/ui/Button";
+import { Card, CardContent } from "../../components/ui/Card";
+import heroBg from "../../assets/herobg.jpg";
+import { authService } from "../../services/auth.service";
 
 const VerifyOTP = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [otp, setOtp] = useState(['', '', '', '', '', ''])
-  const [email, setEmail] = useState(location.state?.email || '')
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [isSending, setIsSending] = useState(false)
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [email, setEmail] = useState(location.state?.email || "");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [otpSent, setOtpSent] = useState(
     // If coming from registration, OTP was already sent
-    Boolean(location.state?.email)
-  )
-  const [cooldown, setCooldown] = useState(0)
-  const [error, setError] = useState('')
+    Boolean(location.state?.email),
+  );
+  const [cooldown, setCooldown] = useState(0);
+  const [error, setError] = useState("");
 
   // Countdown timer for resend cooldown
   const startCooldown = (seconds = 60) => {
-    setCooldown(seconds)
+    setCooldown(seconds);
     const interval = setInterval(() => {
       setCooldown((prev) => {
-        if (prev <= 1) { clearInterval(interval); return 0 }
-        return prev - 1
-      })
-    }, 1000)
-  }
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const handleSendOtp = async () => {
     if (!email.trim()) {
-      setError('Please enter your registered email address')
-      return
+      setError("Please enter your registered email address");
+      return;
     }
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setError('Please enter a valid email address')
-      return
+      setError("Please enter a valid email address");
+      return;
     }
-    setError('')
-    setIsSending(true)
+    setError("");
+    setIsSending(true);
     try {
-      await authService.forgotPassword(email.trim())
-      setOtpSent(true)
-      toast.success('OTP sent to your email')
-      startCooldown(60)
+      await authService.resendOtp(email.trim());
+      setOtpSent(true);
+      toast.success("OTP sent to your email");
+      startCooldown(60);
       // Clear any previously entered OTP
-      setOtp(['', '', '', '', '', ''])
-      setTimeout(() => document.getElementById('otp-0')?.focus(), 100)
+      setOtp(["", "", "", "", "", ""]);
+      setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
     } catch (err) {
-      setError(err.message || 'Failed to send OTP. Please check your email.')
+      setError(err.message || "Failed to send OTP. Please check your email.");
     } finally {
-      setIsSending(false)
+      setIsSending(false);
     }
-  }
+  };
 
   const handleOtpChange = (index, value) => {
-    if (!/^\d?$/.test(value)) return
-    const newOtp = [...otp]
-    newOtp[index] = value
-    setOtp(newOtp)
+    if (!/^\d?$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
     if (value && index < 5) {
-      document.getElementById(`otp-${index + 1}`)?.focus()
+      document.getElementById(`otp-${index + 1}`)?.focus();
     }
-  }
+  };
 
   const handleKeyDown = (index, event) => {
-    if (event.key === 'Backspace' && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`)?.focus()
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      document.getElementById(`otp-${index - 1}`)?.focus();
     }
-  }
+  };
 
   const handlePaste = (event) => {
-    event.preventDefault()
-    const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    event.preventDefault();
+    const pasted = event.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
     if (pasted.length === 6) {
-      setOtp(pasted.split(''))
-      document.getElementById('otp-5')?.focus()
+      setOtp(pasted.split(""));
+      document.getElementById("otp-5")?.focus();
     }
-  }
+  };
 
   const handleVerify = async () => {
-    setError('')
-    const otpString = otp.join('')
+    setError("");
+    const otpString = otp.join("");
     if (otpString.length < 6) {
-      setError('Please enter the complete 6-digit OTP')
-      return
+      setError("Please enter the complete 6-digit OTP");
+      return;
     }
-    setIsVerifying(true)
+    setIsVerifying(true);
     try {
-      await authService.verifyOtp({ email, otp: otpString })
-      toast.success('Email verified successfully!')
-      navigate('/application/personal-details', { replace: true })
+      await authService.verifyOtp({ email, otp: otpString });
+      toast.success("Email verified successfully! You can now login.");
+      window.location.href = "/";
     } catch (err) {
-      setError(err.message || 'Invalid or expired OTP')
-      setOtp(['', '', '', '', '', ''])
-      setTimeout(() => document.getElementById('otp-0')?.focus(), 100)
+      setError(err.message || "Invalid or expired OTP");
+      setOtp(["", "", "", "", "", ""]);
+      setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
     } finally {
-      setIsVerifying(false)
+      setIsVerifying(false);
     }
-  }
+  };
 
-  const otpComplete = otp.every((d) => d !== '')
+  const otpComplete = otp.every((d) => d !== "");
 
   return (
     <div
@@ -122,11 +128,13 @@ const VerifyOTP = () => {
               <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mb-4">
                 EMAIL VERIFICATION
               </div>
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">Verify Your Account</h1>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                Verify Your Account
+              </h1>
               <p className="text-gray-600 text-sm">
                 {otpSent
-                  ? `A 6-digit OTP has been sent to ${email || 'your email'}. Enter it below.`
-                  : 'Enter your registered email to receive a verification OTP.'}
+                  ? `A 6-digit OTP has been sent to ${email || "your email"}. Enter it below.`
+                  : "Enter your registered email to receive a verification OTP."}
               </p>
             </div>
 
@@ -141,10 +149,15 @@ const VerifyOTP = () => {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => { setEmail(e.target.value); setError('') }}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError("");
+                    }}
                     disabled={otpSent && cooldown > 0}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                      otpSent && cooldown > 0 ? 'bg-gray-50 text-gray-500' : 'border-gray-300'
+                      otpSent && cooldown > 0
+                        ? "bg-gray-50 text-gray-500"
+                        : "border-gray-300"
                     }`}
                     placeholder="candidate@example.com"
                   />
@@ -153,11 +166,11 @@ const VerifyOTP = () => {
                 <Button
                   onClick={handleSendOtp}
                   disabled={isSending || cooldown > 0 || !email.trim()}
-                  variant={otpSent ? 'outline' : 'default'}
+                  variant={otpSent ? "outline" : "default"}
                   className={`whitespace-nowrap px-4 ${
                     !otpSent
-                      ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                      : 'border-orange-300 text-orange-600 hover:bg-orange-50'
+                      ? "bg-orange-600 hover:bg-orange-700 text-white"
+                      : "border-orange-300 text-orange-600 hover:bg-orange-50"
                   }`}
                 >
                   {isSending ? (
@@ -191,7 +204,10 @@ const VerifyOTP = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-4">
                   Enter 6-Digit OTP
                 </label>
-                <div className="flex justify-center space-x-3 mb-3" onPaste={handlePaste}>
+                <div
+                  className="flex justify-center space-x-3 mb-3"
+                  onPaste={handlePaste}
+                >
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -204,8 +220,8 @@ const VerifyOTP = () => {
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       className={`w-12 h-12 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none transition-colors ${
                         digit
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
-                          : 'border-gray-300 focus:border-orange-500'
+                          ? "border-orange-500 bg-orange-50 text-orange-700"
+                          : "border-gray-300 focus:border-orange-500"
                       }`}
                     />
                   ))}
@@ -243,10 +259,16 @@ const VerifyOTP = () => {
 
             {/* Links */}
             <div className="text-center mt-6 space-y-2">
-              <Link to="/auth/register" className="block text-sm text-orange-600 hover:text-orange-700">
+              <Link
+                to="/auth/register"
+                className="block text-sm text-orange-600 hover:text-orange-700"
+              >
                 ← Back to registration
               </Link>
-              <Link to="/auth/candidate-login" className="block text-sm text-gray-500 hover:text-gray-700">
+              <Link
+                to="/auth/candidate-login"
+                className="block text-sm text-gray-500 hover:text-gray-700"
+              >
                 Already verified? Sign in
               </Link>
             </div>
@@ -254,7 +276,7 @@ const VerifyOTP = () => {
         </Card>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default VerifyOTP
+export default VerifyOTP;

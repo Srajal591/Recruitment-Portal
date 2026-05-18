@@ -1,0 +1,259 @@
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { ArrowLeft, Lock, Loader2 } from 'lucide-react'
+import AdminLayout from '../../components/layouts/AdminLayout'
+import { Card, CardContent, CardHeader } from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import { adminService } from '../../services/admin.service'
+
+const MODULES = [
+  { id: 'jobs',            label: 'Jobs Management' },
+  { id: 'applications',   label: 'Applications Management' },
+  { id: 'analytics',      label: 'Analytics & Reports' },
+  { id: 'employees',      label: 'Employee Management' },
+  { id: 'paymentSettings', label: 'Payment Settings' },
+  { id: 'support',        label: 'Support Management' },
+  { id: 'projects',       label: 'Project Management' },
+  { id: 'results',        label: 'Results Management' },
+]
+const ACTIONS = ['create', 'view', 'edit', 'delete', 'download']
+
+const emptyPermissions = () =>
+  Object.fromEntries(
+    MODULES.map(m => [m.id, Object.fromEntries(ACTIONS.map(a => [a, false]))])
+  )
+
+const EditRole = () => {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [roleName, setRoleName] = useState('')
+  const [roleDescription, setRoleDescription] = useState('')
+  const [permissions, setPermissions] = useState(emptyPermissions())
+  const [errors, setErrors] = useState({})
+
+  const { data: roleData, isLoading } = useQuery({
+    queryKey: ['admin-role', id],
+    queryFn: () => adminService.getRole(id),
+  })
+
+  useEffect(() => {
+    if (roleData?.role) {
+      const role = roleData.role
+      setRoleName(role.roleName || '')
+      setRoleDescription(role.roleDescription || '')
+      if (role.permissions) {
+        // Merge existing permissions with empty template (handles missing modules)
+        const merged = emptyPermissions()
+        Object.entries(role.permissions).forEach(([mod, perms]) => {
+          if (merged[mod]) {
+            Object.entries(perms).forEach(([action, val]) => {
+              if (merged[mod][action] !== undefined) {
+                merged[mod][action] = Boolean(val)
+              }
+            })
+          }
+        })
+        setPermissions(merged)
+      }
+    }
+  }, [roleData])
+
+  const { mutate: updateRole, isPending } = useMutation({
+    mutationFn: ({ id, data }) => adminService.updateRole(id, data),
+    onSuccess: () => {
+      toast.success('Role updated successfully')
+      queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-role', id] })
+      navigate('/admin/roles')
+    },
+    onError: (err) => toast.error(err.message || 'Failed to update role'),
+  })
+
+  const togglePermission = (moduleId, action) => {
+    setPermissions(prev => ({
+      ...prev,
+      [moduleId]: { ...prev[moduleId], [action]: !prev[moduleId][action] },
+    }))
+  }
+
+  const toggleAll = (moduleId) => {
+    const allOn = ACTIONS.every(a => permissions[moduleId][a])
+    setPermissions(prev => ({
+      ...prev,
+      [moduleId]: Object.fromEntries(ACTIONS.map(a => [a, !allOn])),
+    }))
+  }
+
+  const totalActive = Object.values(permissions).flatMap(Object.values).filter(Boolean).length
+
+  const handleSubmit = () => {
+    const e = {}
+    if (!roleName.trim()) e.roleName = 'Role name is required'
+    if (roleName.trim().length < 2) e.roleName = 'At least 2 characters'
+    setErrors(e)
+    if (Object.keys(e).length > 0) return
+    updateRole({ id, data: { roleName: roleName.trim(), roleDescription: roleDescription.trim() || undefined, permissions } })
+  }
+
+  if (isLoading) {
+    return (
+      <AdminLayout title="Edit Role">
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  const isSystemRole = roleData?.role?.isSystemRole
+
+  return (
+    <AdminLayout title="Edit Role">
+      <div className="max-w-5xl mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin/roles')}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Edit Role</h1>
+            <p className="text-gray-600 text-sm">
+              {isSystemRole ? 'System role — name is locked, permissions can be adjusted.' : 'Update role name and permissions.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Basic Info */}
+            <Card>
+              <CardHeader><h3 className="font-semibold text-gray-800">Basic Information</h3></CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Recruitment Manager"
+                    disabled={isSystemRole}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      isSystemRole ? 'bg-gray-100 cursor-not-allowed' : ''
+                    } ${errors.roleName ? 'border-red-400' : 'border-gray-300'}`}
+                    value={roleName}
+                    onChange={(e) => { setRoleName(e.target.value); setErrors({}) }}
+                  />
+                  {errors.roleName && <p className="text-red-500 text-xs mt-1">{errors.roleName}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    rows="3"
+                    placeholder="Describe the responsibilities of this role..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    value={roleDescription}
+                    onChange={(e) => setRoleDescription(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Permission Matrix */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-orange-600" />
+                    <h3 className="font-semibold text-gray-800">Permission Matrix</h3>
+                  </div>
+                  <span className="text-sm text-gray-500">{totalActive} permissions active</span>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Module</th>
+                        {ACTIONS.map(a => (
+                          <th key={a} className="text-center py-3 px-3 text-xs font-medium text-gray-500 uppercase">{a}</th>
+                        ))}
+                        <th className="text-center py-3 px-3 text-xs font-medium text-gray-500 uppercase">All</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {MODULES.map(mod => (
+                        <tr key={mod.id} className="hover:bg-gray-50">
+                          <td className="py-3 px-4 text-sm font-medium text-gray-800">{mod.label}</td>
+                          {ACTIONS.map(action => (
+                            <td key={action} className="py-3 px-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={permissions[mod.id]?.[action] || false}
+                                onChange={() => togglePermission(mod.id, action)}
+                                className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer"
+                              />
+                            </td>
+                          ))}
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              onClick={() => toggleAll(mod.id)}
+                              className="text-xs text-orange-600 hover:text-orange-800 font-medium"
+                            >
+                              {ACTIONS.every(a => permissions[mod.id]?.[a]) ? 'None' : 'All'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <Card className="bg-gray-800 text-white">
+              <CardContent className="p-6 space-y-4">
+                <h3 className="font-semibold">Role Summary</h3>
+                <div>
+                  <p className="text-xs text-gray-400">ROLE NAME</p>
+                  <p className="font-medium text-white">{roleName || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">ACTIVE PERMISSIONS</p>
+                  <p className="text-3xl font-bold text-orange-400">{totalActive}</p>
+                  <p className="text-xs text-gray-400">out of {MODULES.length * ACTIONS.length} total</p>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-orange-500 h-2 rounded-full transition-all"
+                    style={{ width: `${(totalActive / (MODULES.length * ACTIONS.length)) * 100}%` }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-3">
+              <Button
+                onClick={handleSubmit}
+                disabled={isPending}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Save Changes'}
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/admin/roles')} className="w-full">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
+  )
+}
+
+export default EditRole

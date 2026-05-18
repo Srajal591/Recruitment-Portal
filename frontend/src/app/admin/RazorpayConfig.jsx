@@ -1,150 +1,238 @@
-import { useState } from 'react'
-import { Eye, EyeOff, Copy, AlertTriangle, Key, Link, RotateCcw, Circle, Smartphone } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import {
+  ArrowLeft, Eye, EyeOff, Copy, AlertTriangle, Key,
+  Link, CheckCircle, Loader2, RefreshCw,
+} from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import Input from '../../components/ui/Input'
 import Badge from '../../components/ui/Badge'
+import { adminService } from '../../services/admin.service'
 
 const RazorpayConfig = () => {
-  const [showApiSecret, setShowApiSecret] = useState(false)
-  const [showWebhookSecret, setShowWebhookSecret] = useState(false)
-  const [formData, setFormData] = useState({
-    apiKeyId: 'rzp_live_G9v7LzXBNiuSL',
-    apiSecret: '••••••••••••••',
-    webhookSecret: '••••••••••••••'
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [showSecret, setShowSecret] = useState(false)
+  const [showWebhook, setShowWebhook] = useState(false)
+  const [form, setForm] = useState({
+    status: 'INACTIVE',
+    mode: 'Test',
+    apiKey: '',
+    secretKey: '',
+    webhookSecret: '',
+    settlementDays: '1-2 Days',
+  })
+
+  const { data: gatewaysData, isLoading } = useQuery({
+    queryKey: ['admin-payment-gateways'],
+    queryFn: adminService.getPaymentGateways,
+  })
+
+  // Populate form from existing config
+  useEffect(() => {
+    const gateways = gatewaysData?.gateways || []
+    const razorpay = gateways.find(g => g.name === 'Razorpay')
+    if (razorpay) {
+      setForm(f => ({
+        ...f,
+        status: razorpay.status || 'INACTIVE',
+        mode: razorpay.mode || 'Test',
+        settlementDays: razorpay.settlementDays || '1-2 Days',
+        // Don't pre-fill secrets for security
+      }))
+    }
+  }, [gatewaysData])
+
+  const { mutate: saveConfig, isPending } = useMutation({
+    mutationFn: (data) => adminService.upsertPaymentGateway('Razorpay', data),
+    onSuccess: () => {
+      toast.success('Razorpay configuration saved')
+      queryClient.invalidateQueries({ queryKey: ['admin-payment-gateways'] })
+    },
+    onError: (err) => toast.error(err.message || 'Failed to save configuration'),
   })
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text)
-    // Add toast notification here
+    toast.success('Copied to clipboard')
   }
+
+  const handleSave = () => {
+    if (!form.apiKey.trim() && !form.secretKey.trim()) {
+      // Only update status/mode if no keys provided
+      saveConfig({ status: form.status, mode: form.mode, settlementDays: form.settlementDays })
+    } else {
+      saveConfig(form)
+    }
+  }
+
+  const gateways = gatewaysData?.gateways || []
+  const razorpay = gateways.find(g => g.name === 'Razorpay')
+  const isActive = razorpay?.status === 'ACTIVE'
+
+  const WEBHOOK_URL = `${window.location.origin}/api/candidate/payments/razorpay/webhook`
 
   return (
     <AdminLayout title="Razorpay Configuration">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">R</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-text-primary">Razorpay</h1>
-              <div className="flex items-center space-x-4 mt-1">
-                <Badge variant="success">Status: Active</Badge>
-                <Badge variant="warning">
-                  <Circle className="w-3 h-3 mr-1 text-red-500" />
-                  Mode: Live
-                </Badge>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin/payment-settings')}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex-1">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold text-xl">R</span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Razorpay Configuration</h1>
+                <div className="flex items-center gap-3 mt-1">
+                  <Badge className={isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}>
+                    {isActive ? '● Active' : '○ Inactive'}
+                  </Badge>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {razorpay?.mode || form.mode} Mode
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <div className="text-sm text-text-secondary">GATEWAY MODE</div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm">TEST</Button>
-              <Button variant="primary" size="sm">LIVE</Button>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Mode:</span>
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              {['Test', 'Live'].map(m => (
+                <button
+                  key={m}
+                  onClick={() => setForm(f => ({ ...f, mode: m }))}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    form.mode === m
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Configuration Form */}
+          {/* Config Form */}
           <div className="lg:col-span-2 space-y-6">
+            {/* API Keys */}
             <Card>
               <CardHeader>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <Key className="w-5 h-5 text-orange-600" />
-                  <h3 className="font-semibold text-text-primary">API Configuration</h3>
+                  <h3 className="font-semibold text-gray-800">API Configuration</h3>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    API KEY ID
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.apiKeyId}
-                      onChange={(e) => setFormData({...formData, apiKeyId: e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50"
-                      readOnly
-                    />
-                  </div>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    value={form.status}
+                    onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                    <option value="LIMITED">Limited</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    API Key ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="rzp_test_... or rzp_live_..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm font-mono"
+                    value={form.apiKey}
+                    onChange={(e) => setForm(f => ({ ...f, apiKey: e.target.value }))}
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Leave blank to keep existing key</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      API SECRET
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">API Secret</label>
                     <div className="relative">
                       <input
-                        type={showApiSecret ? 'text' : 'password'}
-                        value={formData.apiSecret}
-                        onChange={(e) => setFormData({...formData, apiSecret: e.target.value})}
-                        className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        type={showSecret ? 'text' : 'password'}
+                        placeholder="Enter API secret"
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm font-mono"
+                        value={form.secretKey}
+                        onChange={(e) => setForm(f => ({ ...f, secretKey: e.target.value }))}
                       />
                       <button
                         type="button"
-                        onClick={() => setShowApiSecret(!showApiSecret)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                        onClick={() => setShowSecret(!showSecret)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                       >
-                        {showApiSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      WEBHOOK SECRET
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Webhook Secret</label>
                     <div className="relative">
                       <input
-                        type={showWebhookSecret ? 'text' : 'password'}
-                        value={formData.webhookSecret}
-                        onChange={(e) => setFormData({...formData, webhookSecret: e.target.value})}
-                        className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        type={showWebhook ? 'text' : 'password'}
+                        placeholder="Enter webhook secret"
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm font-mono"
+                        value={form.webhookSecret}
+                        onChange={(e) => setForm(f => ({ ...f, webhookSecret: e.target.value }))}
                       />
                       <button
                         type="button"
-                        onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                        onClick={() => setShowWebhook(!showWebhook)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                       >
-                        {showWebhookSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showWebhook ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Settlement Days</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1-2 Days"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    value={form.settlementDays}
+                    onChange={(e) => setForm(f => ({ ...f, settlementDays: e.target.value }))}
+                  />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Webhook Configuration */}
+            {/* Webhook */}
             <Card>
               <CardHeader>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <Link className="w-5 h-5 text-yellow-600" />
-                  <h3 className="font-semibold text-text-primary">Webhook Endpoint</h3>
+                  <h3 className="font-semibold text-gray-800">Webhook Endpoint</h3>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-text-secondary text-sm mb-4">
-                  Configure this URL in your Razorpay Dashboard under Settings &gt; Webhooks to receive real-time 
-                  notifications for payment successes, failures, and refunds.
+                <p className="text-gray-600 text-sm mb-4">
+                  Add this URL in your Razorpay Dashboard under Settings → Webhooks to receive real-time payment notifications.
                 </p>
-                <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                  <code className="flex-1 text-sm text-text-primary">
-                    https://api.bihar-recruitment.gov.in/v1/payments/razorpay/webhook
-                  </code>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCopy('https://api.bihar-recruitment.gov.in/v1/payments/razorpay/webhook')}
-                  >
-                    <Copy className="w-4 h-4" />
-                    COPY
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border">
+                  <code className="flex-1 text-sm text-gray-800 break-all">{WEBHOOK_URL}</code>
+                  <Button variant="outline" size="sm" onClick={() => handleCopy(WEBHOOK_URL)}>
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copy
                   </Button>
                 </div>
               </CardContent>
@@ -153,14 +241,13 @@ const RazorpayConfig = () => {
             {/* Security Alert */}
             <Card className="border-red-200 bg-red-50">
               <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-medium text-red-800 mb-1">SECURITY PROTOCOL ALERT</h4>
+                    <h4 className="font-semibold text-red-800 mb-1">Security Protocol Alert</h4>
                     <p className="text-red-700 text-sm">
-                      Your API Secret and Webhook Secret are extremely sensitive. Never share them or commit them to public repositories. Bihar Recruitment 
-                      Portal encrypts these keys using AES-256-GCM before storage. If you suspect a compromise, rotate your keys immediately in the Razorpay 
-                      dashboard.
+                      Your API Secret and Webhook Secret are extremely sensitive. Never share them or commit them to repositories.
+                      All keys are encrypted with AES-256-GCM before storage. If compromised, rotate keys immediately in the Razorpay dashboard.
                     </p>
                   </div>
                 </div>
@@ -170,46 +257,56 @@ const RazorpayConfig = () => {
 
           {/* Status Panel */}
           <div className="space-y-6">
-            <Card className="border-green-200 bg-green-50">
+            <Card className={isActive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}>
               <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Smartphone className="w-8 h-8 text-green-600" />
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
+                  <CheckCircle className={`w-8 h-8 ${isActive ? 'text-green-600' : 'text-gray-400'}`} />
                 </div>
-                <h3 className="font-semibold text-green-800 mb-2">Connectivity</h3>
-                <p className="text-green-700 text-sm mb-4">
-                  Validate your API credentials with Razorpay servers.
+                <h3 className={`font-semibold mb-2 ${isActive ? 'text-green-800' : 'text-gray-700'}`}>
+                  {isActive ? 'Gateway Active' : 'Gateway Inactive'}
+                </h3>
+                <p className={`text-sm mb-4 ${isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                  {isActive
+                    ? 'Razorpay is accepting payments.'
+                    : 'Configure and activate to start accepting payments.'}
                 </p>
-                <Badge variant="success" className="mb-4">✓ Connection Successful</Badge>
-                <div className="text-xs text-green-600">LAST CHECKED: 2 MINS AGO</div>
+                {razorpay?.updatedAt && (
+                  <p className="text-xs text-gray-500">
+                    Last updated: {new Date(razorpay.updatedAt).toLocaleDateString('en-IN')}
+                  </p>
+                )}
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-text-primary mb-4">Quick Actions</h3>
-                <div className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start">
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Auto-Validate Aadhar
-                    <Badge variant="success" className="ml-auto">ENABLE</Badge>
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    🌐 Hindi Support
-                    <Badge variant="success" className="ml-auto">ENABLE</Badge>
-                  </Button>
-                </div>
+              <CardContent className="p-6 space-y-3">
+                <h3 className="font-semibold text-gray-800">Supported Methods</h3>
+                {['UPI', 'Credit/Debit Cards', 'Net Banking', 'Wallets', 'EMI'].map(m => (
+                  <div key={m} className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    {m}
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between">
-          <div></div>
-          <div className="flex space-x-3">
-            <Button variant="outline">Save Configuration</Button>
-            <Button>Activate Gateway</Button>
-          </div>
+        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+          <Button variant="outline" onClick={() => navigate('/admin/payment-settings')}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isPending || isLoading}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-8"
+          >
+            {isPending
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
+              : <><CheckCircle className="w-4 h-4 mr-2" />Save Configuration</>
+            }
+          </Button>
         </div>
       </div>
     </AdminLayout>

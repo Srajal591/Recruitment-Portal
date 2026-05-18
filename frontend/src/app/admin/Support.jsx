@@ -39,8 +39,17 @@ const Support = () => {
   })
 
   const tickets = data?.tickets || []
-  const stats = statsData || {}
-  const total = data?.pagination?.totalItems || tickets.length
+  const rawStats = statsData || {}
+  const statusStats = rawStats.statusStats || []
+  const countByStatusName = (name) => statusStats.find(s => s._id === name)?.count || 0
+  const stats = {
+    open: countByStatusName('Open'),
+    inProgress: countByStatusName('In Progress'),
+    resolved: countByStatusName('Resolved'),
+    closed: countByStatusName('Closed'),
+    total: statusStats.reduce((sum, s) => sum + (s.count || 0), 0),
+  }
+  const total = data?.pagination?.totalItems || stats.total || tickets.length
 
   const statCards = [
     { title: 'OPEN TICKETS', value: stats.open || 0, color: 'border-l-red-500', icon: Ticket },

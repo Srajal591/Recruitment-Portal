@@ -1,329 +1,370 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, RotateCcw, Link, MessageSquare, Clock, User, Mail, Phone, Paperclip } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import {
+  ArrowLeft, Loader2, MessageSquare, Clock, User,
+  Paperclip, Send, AlertCircle, CheckCircle, XCircle,
+} from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import Button from '../../components/ui/Button'
-import { Card } from '../../components/ui/Card'
+import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
-import Input from '../../components/ui/Input'
+import { adminService } from '../../services/admin.service'
+
+const PRIORITY_COLORS = {
+  low: 'bg-green-100 text-green-800',
+  medium: 'bg-yellow-100 text-yellow-800',
+  high: 'bg-orange-100 text-orange-800',
+  critical: 'bg-red-100 text-red-800',
+  Low: 'bg-green-100 text-green-800',
+  Medium: 'bg-yellow-100 text-yellow-800',
+  High: 'bg-orange-100 text-orange-800',
+  Critical: 'bg-red-100 text-red-800',
+}
+
+const STATUS_COLORS = {
+  open: 'bg-red-100 text-red-800',
+  Open: 'bg-red-100 text-red-800',
+  in_progress: 'bg-yellow-100 text-yellow-800',
+  'In Progress': 'bg-yellow-100 text-yellow-800',
+  resolved: 'bg-green-100 text-green-800',
+  Resolved: 'bg-green-100 text-green-800',
+  closed: 'bg-gray-100 text-gray-800',
+  Closed: 'bg-gray-100 text-gray-800',
+}
+
+const STATUS_FLOW = ['Open', 'In Progress', 'Resolved', 'Closed']
 
 const SupportTicketDetails = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [newMessage, setNewMessage] = useState('')
-  const [ticket] = useState({
-    id: id,
-    title: 'Login Issue',
-    description: 'Unable to login with correct credentials. Getting error message "Invalid credentials" even with correct username and password.',
-    status: 'new',
-    priority: 'high',
-    category: 'Technical',
-    assignee: 'Unassigned',
-    customer: {
-      name: 'John Doe',
-      email: 'john.doe@email.com',
-      phone: '+91 9876543210',
-      userId: 'USR-001'
-    },
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-15T14:20:00Z',
-    messages: [
-      {
-        id: 1,
-        sender: 'John Doe',
-        senderType: 'customer',
-        message: 'I am unable to login to my account. I have tried multiple times with the correct credentials but keep getting an error.',
-        timestamp: '2024-01-15T10:30:00Z',
-        attachments: []
-      },
-      {
-        id: 2,
-        sender: 'Support Team',
-        senderType: 'agent',
-        message: 'Thank you for contacting us. We have received your ticket and are looking into the issue. Can you please provide your registered email address?',
-        timestamp: '2024-01-15T11:15:00Z',
-        attachments: []
-      },
-      {
-        id: 3,
-        sender: 'John Doe',
-        senderType: 'customer',
-        message: 'My registered email is john.doe@email.com. I have been trying to login since yesterday.',
-        timestamp: '2024-01-15T14:20:00Z',
-        attachments: [
-          { name: 'screenshot.png', size: '245 KB' }
-        ]
-      }
-    ]
+  const queryClient = useQueryClient()
+  const [replyText, setReplyText] = useState('')
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-support-ticket', id],
+    queryFn: () => adminService.getSupportTicket(id),
   })
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'critical': return 'danger'
-      case 'high': return 'warning'
-      case 'medium': return 'info'
-      case 'low': return 'secondary'
-      default: return 'secondary'
-    }
-  }
+  const ticket = data?.ticket || data
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'new': return 'info'
-      case 'inProgress': return 'warning'
-      case 'resolved': return 'success'
-      case 'closed': return 'secondary'
-      default: return 'secondary'
-    }
-  }
+  const { mutate: updateTicket, isPending: isUpdating } = useMutation({
+    mutationFn: (updates) => adminService.updateSupportTicket(id, updates),
+    onSuccess: () => {
+      toast.success('Ticket updated')
+      queryClient.invalidateQueries({ queryKey: ['admin-support-ticket', id] })
+      queryClient.invalidateQueries({ queryKey: ['admin-support-tickets'] })
+    },
+    onError: (err) => toast.error(err.message || 'Failed to update ticket'),
+  })
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      console.log('Sending message:', newMessage)
-      setNewMessage('')
-      // API call to send message
-    }
-  }
+  const { mutate: sendReply, isPending: isSending } = useMutation({
+    mutationFn: (message) => adminService.replyToTicket(id, { message }),
+    onSuccess: () => {
+      toast.success('Reply sent')
+      setReplyText('')
+      queryClient.invalidateQueries({ queryKey: ['admin-support-ticket', id] })
+    },
+    onError: (err) => toast.error(err.message || 'Failed to send reply'),
+  })
 
   const handleStatusChange = (newStatus) => {
-    console.log('Changing status to:', newStatus)
-    // API call to update status
+    updateTicket({ status: newStatus })
   }
 
-  const handleAssignTicket = () => {
-    console.log('Assigning ticket')
-    // Open assignment modal or dropdown
+  const handlePriorityChange = (newPriority) => {
+    updateTicket({ priority: newPriority })
   }
 
-  const formatTimestamp = (timestamp) => {
-    return new Date(timestamp).toLocaleString()
+  const handleSendReply = () => {
+    if (!replyText.trim()) return
+    sendReply(replyText.trim())
   }
+
+  const formatTime = (ts) => {
+    if (!ts) return '—'
+    return new Date(ts).toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
+  }
+
+  if (isLoading) return (
+    <AdminLayout title="Ticket Details">
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+      </div>
+    </AdminLayout>
+  )
+
+  if (!ticket) return (
+    <AdminLayout title="Ticket Details">
+      <div className="p-6">
+        <p className="text-gray-600">Ticket not found.</p>
+        <Button variant="outline" onClick={() => navigate('/admin/support')} className="mt-4">
+          Back to Support
+        </Button>
+      </div>
+    </AdminLayout>
+  )
+
+  const replies = ticket.replies || ticket.messages || []
+  const candidate = ticket.raisedBy || ticket.candidateId || {}
 
   return (
-    <AdminLayout>
-      <div className="p-6">
-        <div className="space-y-6">
+    <AdminLayout title="Ticket Details">
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ticket Details</h1>
-            <p className="text-gray-600">Ticket ID: {ticket.id}</p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/support')}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Ticket Details</h1>
+              <p className="text-gray-500 text-sm font-mono text-orange-600">{ticket.ticketId || id}</p>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/admin/support')}
-          >
-            Back to Support
-          </Button>
+          <div className="flex items-center gap-2">
+            <Badge className={PRIORITY_COLORS[ticket.priority] || 'bg-gray-100 text-gray-800'}>
+              {ticket.priority?.toUpperCase()}
+            </Badge>
+            <Badge className={STATUS_COLORS[ticket.status] || 'bg-gray-100 text-gray-800'}>
+              {ticket.status?.replace('_', ' ').toUpperCase()}
+            </Badge>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Ticket Header */}
-            <Card className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
+            {/* Ticket Info */}
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">{ticket.subject || ticket.title}</h2>
+                <p className="text-gray-600 text-sm leading-relaxed">{ticket.description}</p>
+                <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{ticket.title}</h2>
-                    <p className="text-gray-600 mt-2">{ticket.description}</p>
+                    <p className="text-xs text-gray-500">Category</p>
+                    <p className="text-sm font-medium text-gray-800 capitalize">{ticket.category || '—'}</p>
                   </div>
-                  <div className="flex space-x-2">
-                    <Badge variant={getPriorityColor(ticket.priority)}>
-                      {ticket.priority.toUpperCase()}
-                    </Badge>
-                    <Badge variant={getStatusColor(ticket.status)}>
-                      {ticket.status.replace(/([A-Z])/g, ' $1').toUpperCase()}
-                    </Badge>
+                  <div>
+                    <p className="text-xs text-gray-500">Created</p>
+                    <p className="text-sm font-medium text-gray-800">{formatTime(ticket.createdAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Last Updated</p>
+                    <p className="text-sm font-medium text-gray-800">{formatTime(ticket.updatedAt)}</p>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Category</span>
-                    <p className="text-gray-900">{ticket.category}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Created</span>
-                    <p className="text-gray-900">{formatTimestamp(ticket.createdAt)}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Last Updated</span>
-                    <p className="text-gray-900">{formatTimestamp(ticket.updatedAt)}</p>
-                  </div>
-                </div>
-              </div>
+              </CardContent>
             </Card>
 
-            {/* Messages */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Conversation</h3>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {ticket.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.senderType === 'agent' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
-                        message.senderType === 'agent'
-                          ? 'bg-primary text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">
-                          {message.sender}
-                        </span>
-                        <span className={`text-xs ${
-                          message.senderType === 'agent' ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
-                          {formatTimestamp(message.timestamp)}
-                        </span>
-                      </div>
-                      <p className="text-sm">{message.message}</p>
-                      {message.attachments.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {message.attachments.map((attachment, index) => (
-                            <div key={index} className="flex items-center space-x-2 text-xs">
-                              <Paperclip className="w-3 h-3 text-gray-400" />
-                              <span>{attachment.name}</span>
-                              <span className="text-gray-400">({attachment.size})</span>
+            {/* Conversation */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800">Conversation</h3>
+                  <span className="text-sm text-gray-500">({replies.length} messages)</span>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {/* Messages */}
+                <div className="max-h-96 overflow-y-auto p-6 space-y-4">
+                  {replies.length === 0 ? (
+                    <p className="text-gray-500 text-sm text-center py-4">No messages yet.</p>
+                  ) : (
+                    replies.map((msg, i) => {
+                      const isAgent = msg.senderType === 'Employee' || msg.senderType === 'agent' || msg.isAdmin
+                      return (
+                        <div key={msg._id || i} className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-sm lg:max-w-md rounded-xl px-4 py-3 ${
+                            isAgent
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-gray-100 text-gray-900'
+                          }`}>
+                            <div className="flex items-center justify-between gap-4 mb-1">
+                              <span className={`text-xs font-semibold ${isAgent ? 'text-orange-100' : 'text-gray-600'}`}>
+                                {msg.senderName || msg.sender || (isAgent ? 'Support Team' : 'Candidate')}
+                              </span>
+                              <span className={`text-xs ${isAgent ? 'text-orange-200' : 'text-gray-400'}`}>
+                                {formatTime(msg.createdAt || msg.timestamp)}
+                              </span>
                             </div>
-                          ))}
+                            <p className="text-sm">{msg.message || msg.content}</p>
+                            {msg.attachments?.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                {msg.attachments.map((att, j) => (
+                                  <div key={j} className="flex items-center gap-1 text-xs opacity-80">
+                                    <Paperclip className="w-3 h-3" />
+                                    <span>{att.name || att}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
+                      )
+                    })
+                  )}
+                </div>
+
+                {/* Reply Box */}
+                {ticket.status !== 'Closed' && ticket.status !== 'closed' && (
+                  <div className="p-6 border-t border-gray-100">
+                    <textarea
+                      rows={3}
+                      placeholder="Type your reply to the candidate..."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm resize-none"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.ctrlKey) handleSendReply()
+                      }}
+                    />
+                    <div className="flex justify-between items-center mt-3">
+                      <p className="text-xs text-gray-400">Ctrl+Enter to send</p>
+                      <Button
+                        onClick={handleSendReply}
+                        disabled={!replyText.trim() || isSending}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSending
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <><Send className="w-4 h-4 mr-2" />Send Reply</>
+                        }
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Reply Form */}
-              <div className="mt-6 pt-4 border-t">
-                <div className="space-y-3">
-                  <textarea
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type your reply..."
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                  <div className="flex justify-between items-center">
-                    <Button variant="outline" size="sm">
-                      Attach File
-                    </Button>
-                    <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                      Send Reply
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                )}
+              </CardContent>
             </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Customer Info */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h3>
-              <div className="space-y-3">
+            {/* Candidate Info */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800">Candidate Info</h3>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 <div>
-                  <span className="text-sm font-medium text-gray-500">Name</span>
-                  <p className="text-gray-900">{ticket.customer.name}</p>
+                  <p className="text-xs text-gray-500">Name</p>
+                  <p className="text-sm font-medium text-gray-900">{candidate.fullName || candidate.name || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">Email</span>
-                  <p className="text-gray-900">{ticket.customer.email}</p>
+                  <p className="text-xs text-gray-500">Email</p>
+                  <p className="text-sm font-medium text-gray-900">{candidate.email || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">Phone</span>
-                  <p className="text-gray-900">{ticket.customer.phone}</p>
+                  <p className="text-xs text-gray-500">Phone</p>
+                  <p className="text-sm font-medium text-gray-900">{candidate.phone || candidate.contactNumber || '—'}</p>
                 </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-500">User ID</span>
-                  <p className="text-gray-900">{ticket.customer.userId}</p>
-                </div>
-              </div>
+              </CardContent>
             </Card>
 
             {/* Actions */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
-              <div className="space-y-3">
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold text-gray-800">Update Ticket</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Change Status
-                  </label>
-                  <select
-                    value={ticket.status}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="new">New</option>
-                    <option value="inProgress">In Progress</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="closed">Closed</option>
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <div className="space-y-2">
+                    {STATUS_FLOW.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => handleStatusChange(s)}
+                        disabled={isUpdating || ticket.status === s}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                          ticket.status === s
+                            ? 'bg-orange-600 text-white border-orange-600'
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {s === 'Open' && <AlertCircle className="w-4 h-4 inline mr-2 text-red-500" />}
+                        {s === 'In Progress' && <Clock className="w-4 h-4 inline mr-2 text-yellow-500" />}
+                        {s === 'Resolved' && <CheckCircle className="w-4 h-4 inline mr-2 text-green-500" />}
+                        {s === 'Closed' && <XCircle className="w-4 h-4 inline mr-2 text-gray-500" />}
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assign To
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
                   <select
-                    value={ticket.assignee}
-                    onChange={(e) => console.log('Assigning to:', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={ticket.priority || ''}
+                    onChange={(e) => handlePriorityChange(e.target.value)}
+                    disabled={isUpdating}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
                   >
-                    <option value="Unassigned">Unassigned</option>
-                    <option value="Alice Johnson">Alice Johnson</option>
-                    <option value="Bob Brown">Bob Brown</option>
-                    <option value="Carol White">Carol White</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Priority
-                  </label>
-                  <select
-                    value={ticket.priority}
-                    onChange={(e) => console.log('Changing priority to:', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                  </select>
-                </div>
-              </div>
+              </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Escalate Ticket
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Create Internal Note
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Link className="w-4 h-4 mr-2" />
-                  Link Related Ticket
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Clock className="w-4 h-4 mr-2" />
-                  View Customer History
-                </Button>
-              </div>
+            {/* Timeline */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800">Timeline</h3>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-gray-800">Ticket Created</p>
+                      <p className="text-xs text-gray-500">{formatTime(ticket.createdAt)}</p>
+                    </div>
+                  </div>
+                  {ticket.assignedAt && (
+                    <div className="flex gap-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-800">Assigned</p>
+                        <p className="text-xs text-gray-500">{formatTime(ticket.assignedAt)}</p>
+                      </div>
+                    </div>
+                  )}
+                  {ticket.resolvedAt && (
+                    <div className="flex gap-3">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-800">Resolved</p>
+                        <p className="text-xs text-gray-500">{formatTime(ticket.resolvedAt)}</p>
+                      </div>
+                    </div>
+                  )}
+                  {ticket.closedAt && (
+                    <div className="flex gap-3">
+                      <div className="w-2 h-2 rounded-full bg-gray-400 mt-1.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-800">Closed</p>
+                        <p className="text-xs text-gray-500">{formatTime(ticket.closedAt)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
             </Card>
           </div>
         </div>
-      </div>
       </div>
     </AdminLayout>
   )

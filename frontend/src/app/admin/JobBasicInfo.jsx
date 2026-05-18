@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'

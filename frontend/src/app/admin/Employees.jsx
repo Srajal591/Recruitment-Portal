@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { Plus, Search } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Search, Edit2, Trash2, Activity } from 'lucide-react'
+import toast from 'react-hot-toast'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -9,6 +10,8 @@ import { adminService } from '../../services/admin.service'
 
 const Employees = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-employees'],
     queryFn: () => adminService.getEmployees({ limit: 20 }),
@@ -17,6 +20,24 @@ const Employees = () => {
     queryKey: ['admin-employee-stats'],
     queryFn: adminService.getEmployeeStats,
   })
+
+  const { mutate: deleteEmployee } = useMutation({
+    mutationFn: adminService.deleteEmployee,
+    onSuccess: () => {
+      toast.success('Employee deleted successfully')
+      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-employee-stats'] })
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to delete employee')
+    },
+  })
+
+  const handleDelete = (employee) => {
+    if (window.confirm(`Are you sure you want to delete ${employee.fullName}? This action cannot be undone.`)) {
+      deleteEmployee(employee._id)
+    }
+  }
 
   const employees = data?.employees || []
   const stats = [
@@ -75,11 +96,12 @@ const Employees = () => {
                     <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Role</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Status</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Joined</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoading && <tr><td colSpan="6" className="py-6 px-4 text-gray-600">Loading employees...</td></tr>}
-                  {!isLoading && employees.length === 0 && <tr><td colSpan="6" className="py-6 px-4 text-gray-600">No employees found.</td></tr>}
+                  {isLoading && <tr><td colSpan="7" className="py-6 px-4 text-gray-600">Loading employees...</td></tr>}
+                  {!isLoading && employees.length === 0 && <tr><td colSpan="7" className="py-6 px-4 text-gray-600">No employees found.</td></tr>}
                   {employees.map((employee) => (
                     <tr key={employee._id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-4 px-4">
@@ -95,6 +117,31 @@ const Employees = () => {
                         </Badge>
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-800">{employee.dateOfJoining ? new Date(employee.dateOfJoining).toLocaleDateString('en-IN') : '-'}</td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => navigate(`/admin/employees/${employee._id}/edit`)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Employee"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/admin/employees/${employee._id}/activity`)}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="View Activity Logs"
+                          >
+                            <Activity className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(employee)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Employee"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

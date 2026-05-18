@@ -179,6 +179,24 @@ export const adminService = {
     return unwrapData(response)
   },
 
+  // ── Payments ──────────────────────────────────────────────
+  async getPayments(params = {}) {
+    const response = await apiClient.get('/admin/payments', { params })
+    return unwrapData(response)
+  },
+  async getPaymentStats() {
+    const response = await apiClient.get('/admin/payments/stats')
+    return unwrapData(response)
+  },
+  async getPaymentGateways() {
+    const response = await apiClient.get('/admin/payment-gateways')
+    return unwrapData(response)
+  },
+  async upsertPaymentGateway(name, data) {
+    const response = await apiClient.put(`/admin/payment-gateways/${name}`, data)
+    return unwrapData(response)
+  },
+
   // ── Activity Logs ─────────────────────────────────────────
   async getActivityLogs(params = {}) {
     const response = await apiClient.get('/admin/activity-logs', { params })

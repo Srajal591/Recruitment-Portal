@@ -1,238 +1,183 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { LayoutList, Loader2 } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import Button from '../../components/ui/Button'
-import { Card } from '../../components/ui/Card'
+import { Card, CardContent } from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
+import { adminService } from '../../services/admin.service'
+
+const PRIORITY_COLORS = {
+  low: 'bg-green-100 text-green-800',
+  medium: 'bg-yellow-100 text-yellow-800',
+  high: 'bg-orange-100 text-orange-800',
+  critical: 'bg-red-100 text-red-800',
+  Low: 'bg-green-100 text-green-800',
+  Medium: 'bg-yellow-100 text-yellow-800',
+  High: 'bg-orange-100 text-orange-800',
+  Critical: 'bg-red-100 text-red-800',
+}
+
+const COLUMNS = [
+  { id: 'Open',        label: 'Open',        color: 'bg-red-50 border-red-200',    dot: 'bg-red-500' },
+  { id: 'In Progress', label: 'In Progress', color: 'bg-yellow-50 border-yellow-200', dot: 'bg-yellow-500' },
+  { id: 'Resolved',    label: 'Resolved',    color: 'bg-green-50 border-green-200',  dot: 'bg-green-500' },
+  { id: 'Closed',      label: 'Closed',      color: 'bg-gray-50 border-gray-200',    dot: 'bg-gray-400' },
+]
 
 const SupportKanban = () => {
   const navigate = useNavigate()
-  const [tickets] = useState({
-    new: [
-      {
-        id: 'TKT-001',
-        title: 'Login Issue',
-        description: 'Unable to login with correct credentials',
-        priority: 'high',
-        assignee: 'Unassigned',
-        createdAt: '2024-01-15',
-        customer: 'John Doe'
-      },
-      {
-        id: 'TKT-002',
-        title: 'Payment Failed',
-        description: 'Payment gateway showing error',
-        priority: 'critical',
-        assignee: 'Unassigned',
-        createdAt: '2024-01-15',
-        customer: 'Jane Smith'
-      }
-    ],
-    inProgress: [
-      {
-        id: 'TKT-003',
-        title: 'Document Upload Error',
-        description: 'PDF files not uploading properly',
-        priority: 'medium',
-        assignee: 'Alice Johnson',
-        createdAt: '2024-01-14',
-        customer: 'Mike Wilson'
-      }
-    ],
-    resolved: [
-      {
-        id: 'TKT-004',
-        title: 'Profile Update Issue',
-        description: 'Cannot update profile information',
-        priority: 'low',
-        assignee: 'Bob Brown',
-        createdAt: '2024-01-13',
-        customer: 'Sarah Davis',
-        resolvedAt: '2024-01-15'
-      }
-    ],
-    closed: [
-      {
-        id: 'TKT-005',
-        title: 'Email Notification',
-        description: 'Not receiving email notifications',
-        priority: 'medium',
-        assignee: 'Alice Johnson',
-        createdAt: '2024-01-12',
-        customer: 'Tom Anderson',
-        resolvedAt: '2024-01-14',
-        closedAt: '2024-01-15'
-      }
-    ]
+  const queryClient = useQueryClient()
+
+  // Fetch all tickets (high limit to show all in kanban)
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-support-tickets-kanban'],
+    queryFn: () => adminService.getSupportTickets({ limit: 100 }),
   })
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'critical': return 'danger'
-      case 'high': return 'warning'
-      case 'medium': return 'info'
-      case 'low': return 'secondary'
-      default: return 'secondary'
-    }
+  const { data: statsData } = useQuery({
+    queryKey: ['admin-support-stats'],
+    queryFn: adminService.getSupportStats,
+  })
+
+  const { mutate: updateTicket } = useMutation({
+    mutationFn: ({ id, status }) => adminService.updateSupportTicket(id, { status }),
+    onSuccess: () => {
+      toast.success('Ticket status updated')
+      queryClient.invalidateQueries({ queryKey: ['admin-support-tickets-kanban'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-support-stats'] })
+    },
+    onError: (err) => toast.error(err.message || 'Failed to update ticket'),
+  })
+
+  const allTickets = data?.tickets || []
+  const rawStats = statsData || {}
+  const statusStats = rawStats.statusStats || []
+  const countByStatusName = (name) => statusStats.find(s => s._id === name)?.count || 0
+  const stats = {
+    open: countByStatusName('Open'),
+    inProgress: countByStatusName('In Progress'),
+    resolved: countByStatusName('Resolved'),
+    closed: countByStatusName('Closed'),
   }
 
-  const columns = [
-    { id: 'new', title: 'New', color: 'bg-gray-50' },
-    { id: 'inProgress', title: 'In Progress', color: 'bg-blue-50' },
-    { id: 'resolved', title: 'Resolved', color: 'bg-green-50' },
-    { id: 'closed', title: 'Closed', color: 'bg-gray-100' }
-  ]
+  // Group tickets by status
+  const grouped = COLUMNS.reduce((acc, col) => {
+    acc[col.id] = allTickets.filter(t =>
+      (t.status || '').toLowerCase() === col.id.toLowerCase() ||
+      t.status === col.id
+    )
+    return acc
+  }, {})
 
-  const handleTicketClick = (ticketId) => {
-    navigate(`/admin/support/ticket/${ticketId}`)
-  }
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <AdminLayout title="Support Kanban">
+      <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Support Kanban</h1>
-            <p className="text-gray-600">Manage support tickets with drag-and-drop interface</p>
+            <p className="text-gray-600 text-sm">Drag-free kanban view of all support tickets.</p>
           </div>
-          <div className="flex space-x-3">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/support')}
-            >
-              List View
-            </Button>
-            <Button>
-              New Ticket
-            </Button>
-          </div>
+          <Button variant="outline" onClick={() => navigate('/admin/support')}>
+            <LayoutList className="w-4 h-4 mr-2" />
+            List View
+          </Button>
         </div>
 
-        {/* Kanban Board */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {columns.map((column) => (
-            <div key={column.id} className={`${column.color} rounded-lg p-4`}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">{column.title}</h3>
-                <Badge variant="secondary">
-                  {tickets[column.id]?.length || 0}
-                </Badge>
-              </div>
-
-              <div className="space-y-3">
-                {tickets[column.id]?.map((ticket) => (
-                  <Card
-                    key={ticket.id}
-                    className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleTicketClick(ticket.id)}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm">
-                            {ticket.title}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {ticket.id}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={getPriorityColor(ticket.priority)}
-                          size="sm"
-                        >
-                          {ticket.priority}
-                        </Badge>
-                      </div>
-
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {ticket.description}
-                      </p>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span>Customer:</span>
-                          <span className="font-medium">{ticket.customer}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span>Assignee:</span>
-                          <span className="font-medium">
-                            {ticket.assignee === 'Unassigned' ? (
-                              <Badge variant="outline" size="sm">Unassigned</Badge>
-                            ) : (
-                              ticket.assignee
-                            )}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span>Created:</span>
-                          <span>{ticket.createdAt}</span>
-                        </div>
-
-                        {ticket.resolvedAt && (
-                          <div className="flex items-center justify-between text-xs text-gray-500">
-                            <span>Resolved:</span>
-                            <span>{ticket.resolvedAt}</span>
-                          </div>
-                        )}
-
-                        {ticket.closedAt && (
-                          <div className="flex items-center justify-between text-xs text-gray-500">
-                            <span>Closed:</span>
-                            <span>{ticket.closedAt}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-
-                {(!tickets[column.id] || tickets[column.id].length === 0) && (
-                  <div className="text-center py-8 text-gray-500">
-                    <p className="text-sm">No tickets in this column</p>
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* Stats Row */}
+        <div className="grid grid-cols-4 gap-4">
+          {[
+            { label: 'Open', value: stats.open || grouped['Open']?.length || 0, color: 'text-red-600' },
+            { label: 'In Progress', value: stats.inProgress || grouped['In Progress']?.length || 0, color: 'text-yellow-600' },
+            { label: 'Resolved', value: stats.resolved || grouped['Resolved']?.length || 0, color: 'text-green-600' },
+            { label: 'Closed', value: stats.closed || grouped['Closed']?.length || 0, color: 'text-gray-600' },
+          ].map(s => (
+            <Card key={s.label} className="bg-white">
+              <CardContent className="p-4 text-center">
+                <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">
-                {Object.values(tickets).flat().length}
-              </p>
-              <p className="text-sm text-gray-600">Total Tickets</p>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">
-                {tickets.inProgress?.length || 0}
-              </p>
-              <p className="text-sm text-gray-600">In Progress</p>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-                {tickets.resolved?.length || 0}
-              </p>
-              <p className="text-sm text-gray-600">Resolved Today</p>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">
-                {tickets.new?.filter(t => t.priority === 'critical').length || 0}
-              </p>
-              <p className="text-sm text-gray-600">Critical Issues</p>
-            </div>
-          </Card>
-        </div>
+        {/* Kanban Board */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {COLUMNS.map((col) => {
+              const colTickets = grouped[col.id] || []
+              return (
+                <div key={col.id} className={`rounded-xl border p-4 ${col.color}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
+                      <h3 className="font-semibold text-gray-800 text-sm">{col.label}</h3>
+                    </div>
+                    <span className="text-xs font-bold text-gray-600 bg-white rounded-full px-2 py-0.5 border">
+                      {colTickets.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 min-h-[200px]">
+                    {colTickets.length === 0 && (
+                      <div className="text-center py-8 text-gray-400 text-sm">No tickets</div>
+                    )}
+                    {colTickets.map((ticket) => (
+                      <div
+                        key={ticket._id}
+                        onClick={() => navigate(`/admin/support/ticket/${ticket._id}`)}
+                        className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <p className="font-medium text-gray-900 text-sm line-clamp-2 flex-1">
+                            {ticket.subject || ticket.title}
+                          </p>
+                          <Badge className={`${PRIORITY_COLORS[ticket.priority] || 'bg-gray-100 text-gray-800'} text-xs flex-shrink-0`}>
+                            {ticket.priority}
+                          </Badge>
+                        </div>
+
+                        <p className="text-xs text-orange-600 font-mono mb-2">{ticket.ticketId}</p>
+
+                        <p className="text-xs text-gray-500 line-clamp-2 mb-3">
+                          {ticket.description}
+                        </p>
+
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{ticket.raisedBy?.fullName || ticket.candidateId?.fullName || 'Candidate'}</span>
+                          <span>{formatDate(ticket.createdAt)}</span>
+                        </div>
+
+                        {/* Quick status change */}
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex gap-1 flex-wrap">
+                          {COLUMNS.filter(c => c.id !== col.id).map(c => (
+                            <button
+                              key={c.id}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                updateTicket({ id: ticket._id, status: c.id })
+                              }}
+                              className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                            >
+                              → {c.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </AdminLayout>
   )

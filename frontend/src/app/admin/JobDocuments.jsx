@@ -85,6 +85,17 @@ const JobDocuments = () => {
   }
 
   const handleNext = () => {
+    const existing = JSON.parse(sessionStorage.getItem('job_draft') || '{}')
+    sessionStorage.setItem('job_draft', JSON.stringify({
+      ...existing,
+      documentRequirements: documents.map(({ id: _id, ...doc }) => ({
+        name: doc.name,
+        description: doc.description,
+        required: doc.required,
+        formats: doc.formats,
+        maxSizeKB: doc.maxSize ? parseInt(doc.maxSize) * 1024 : undefined,
+      })),
+    }))
     navigate(`/admin/jobs/create/payment${projectId ? `?project=${projectId}` : ''}`)
   }
 

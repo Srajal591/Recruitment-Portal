@@ -3,7 +3,7 @@ const Job = require("../../shared/models/Job");
 const Project = require("../../shared/models/Project");
 const Application = require("../../shared/models/Application");
 const ApiError = require("../../shared/utils/ApiError");
-const ApiResponse = require("../../shared/utils/ApiResponse");
+const { ApiResponse } = require("../../shared/utils/ApiResponse");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 
 /**

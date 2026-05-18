@@ -56,13 +56,13 @@ const JobReview = () => {
     catch { return {} }
   })()
 
-  const missingRequired = !draft.title || !draft.postCode || !draft.department || !draft.projectId
+  const missingRequired = !draft.title || !draft.postCode || !draft.department || !draft.projectId || !/^[a-f\d]{24}$/i.test(draft.projectId || '')
 
   const missingFields = [
-    !draft.projectId && 'Project (go back to Jobs and select a project)',
-    !draft.title && 'Job Title',
-    !draft.postCode && 'Post Code',
-    !draft.department && 'Department',
+    (!draft.projectId || !/^[a-f\d]{24}$/i.test(draft.projectId)) && 'Project — go back to Jobs, select a project, then click Create Job',
+    !draft.title && 'Job Title (Step 1)',
+    !draft.postCode && 'Post Code (Step 1)',
+    !draft.department && 'Department (Step 1)',
   ].filter(Boolean)
 
   // Step 1: Create job as draft
@@ -80,32 +80,33 @@ const JobReview = () => {
     mutationFn: adminService.publishJob,
   })
 
+  // Validate projectId is a valid MongoDB ObjectId (24 hex chars)
+  const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(id)
+
   const handleSaveDraft = async () => {
     if (missingRequired) {
       toast.error('Please complete Step 1 (Basic Info) first')
       return
     }
+    if (!isValidObjectId(draft.projectId)) {
+      toast.error('Invalid project ID. Please go back to Jobs, select a project, and start again.')
+      return
+    }
     try {
       setIsPublishing(true)
-
-      // Build the full payload for create — only required fields
       const createPayload = {
         projectId: draft.projectId,
         title: draft.title,
         postCode: draft.postCode,
         department: draft.department,
       }
-
       const createRes = await createJob(createPayload)
       const jobId = createRes?.job?._id
       if (!jobId) throw new Error('Job creation failed — no job ID returned')
-
-      // Build update payload — everything except the 4 create fields
       const updatePayload = buildUpdatePayload(draft)
       if (Object.keys(updatePayload).length > 0) {
         await updateJob({ id: jobId, data: updatePayload })
       }
-
       toast.success('Job saved as draft')
       sessionStorage.removeItem(STORAGE_KEY)
       queryClient.invalidateQueries({ queryKey: ['admin-jobs'] })
@@ -122,6 +123,10 @@ const JobReview = () => {
       toast.error('Please complete Step 1 (Basic Info) first')
       return
     }
+    if (!isValidObjectId(draft.projectId)) {
+      toast.error('Invalid project ID. Please go back to Jobs, select a project, and start again.')
+      return
+    }
     if (!draft.applicationDeadline) {
       toast.error('Application deadline is required to publish')
       return
@@ -132,25 +137,20 @@ const JobReview = () => {
     }
     try {
       setIsPublishing(true)
-
       const createPayload = {
         projectId: draft.projectId,
         title: draft.title,
         postCode: draft.postCode,
         department: draft.department,
       }
-
       const createRes = await createJob(createPayload)
       const jobId = createRes?.job?._id
       if (!jobId) throw new Error('Job creation failed — no job ID returned')
-
       const updatePayload = buildUpdatePayload(draft)
       if (Object.keys(updatePayload).length > 0) {
         await updateJob({ id: jobId, data: updatePayload })
       }
-
       await publishJob(jobId)
-
       toast.success('Job published successfully!')
       sessionStorage.removeItem(STORAGE_KEY)
       queryClient.invalidateQueries({ queryKey: ['admin-jobs'] })

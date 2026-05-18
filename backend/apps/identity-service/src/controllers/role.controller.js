@@ -64,8 +64,10 @@ const getRoles = asyncHandler(async (req, res) => {
       new ApiResponse(
         StatusCodes.OK,
         "Roles fetched",
-        rolesWithCount,
-        paginationMeta(total, page, limit),
+        {
+          roles: rolesWithCount,
+          pagination: paginationMeta(total, page, limit),
+        },
       ),
     );
 });

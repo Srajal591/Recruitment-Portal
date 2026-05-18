@@ -9,22 +9,30 @@ import { adminService } from '../../services/admin.service'
 
 const Employees = () => {
   const navigate = useNavigate()
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['admin-employees'],
     queryFn: () => adminService.getEmployees({ limit: 20 }),
   })
-  const { data: statsData } = useQuery({
+  const { data: statsData, error: statsError } = useQuery({
     queryKey: ['admin-employee-stats'],
     queryFn: adminService.getEmployeeStats,
   })
 
   const employees = data?.employees || []
   const stats = [
-    { title: 'TOTAL EMPLOYEES', value: statsData?.totalEmployees || data?.pagination?.totalItems || employees.length, color: 'border-l-orange-500' },
-    { title: 'ACTIVE', value: statsData?.activeEmployees || employees.filter((e) => e.status === 'Active').length, color: 'border-l-green-500' },
-    { title: 'INACTIVE', value: statsData?.inactiveEmployees || employees.filter((e) => e.status !== 'Active').length, color: 'border-l-yellow-500' },
-    { title: 'DEPARTMENTS', value: statsData?.departments || new Set(employees.map((e) => e.department).filter(Boolean)).size, color: 'border-l-blue-500' },
+    { title: 'TOTAL EMPLOYEES', value: statsData?.statusStats?.find(s => s._id === 'Active')?.count || employees.length, color: 'border-l-orange-500' },
+    { title: 'ACTIVE', value: statsData?.statusStats?.find(s => s._id === 'Active')?.count || employees.filter((e) => e.status === 'Active').length, color: 'border-l-green-500' },
+    { title: 'INACTIVE', value: statsData?.statusStats?.find(s => s._id !== 'Active')?.count || employees.filter((e) => e.status !== 'Active').length, color: 'border-l-yellow-500' },
+    { title: 'DEPARTMENTS', value: statsData?.departmentStats?.length || new Set(employees.map((e) => e.department).filter(Boolean)).size, color: 'border-l-blue-500' },
   ]
+
+  if (error) {
+    return (
+      <AdminLayout title="Employees">
+        <div className="p-6 text-red-600">Error loading employees: {error.message}</div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout title="Employees">

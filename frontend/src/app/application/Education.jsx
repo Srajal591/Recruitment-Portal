@@ -1,50 +1,133 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
-import { Loader2 } from 'lucide-react'
-import ApplicationLayout from '../../components/layouts/ApplicationLayout'
-import { Card, CardContent, CardHeader } from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import { candidateService } from '../../services/candidate.service'
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { Loader2 } from "lucide-react";
+import ApplicationLayout from "../../components/layouts/ApplicationLayout";
+import { Card, CardContent, CardHeader } from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import { candidateService } from "../../services/candidate.service";
 
-const APP_KEY = 'app_draft'
-const getAppId = () => { try { return JSON.parse(sessionStorage.getItem(APP_KEY) || '{}').applicationId } catch { return null } }
+const APP_KEY = "app_draft";
+const getAppId = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem(APP_KEY) || "{}").applicationId;
+  } catch {
+    return null;
+  }
+};
 
-const YEARS = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i)
+const YEARS = Array.from(
+  { length: 30 },
+  (_, i) => new Date().getFullYear() - i,
+);
 
 const Education = () => {
-  const navigate = useNavigate()
-  const applicationId = getAppId()
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Persist applicationId if passed via state
+  useEffect(() => {
+    const stateId = location.state?.applicationId;
+    if (stateId) {
+      const existing = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
+      sessionStorage.setItem(
+        APP_KEY,
+        JSON.stringify({ ...existing, applicationId: stateId }),
+      );
+    }
+  }, [location.state]);
+
+  const applicationId = getAppId();
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const [formData, setFormData] = useState({
-    tenth: { board: '', school: '', rollNumber: '', year: '', percentage: '' },
-    twelfth: { board: '', stream: '', school: '', rollNumber: '', year: '', percentage: '' },
-    graduation: { degree: '', university: '', year: '', percentage: '' },
+    tenth: { board: "", school: "", rollNumber: "", year: "", percentage: "" },
+    twelfth: {
+      board: "",
+      stream: "",
+      school: "",
+      rollNumber: "",
+      year: "",
+      percentage: "",
+    },
+    graduation: { degree: "", university: "", year: "", percentage: "" },
     hasPostGraduation: false,
-  })
+  });
+
+  // Load existing data
+  const { data: appData, isLoading: loadingApp } = useQuery({
+    queryKey: ["application-education", applicationId],
+    queryFn: () => candidateService.getApplication(applicationId),
+    enabled: Boolean(applicationId),
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (appData && !dataLoaded) {
+      const app = appData?.application || appData;
+      const edu = app?.education || {};
+      if (edu && Object.keys(edu).length > 0) {
+        setFormData({
+          tenth: {
+            board: edu.tenth?.board || "",
+            school: edu.tenth?.school || "",
+            rollNumber: edu.tenth?.rollNumber || "",
+            year: edu.tenth?.year ? String(edu.tenth.year) : "",
+            percentage:
+              edu.tenth?.percentage != null ? String(edu.tenth.percentage) : "",
+          },
+          twelfth: {
+            board: edu.twelfth?.board || "",
+            stream: edu.twelfth?.stream || "",
+            school: edu.twelfth?.school || "",
+            rollNumber: edu.twelfth?.rollNumber || "",
+            year: edu.twelfth?.year ? String(edu.twelfth.year) : "",
+            percentage:
+              edu.twelfth?.percentage != null
+                ? String(edu.twelfth.percentage)
+                : "",
+          },
+          graduation: {
+            degree: edu.graduation?.degree || "",
+            university: edu.graduation?.university || "",
+            year: edu.graduation?.year ? String(edu.graduation.year) : "",
+            percentage:
+              edu.graduation?.percentage != null
+                ? String(edu.graduation.percentage)
+                : "",
+          },
+          hasPostGraduation: edu.hasPostGraduation || false,
+        });
+      }
+      setDataLoaded(true);
+    }
+  }, [appData, dataLoaded]);
 
   const set = (section, field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [section]: { ...prev[section], [field]: value },
-    }))
-  }
+    }));
+  };
 
   const { mutate: saveStep, isPending } = useMutation({
     mutationFn: (data) => candidateService.saveEducation(applicationId, data),
     onSuccess: () => {
-      toast.success('Education details saved')
-      navigate('/application/additional-info')
+      toast.success("Education details saved");
+      navigate("/application/additional-info", { state: { applicationId } });
     },
-    onError: (err) => toast.error(err.message || 'Failed to save'),
-  })
+    onError: (err) => toast.error(err.message || "Failed to save"),
+  });
 
   const handleNext = () => {
-    if (!applicationId) { toast.error('Application not found'); navigate('/jobs'); return }
-    // Build payload — only include sections with at least one filled field
-    const payload = {}
-    const tenth = formData.tenth
+    if (!applicationId) {
+      toast.error("Application not found");
+      navigate("/jobs");
+      return;
+    }
+    const payload = {};
+    const tenth = formData.tenth;
     if (tenth.board || tenth.school || tenth.rollNumber) {
       payload.tenth = {
         board: tenth.board,
@@ -52,9 +135,9 @@ const Education = () => {
         rollNumber: tenth.rollNumber,
         year: tenth.year ? Number(tenth.year) : undefined,
         percentage: tenth.percentage ? Number(tenth.percentage) : undefined,
-      }
+      };
     }
-    const twelfth = formData.twelfth
+    const twelfth = formData.twelfth;
     if (twelfth.board || twelfth.school) {
       payload.twelfth = {
         board: twelfth.board,
@@ -63,23 +146,38 @@ const Education = () => {
         rollNumber: twelfth.rollNumber,
         year: twelfth.year ? Number(twelfth.year) : undefined,
         percentage: twelfth.percentage ? Number(twelfth.percentage) : undefined,
-      }
+      };
     }
-    const grad = formData.graduation
+    const grad = formData.graduation;
     if (grad.degree || grad.university) {
       payload.graduation = {
         degree: grad.degree,
         university: grad.university,
         year: grad.year ? Number(grad.year) : undefined,
         percentage: grad.percentage ? Number(grad.percentage) : undefined,
-      }
+      };
     }
-    payload.hasPostGraduation = formData.hasPostGraduation
-    saveStep(payload)
-  }
+    payload.hasPostGraduation = formData.hasPostGraduation;
+    saveStep(payload);
+  };
 
-  const inputCls = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500'
-  const selectCls = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500'
+  const inputCls =
+    "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500";
+  const selectCls =
+    "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500";
+
+  if (loadingApp && !dataLoaded) {
+    return (
+      <ApplicationLayout currentStep={2} title="Education">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+          <span className="ml-3 text-gray-600">
+            Loading your application...
+          </span>
+        </div>
+      </ApplicationLayout>
+    );
+  }
 
   return (
     <ApplicationLayout currentStep={2} title="Education">
@@ -87,36 +185,79 @@ const Education = () => {
         {/* 10th */}
         <Card className="shadow-sm">
           <CardHeader>
-            <h2 className="text-xl font-semibold text-gray-800">10th Education (Secondary)</h2>
+            <h2 className="text-xl font-semibold text-gray-800">
+              10th Education (Secondary)
+            </h2>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Board / Council</label>
-                <input type="text" className={inputCls} placeholder="e.g. BSEB Patna"
-                  value={formData.tenth.board} onChange={(e) => set('tenth', 'board', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Board / Council
+                </label>
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder="e.g. BSEB Patna"
+                  value={formData.tenth.board}
+                  onChange={(e) => set("tenth", "board", e.target.value)}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">School / Institute Name</label>
-                <input type="text" className={inputCls} placeholder="Enter your school's full name"
-                  value={formData.tenth.school} onChange={(e) => set('tenth', 'school', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School / Institute Name
+                </label>
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder="Enter your school's full name"
+                  value={formData.tenth.school}
+                  onChange={(e) => set("tenth", "school", e.target.value)}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Roll Number</label>
-                <input type="text" className={inputCls} placeholder="e.g. 240012"
-                  value={formData.tenth.rollNumber} onChange={(e) => set('tenth', 'rollNumber', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Roll Number
+                </label>
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder="e.g. 240012"
+                  value={formData.tenth.rollNumber}
+                  onChange={(e) => set("tenth", "rollNumber", e.target.value)}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Year of Passing</label>
-                <select className={selectCls} value={formData.tenth.year} onChange={(e) => set('tenth', 'year', e.target.value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Year of Passing
+                </label>
+                <select
+                  className={selectCls}
+                  value={formData.tenth.year}
+                  onChange={(e) => set("tenth", "year", e.target.value)}
+                >
                   <option value="">Select Year</option>
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  {YEARS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Percentage / CGPA</label>
-                <input type="number" min="0" max="100" step="0.01" className={inputCls} placeholder="e.g. 85.5"
-                  value={formData.tenth.percentage} onChange={(e) => set('tenth', 'percentage', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Percentage / CGPA
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className={inputCls}
+                  placeholder="e.g. 85.5"
+                  value={formData.tenth.percentage}
+                  onChange={(e) => set("tenth", "percentage", e.target.value)}
+                />
               </div>
             </div>
           </CardContent>
@@ -125,18 +266,33 @@ const Education = () => {
         {/* 12th */}
         <Card className="shadow-sm">
           <CardHeader>
-            <h2 className="text-xl font-semibold text-gray-800">12th Education (Senior Secondary)</h2>
+            <h2 className="text-xl font-semibold text-gray-800">
+              12th Education (Senior Secondary)
+            </h2>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Board / Council</label>
-                <input type="text" className={inputCls} placeholder="e.g. CBSE / BSEB"
-                  value={formData.twelfth.board} onChange={(e) => set('twelfth', 'board', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Board / Council
+                </label>
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder="e.g. CBSE / BSEB"
+                  value={formData.twelfth.board}
+                  onChange={(e) => set("twelfth", "board", e.target.value)}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Stream</label>
-                <select className={selectCls} value={formData.twelfth.stream} onChange={(e) => set('twelfth', 'stream', e.target.value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Stream
+                </label>
+                <select
+                  className={selectCls}
+                  value={formData.twelfth.stream}
+                  onChange={(e) => set("twelfth", "stream", e.target.value)}
+                >
                   <option value="">Select Stream</option>
                   <option value="science">Science</option>
                   <option value="commerce">Commerce</option>
@@ -144,26 +300,60 @@ const Education = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">School / Institute Name</label>
-                <input type="text" className={inputCls} placeholder="Enter school name"
-                  value={formData.twelfth.school} onChange={(e) => set('twelfth', 'school', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School / Institute Name
+                </label>
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder="Enter school name"
+                  value={formData.twelfth.school}
+                  onChange={(e) => set("twelfth", "school", e.target.value)}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Roll Number</label>
-                <input type="text" className={inputCls} placeholder="e.g. 1102932"
-                  value={formData.twelfth.rollNumber} onChange={(e) => set('twelfth', 'rollNumber', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Roll Number
+                </label>
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder="e.g. 1102932"
+                  value={formData.twelfth.rollNumber}
+                  onChange={(e) => set("twelfth", "rollNumber", e.target.value)}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Year of Passing</label>
-                <select className={selectCls} value={formData.twelfth.year} onChange={(e) => set('twelfth', 'year', e.target.value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Year of Passing
+                </label>
+                <select
+                  className={selectCls}
+                  value={formData.twelfth.year}
+                  onChange={(e) => set("twelfth", "year", e.target.value)}
+                >
                   <option value="">Select Year</option>
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  {YEARS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Percentage (%)</label>
-                <input type="number" min="0" max="100" step="0.01" className={inputCls} placeholder="e.g. 92.0"
-                  value={formData.twelfth.percentage} onChange={(e) => set('twelfth', 'percentage', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Percentage (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className={inputCls}
+                  placeholder="e.g. 92.0"
+                  value={formData.twelfth.percentage}
+                  onChange={(e) => set("twelfth", "percentage", e.target.value)}
+                />
               </div>
             </div>
           </CardContent>
@@ -172,43 +362,105 @@ const Education = () => {
         {/* Graduation */}
         <Card className="shadow-sm">
           <CardHeader>
-            <h2 className="text-xl font-semibold text-gray-800">Graduation Details</h2>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Graduation Details
+            </h2>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Degree Name</label>
-                <select className={selectCls} value={formData.graduation.degree} onChange={(e) => set('graduation', 'degree', e.target.value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Degree Name
+                </label>
+                <select
+                  className={selectCls}
+                  value={formData.graduation.degree}
+                  onChange={(e) => set("graduation", "degree", e.target.value)}
+                >
                   <option value="">Select Degree</option>
-                  {['B.A.','B.Sc.','B.Com.','B.Tech.','B.E.','B.B.A.','B.C.A.','Other'].map(d => <option key={d} value={d}>{d}</option>)}
+                  {[
+                    "B.A.",
+                    "B.Sc.",
+                    "B.Com.",
+                    "B.Tech.",
+                    "B.E.",
+                    "B.B.A.",
+                    "B.C.A.",
+                    "Other",
+                  ].map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">University / Board</label>
-                <input type="text" className={inputCls} placeholder="e.g. Patna University"
-                  value={formData.graduation.university} onChange={(e) => set('graduation', 'university', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  University / Board
+                </label>
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder="e.g. Patna University"
+                  value={formData.graduation.university}
+                  onChange={(e) =>
+                    set("graduation", "university", e.target.value)
+                  }
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Year of Passing</label>
-                <select className={selectCls} value={formData.graduation.year} onChange={(e) => set('graduation', 'year', e.target.value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Year of Passing
+                </label>
+                <select
+                  className={selectCls}
+                  value={formData.graduation.year}
+                  onChange={(e) => set("graduation", "year", e.target.value)}
+                >
                   <option value="">Select Year</option>
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  {YEARS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Percentage / CGPA</label>
-                <input type="number" min="0" max="100" step="0.01" className={inputCls} placeholder="Enter final aggregate"
-                  value={formData.graduation.percentage} onChange={(e) => set('graduation', 'percentage', e.target.value)} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Percentage / CGPA
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className={inputCls}
+                  placeholder="Enter final aggregate"
+                  value={formData.graduation.percentage}
+                  onChange={(e) =>
+                    set("graduation", "percentage", e.target.value)
+                  }
+                />
               </div>
             </div>
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-3">Do you have a postgraduate degree?</p>
+              <p className="text-sm font-medium text-gray-700 mb-3">
+                Do you have a postgraduate degree?
+              </p>
               <div className="flex space-x-4">
                 {[true, false].map((val) => (
-                  <button key={String(val)} type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, hasPostGraduation: val }))}
-                    className={`px-6 py-2 rounded-lg ${formData.hasPostGraduation === val ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-                    {val ? 'Yes' : 'No'}
+                  <button
+                    key={String(val)}
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasPostGraduation: val,
+                      }))
+                    }
+                    className={`px-6 py-2 rounded-lg ${formData.hasPostGraduation === val ? "bg-orange-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
+                  >
+                    {val ? "Yes" : "No"}
                   </button>
                 ))}
               </div>
@@ -217,14 +469,34 @@ const Education = () => {
         </Card>
 
         <div className="flex justify-between">
-          <Button variant="outline" onClick={() => navigate('/application/personal-details')}>← Back</Button>
-          <Button onClick={handleNext} disabled={isPending || !applicationId} className="px-6 bg-orange-600 hover:bg-orange-700">
-            {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Save & Continue →'}
+          <Button
+            variant="outline"
+            onClick={() =>
+              navigate("/application/personal-details", {
+                state: { applicationId },
+              })
+            }
+          >
+            ← Back
+          </Button>
+          <Button
+            onClick={handleNext}
+            disabled={isPending || !applicationId}
+            className="px-6 bg-orange-600 hover:bg-orange-700"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save & Continue →"
+            )}
           </Button>
         </div>
       </div>
     </ApplicationLayout>
-  )
-}
+  );
+};
 
-export default Education
+export default Education;

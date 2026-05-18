@@ -59,7 +59,6 @@ router.post(
   validate(submitApplicationSchema),
   applicationController.submitApplication,
 );
+router.post("/:id/finalize", applicationController.finalizeApplication);
 
 module.exports = router;
-
-

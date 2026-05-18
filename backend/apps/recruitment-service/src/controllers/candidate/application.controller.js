@@ -3,7 +3,10 @@ const Application = require("../../shared/models/Application");
 const Job = require("../../shared/models/Job");
 const User = require("../../shared/models/User");
 const ApiError = require("../../shared/utils/ApiError");
-const { ApiResponse, paginationMeta } = require("../../shared/utils/ApiResponse");
+const {
+  ApiResponse,
+  paginationMeta,
+} = require("../../shared/utils/ApiResponse");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const {
   emitToAdmins,
@@ -119,13 +122,11 @@ const createApplication = asyncHandler(async (req, res) => {
     });
   } catch (_) {}
 
-  res
-    .status(StatusCodes.CREATED)
-    .json(
-      new ApiResponse(StatusCodes.CREATED, "Application created", {
-        application,
-      }),
-    );
+  res.status(StatusCodes.CREATED).json(
+    new ApiResponse(StatusCodes.CREATED, "Application created", {
+      application,
+    }),
+  );
 });
 
 /**
@@ -246,14 +247,12 @@ const updatePersonalDetails = asyncHandler(async (req, res) => {
   app.lastSavedAt = new Date();
   await app.save();
   emitStepSaved(req.user.id, app._id, app.currentStep);
-  res
-    .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(StatusCodes.OK, "Personal details saved", {
-        _id: app._id,
-        currentStep: app.currentStep,
-      }),
-    );
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Personal details saved", {
+      _id: app._id,
+      currentStep: app.currentStep,
+    }),
+  );
 });
 
 /**
@@ -272,14 +271,12 @@ const updateEducation = asyncHandler(async (req, res) => {
   app.lastSavedAt = new Date();
   await app.save();
   emitStepSaved(req.user.id, app._id, app.currentStep);
-  res
-    .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(StatusCodes.OK, "Education details saved", {
-        _id: app._id,
-        currentStep: app.currentStep,
-      }),
-    );
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Education details saved", {
+      _id: app._id,
+      currentStep: app.currentStep,
+    }),
+  );
 });
 
 /**
@@ -301,14 +298,12 @@ const updateAdditionalInfo = asyncHandler(async (req, res) => {
   app.lastSavedAt = new Date();
   await app.save();
   emitStepSaved(req.user.id, app._id, app.currentStep);
-  res
-    .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(StatusCodes.OK, "Additional info saved", {
-        _id: app._id,
-        currentStep: app.currentStep,
-      }),
-    );
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Additional info saved", {
+      _id: app._id,
+      currentStep: app.currentStep,
+    }),
+  );
 });
 
 /**
@@ -327,14 +322,12 @@ const updateAddress = asyncHandler(async (req, res) => {
   app.lastSavedAt = new Date();
   await app.save();
   emitStepSaved(req.user.id, app._id, app.currentStep);
-  res
-    .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(StatusCodes.OK, "Address saved", {
-        _id: app._id,
-        currentStep: app.currentStep,
-      }),
-    );
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Address saved", {
+      _id: app._id,
+      currentStep: app.currentStep,
+    }),
+  );
 });
 
 /**
@@ -371,7 +364,18 @@ const updateAddress = asyncHandler(async (req, res) => {
  *       200: { description: Document uploaded }
  */
 const uploadDocument = asyncHandler(async (req, res) => {
-  const app = await getOwnDraftApplication(req.params.id, req.user.id);
+  // Allow document uploads on both draft and submitted apps (before payment)
+  const app = await Application.findOne({
+    _id: req.params.id,
+    candidateId: req.user.id,
+  });
+  if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
+  if (app.paymentStatus === "paid") {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Cannot upload documents after payment is completed",
+    );
+  }
   const docType = req.params.type;
 
   if (!req.file)
@@ -451,7 +455,23 @@ const uploadDocument = asyncHandler(async (req, res) => {
  */
 const updatePostSelection = asyncHandler(async (req, res) => {
   const { appliedPosts } = req.body;
-  const app = await getOwnDraftApplication(req.params.id, req.user.id);
+
+  // Allow updating post-selection on both draft and submitted apps
+  // (submitted apps may need to update posts before payment is finalized)
+  const app = await Application.findOne({
+    _id: req.params.id,
+    candidateId: req.user.id,
+  });
+  if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
+
+  // Block only if payment is already done
+  if (app.paymentStatus === "paid") {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Cannot update post selection after payment is completed",
+    );
+  }
+
   await app.populate("jobId");
 
   const candidate = await User.findById(req.user.id).select("category");
@@ -508,25 +528,39 @@ const updatePostSelection = asyncHandler(async (req, res) => {
  *       400: { description: Payment pending or steps incomplete }
  */
 const submitApplication = asyncHandler(async (req, res) => {
-  const app = await getOwnDraftApplication(req.params.id, req.user.id);
-  await app.populate("jobId", "title department");
+  const app = await Application.findOne({
+    _id: req.params.id,
+    candidateId: req.user.id,
+  }).populate("jobId", "title department");
 
-  if (app.currentStep < 8)
+  if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
+
+  // Allow re-submission if already submitted (idempotent)
+  if (app.status === "submitted") {
+    return res.status(StatusCodes.OK).json(
+      new ApiResponse(StatusCodes.OK, "Application already submitted", {
+        _id: app._id,
+        applicationId: app.applicationId,
+        status: app.status,
+        submittedAt: app.submittedAt,
+      }),
+    );
+  }
+
+  if (app.status !== "draft")
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      "Please complete all required steps before submitting",
+      "Cannot update a non-draft application",
     );
 
-  if (app.totalFee > 0 && app.paymentStatus !== "paid")
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      "Payment is required before submission",
-    );
+  // Save declaration and advance step — actual final submit happens via /finalize after payment
+  if (req.body.declaration) {
+    app.declaration = req.body.declaration;
+  }
 
-  app.status = "submitted";
-  app.declaration = req.body.declaration;
-  app.submittedAt = new Date();
-  app.currentStep = 9;
+  // Always keep as draft — finalize handles the actual submission
+  app.currentStep = Math.max(app.currentStep, 7);
+  app.lastSavedAt = new Date();
   await app.save();
 
   const candidate = await User.findById(req.user.id).select("fullName email");
@@ -566,6 +600,81 @@ const submitApplication = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * @swagger
+ * /api/candidate/applications/{id}/finalize:
+ *   post:
+ *     tags: [Candidate - Applications]
+ *     summary: Finalize application after payment (Step 9)
+ *     security:
+ *       - bearerAuth: []
+ */
+const finalizeApplication = asyncHandler(async (req, res) => {
+  const app = await Application.findOne({
+    _id: req.params.id,
+    candidateId: req.user.id,
+  }).populate("jobId", "title department");
+
+  if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
+
+  // Already fully finalized with payment — idempotent
+  if (app.status === "submitted" && app.paymentStatus === "paid") {
+    return res.status(StatusCodes.OK).json(
+      new ApiResponse(StatusCodes.OK, "Application already submitted", {
+        _id: app._id,
+        applicationId: app.applicationId,
+        status: app.status,
+        submittedAt: app.submittedAt,
+      }),
+    );
+  }
+
+  // Mark payment as simulated/paid and finalize
+  app.paymentStatus = "paid";
+  app.status = "submitted";
+  app.submittedAt = new Date();
+  app.currentStep = 9;
+  if (req.body.transactionId) app.transactionId = req.body.transactionId;
+  if (req.body.declaration) app.declaration = req.body.declaration;
+  await app.save();
+
+  const candidate = await User.findById(req.user.id).select("fullName email");
+
+  try {
+    emitToAdmins(SOCKET_EVENTS.APPLICATION_SUBMITTED, {
+      type: "application_submitted",
+      message: `Application submitted: ${app.applicationId}`,
+      application: {
+        _id: app._id,
+        applicationId: app.applicationId,
+        candidateName: candidate?.fullName,
+        jobTitle: app.jobId?.title,
+      },
+      timestamp: new Date(),
+    });
+
+    emitToCandidate(req.user.id, SOCKET_EVENTS.APPLICATION_SUBMITTED, {
+      type: "submitted",
+      message: "Your application has been submitted successfully!",
+      application: {
+        _id: app._id,
+        applicationId: app.applicationId,
+        status: app.status,
+      },
+      timestamp: new Date(),
+    });
+  } catch (_) {}
+
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Application finalized successfully", {
+      _id: app._id,
+      applicationId: app.applicationId,
+      status: app.status,
+      submittedAt: app.submittedAt,
+    }),
+  );
+});
+
 module.exports = {
   createApplication,
   getMyApplications,
@@ -577,6 +686,5 @@ module.exports = {
   uploadDocument,
   updatePostSelection,
   submitApplication,
+  finalizeApplication,
 };
-
-

@@ -71,7 +71,10 @@ const EmployeeActivityDetails = lazy(
   () => import("../app/admin/EmployeeActivityDetails"),
 );
 const AddEmployee = lazy(() => import("../app/admin/AddEmployee"));
+const EditEmployee = lazy(() => import("../app/admin/EditEmployee"));
+const EmployeeActivity = lazy(() => import("../app/admin/EmployeeActivity"));
 const CreateRole = lazy(() => import("../app/admin/CreateRole"));
+const EditRole = lazy(() => import("../app/admin/EditRole"));
 const ApplicationDetails = lazy(
   () => import("../app/admin/ApplicationDetails"),
 );
@@ -381,6 +384,22 @@ const AppRoutes = () => {
           }
         />
         <Route
+          path="/admin/employees/:id/edit"
+          element={
+            <ProtectedRoute role="admin">
+              <EditEmployee />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/employees/:id/activity"
+          element={
+            <ProtectedRoute role="admin">
+              <EmployeeActivity />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/roles"
           element={
             <ProtectedRoute role="admin">
@@ -393,6 +412,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute role="admin">
               <CreateRole />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/roles/:id/edit"
+          element={
+            <ProtectedRoute role="admin">
+              <EditRole />
             </ProtectedRoute>
           }
         />

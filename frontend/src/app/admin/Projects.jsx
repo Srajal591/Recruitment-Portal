@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { Plus, Eye, Edit, FolderOpen, Rocket, CheckCircle, Calendar } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { Plus, Eye, Edit, FolderOpen, Rocket, CheckCircle, Calendar, Trash2 } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -9,14 +10,32 @@ import { adminService } from '../../services/admin.service'
 
 const Projects = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
   const { data, isLoading } = useQuery({
     queryKey: ['admin-projects'],
-    queryFn: () => adminService.getProjects({ limit: 20 }),
+    queryFn: () => adminService.getProjects({ limit: 50 }),
   })
   const { data: statsData } = useQuery({
     queryKey: ['admin-project-stats'],
     queryFn: adminService.getProjectStats,
   })
+
+  const { mutate: deleteProject } = useMutation({
+    mutationFn: adminService.deleteProject,
+    onSuccess: () => {
+      toast.success('Project deleted')
+      queryClient.invalidateQueries({ queryKey: ['admin-projects'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-project-stats'] })
+    },
+    onError: (err) => toast.error(err.message || 'Failed to delete project'),
+  })
+
+  const handleDelete = (project) => {
+    if (window.confirm(`Delete project "${project.name}"? All associated jobs will be unlinked. This cannot be undone.`)) {
+      deleteProject(project._id)
+    }
+  }
 
   const projects = data?.projects || []
   const stats = [
@@ -32,7 +51,7 @@ const Projects = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
-            <p className="text-gray-600">Manage recruitment projects from the backend.</p>
+            <p className="text-gray-600">Manage recruitment projects and drives.</p>
           </div>
           <Button onClick={() => navigate('/admin/projects/create')} className="bg-orange-600 hover:bg-orange-700 text-white">
             <Plus className="w-4 h-4 mr-2" />
@@ -40,6 +59,7 @@ const Projects = () => {
           </Button>
         </div>
 
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat) => (
             <Card key={stat.title} className="bg-white">
@@ -58,6 +78,7 @@ const Projects = () => {
           ))}
         </div>
 
+        {/* Table */}
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -75,30 +96,55 @@ const Projects = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {isLoading && <tr><td colSpan="7" className="p-6 text-gray-600">Loading projects...</td></tr>}
-                  {!isLoading && projects.length === 0 && <tr><td colSpan="7" className="p-6 text-gray-600">No projects found.</td></tr>}
+                  {!isLoading && projects.length === 0 && (
+                    <tr><td colSpan="7" className="p-6 text-gray-600">No projects found. Create your first project.</td></tr>
+                  )}
                   {projects.map((project) => (
-                    <tr key={project._id} className="hover:bg-gray-50">
+                    <tr key={project._id} className="hover:bg-orange-50 transition-colors">
                       <td className="p-4">
-                        <div className="font-medium text-gray-800">{project.name}</div>
-                        <div className="text-sm text-gray-500">{project.description || 'No description'}</div>
+                        <div className="font-semibold text-gray-800">{project.name}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{project.description || 'No description'}</div>
                       </td>
-                      <td className="p-4 text-sm text-gray-800">{project.state}</td>
-                      <td className="p-4 text-sm text-gray-800">{project.department}</td>
+                      <td className="p-4 text-sm text-gray-700">{project.state}</td>
+                      <td className="p-4 text-sm text-gray-700">{project.department}</td>
                       <td className="p-4">
-                        <Badge className={project.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                        <Badge className={
+                          project.status === 'Active' ? 'bg-green-100 text-green-800' :
+                          project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-700'
+                        }>
                           {project.status}
                         </Badge>
                       </td>
-                      <td className="p-4 text-sm text-gray-600">{project.startDate ? new Date(project.startDate).toLocaleDateString('en-IN') : '-'}</td>
-                      <td className="p-4 text-sm text-gray-600">{project.endDate ? new Date(project.endDate).toLocaleDateString('en-IN') : '-'}</td>
+                      <td className="p-4 text-sm text-gray-600">
+                        {project.startDate ? new Date(project.startDate).toLocaleDateString('en-IN') : '—'}
+                      </td>
+                      <td className="p-4 text-sm text-gray-600">
+                        {project.endDate ? new Date(project.endDate).toLocaleDateString('en-IN') : '—'}
+                      </td>
                       <td className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/projects/${project._id}`)}>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => navigate(`/admin/projects/${project._id}`)}
+                            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="View Project"
+                          >
                             <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
+                          </button>
+                          <button
+                            onClick={() => navigate(`/admin/projects/${project._id}`)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Project"
+                          >
                             <Edit className="w-4 h-4" />
-                          </Button>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(project)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Project"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>

@@ -19,7 +19,14 @@ const Dashboard = () => {
   const recentApplications = data?.overview?.recentApplications || []
   const funnel = data?.funnel?.funnel || {}
   const topJobs = data?.topJobs || []
-  const support = data?.support || {}
+  const rawSupport = data?.support || {}
+  const supportStatusStats = rawSupport.statusStats || []
+  const countSupportByStatus = (name) => supportStatusStats.find(s => s._id === name)?.count || 0
+  const support = {
+    open: countSupportByStatus('Open'),
+    pending: countSupportByStatus('In Progress'),
+    resolved: countSupportByStatus('Resolved'),
+  }
   const submitted = applicationsByStatus.find((item) => item._id === 'submitted')?.count || 0
 
   const stats = [

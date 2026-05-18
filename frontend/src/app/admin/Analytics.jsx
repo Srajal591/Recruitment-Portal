@@ -25,7 +25,15 @@ const Analytics = () => {
   const appsByStatus = overviewData?.applicationsByStatus || []
   const funnel = funnelData?.funnel || {}
   const topJobs = topJobsData?.topJobs || []
-  const support = supportData || {}
+  const rawSupport = supportData || {}
+  const supportStatusStats = rawSupport.statusStats || []
+  const countSupportByStatus = (name) => supportStatusStats.find(s => s._id === name)?.count || 0
+  const support = {
+    open: countSupportByStatus('Open'),
+    inProgress: countSupportByStatus('In Progress'),
+    resolved: countSupportByStatus('Resolved'),
+    total: supportStatusStats.reduce((sum, s) => sum + (s.count || 0), 0),
+  }
 
   const countByStatus = (s) => appsByStatus.find(x => x._id === s)?.count || 0
 

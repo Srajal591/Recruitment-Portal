@@ -1,14 +1,14 @@
-import ComingSoon from '../../components/common/ComingSoon'
+import ComingSoon from "../../components/common/ComingSoon";
 
 const ForgotPassword = () => {
   return (
-    <ComingSoon 
+    <ComingSoon
       title="Forgot Password"
       description="Reset your password to regain access to your account."
-      backLink="/auth/login"
+      backLink="/auth/candidate-login"
       backText="Back to Login"
     />
-  )
-}
+  );
+};
 
-export default ForgotPassword
+export default ForgotPassword;

@@ -3,7 +3,10 @@ const router = express.Router();
 const authController = require("../controllers/auth.controller");
 const validate = require("../shared/middlewares/validate");
 const authenticate = require("../shared/middlewares/authenticate");
-const { authLimiter, otpLimiter } = require("../shared/middlewares/rateLimiter");
+const {
+  authLimiter,
+  otpLimiter,
+} = require("../shared/middlewares/rateLimiter");
 const {
   registerSchema,
   verifyOTPSchema,
@@ -49,10 +52,10 @@ router.post(
   validate(resetPasswordSchema),
   authController.resetPassword,
 );
+router.post("/resend-otp", authController.resendOTP);
 
 // ── Protected routes ──────────────────────────────────────────
 router.post("/logout", authenticate, authController.logout);
 router.get("/me", authenticate, authController.getMe);
 
 module.exports = router;
-

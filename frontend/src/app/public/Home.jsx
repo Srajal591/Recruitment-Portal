@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from "react";
 
 import {
   Search,
@@ -10,65 +10,72 @@ import {
   Phone,
   ChevronDown,
   Calendar,
-} from 'lucide-react'
+} from "lucide-react";
 
-import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
-import PublicLayout from '../../components/layouts/PublicLayout'
-import heroBg from '../../assets/herobg.jpg'
-import { jobService } from '../../services/job.service'
+import PublicLayout from "../../components/layouts/PublicLayout";
+import heroBg from "../../assets/herobg.jpg";
+import { jobService } from "../../services/job.service";
 
 const Home = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const [eligibilityForm, setEligibilityForm] =
-    useState({
-      qualification: '',
-      age: '',
-      category: '',
-    })
+  const [eligibilityForm, setEligibilityForm] = useState({
+    qualification: "",
+    age: "",
+    category: "",
+  });
 
   const handleEligibilityCheck = () => {
-    navigate('/eligible-jobs', {
+    navigate("/eligible-jobs", {
       state: eligibilityForm,
-    })
-  }
+    });
+  };
 
   const fallbackFeaturedJobs = [
     {
       id: 1,
-      title: 'Assistant Section Officer (ASO)',
-      department: 'Bihar State Secretariat',
-      category: 'ACTIVE',
+      title: "Assistant Section Officer (ASO)",
+      department: "Bihar State Secretariat",
+      category: "ACTIVE",
       vacancies: 45,
-      lastDate: 'Nov 30, 2024',
-      applyFee: '₹750',
+      lastDate: "Nov 30, 2024",
+      applyFee: "₹750",
     },
 
     {
       id: 2,
-      title: 'Junior Engineer (Mechanical)',
-      department: 'Public Works Department',
-      category: 'CLOSING SOON',
+      title: "Junior Engineer (Mechanical)",
+      department: "Public Works Department",
+      category: "CLOSING SOON",
       vacancies: 120,
-      lastDate: 'Dec 15, 2024',
-      applyFee: '₹500',
+      lastDate: "Dec 15, 2024",
+      applyFee: "₹500",
     },
-  ]
+  ];
 
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
-    queryKey: ['public-featured-jobs'],
-    queryFn: () => jobService.getPublicJobs({ limit: 2, sortBy: 'publishedAt', sortOrder: 'desc' }),
-  })
+    queryKey: ["public-featured-jobs"],
+    queryFn: () =>
+      jobService.getPublicJobs({
+        limit: 2,
+        sortBy: "publishedAt",
+        sortOrder: "desc",
+      }),
+  });
 
-  const featuredJobs = jobsData?.jobs || []
+  const featuredJobs = jobsData?.jobs || [];
 
-  const formatDate = (date) => (date ? new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }) : 'Not announced')
+  const formatDate = (date) =>
+    date
+      ? new Date(date).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "Not announced";
 
   return (
     <PublicLayout>
@@ -101,14 +108,13 @@ const Home = () => {
                 </h1>
 
                 <p className="mt-5 text-[13px] sm:text-[15px] leading-7 text-white/80 max-w-[500px]">
-                  Transparent, accessible, and reliable
-                  government job opportunities for every
-                  qualified citizen. Find your role today.
+                  Transparent, accessible, and reliable government job
+                  opportunities for every qualified citizen. Find your role
+                  today.
                 </p>
 
                 <div className="mt-7 inline-flex items-center gap-2 text-orange-300 text-[12px] font-bold">
                   <ShieldCheck className="w-4 h-4" />
-
                   Official Government Employment Gateway
                 </div>
               </div>
@@ -131,37 +137,24 @@ const Home = () => {
                     </label>
 
                     <select
-                      value={
-                        eligibilityForm.qualification
-                      }
+                      value={eligibilityForm.qualification}
                       onChange={(e) =>
                         setEligibilityForm({
                           ...eligibilityForm,
-                          qualification:
-                            e.target.value,
+                          qualification: e.target.value,
                         })
                       }
                       className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
                     >
-                      <option>
-                        Select Highest Qualification
-                      </option>
+                      <option>Select Highest Qualification</option>
 
-                      <option>
-                        10th Pass
-                      </option>
+                      <option>10th Pass</option>
 
-                      <option>
-                        12th Pass
-                      </option>
+                      <option>12th Pass</option>
 
-                      <option>
-                        Graduation
-                      </option>
+                      <option>Graduation</option>
 
-                      <option>
-                        Post Graduation
-                      </option>
+                      <option>Post Graduation</option>
                     </select>
                   </div>
 
@@ -185,17 +178,11 @@ const Home = () => {
                         }
                         className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
                       >
-                        <option>
-                          Enter Age
-                        </option>
+                        <option>Enter Age</option>
 
-                        <option>
-                          18-25
-                        </option>
+                        <option>18-25</option>
 
-                        <option>
-                          25-30
-                        </option>
+                        <option>25-30</option>
                       </select>
                     </div>
 
@@ -207,21 +194,16 @@ const Home = () => {
                       </label>
 
                       <select
-                        value={
-                          eligibilityForm.category
-                        }
+                        value={eligibilityForm.category}
                         onChange={(e) =>
                           setEligibilityForm({
                             ...eligibilityForm,
-                            category:
-                              e.target.value,
+                            category: e.target.value,
                           })
                         }
                         className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
                       >
-                        <option>
-                          General
-                        </option>
+                        <option>General</option>
 
                         <option>OBC</option>
 
@@ -235,13 +217,10 @@ const Home = () => {
                   {/* BUTTON */}
 
                   <button
-                    onClick={
-                      handleEligibilityCheck
-                    }
+                    onClick={handleEligibilityCheck}
                     className="w-full h-[52px] bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] text-[12px] uppercase tracking-[0.12em] font-black transition-all flex items-center justify-center gap-2"
                   >
                     <Search className="w-4 h-4" />
-
                     Check Eligible Jobs
                   </button>
                 </div>
@@ -261,13 +240,11 @@ const Home = () => {
 
               <div className="flex flex-wrap items-center gap-6 text-white/80">
                 <span>
-                  Admit Card for Assistant Manager
-                  Exam 2024 now available
+                  Admit Card for Assistant Manager Exam 2024 now available
                 </span>
 
                 <span>
-                  Junior Engineer application extended
-                  till 30th October
+                  Junior Engineer application extended till 30th October
                 </span>
               </div>
             </div>
@@ -282,32 +259,29 @@ const Home = () => {
               {[
                 {
                   icon: Users,
-                  color: 'text-[#4f6ef7]',
-                  bg: 'bg-[#eef2ff]',
-                  title: 'New User?',
-                  desc:
-                    'Create your profile and apply to multiple openings.',
-                  action: 'Register Now',
+                  color: "text-[#4f6ef7]",
+                  bg: "bg-[#eef2ff]",
+                  title: "New User?",
+                  desc: "Create your profile and apply to multiple openings.",
+                  action: "Register Now",
                 },
 
                 {
                   icon: LogIn,
-                  color: 'text-[#19a452]',
-                  bg: 'bg-[#ecfff2]',
-                  title: 'Already Applied?',
-                  desc:
-                    'Check status, download admit cards, and results.',
-                  action: 'Login Here',
+                  color: "text-[#19a452]",
+                  bg: "bg-[#ecfff2]",
+                  title: "Already Applied?",
+                  desc: "Check status, download admit cards, and results.",
+                  action: "Login Here",
                 },
 
                 {
                   icon: CircleHelp,
-                  color: 'text-[#9257ff]',
-                  bg: 'bg-[#f3ecff]',
-                  title: 'Need Help?',
-                  desc:
-                    'Get recruitment assistance and support resources.',
-                  action: 'Get Help',
+                  color: "text-[#9257ff]",
+                  bg: "bg-[#f3ecff]",
+                  title: "Need Help?",
+                  desc: "Get recruitment assistance and support resources.",
+                  action: "Get Help",
                 },
               ].map((card, index) => (
                 <div
@@ -317,9 +291,7 @@ const Home = () => {
                   <div
                     className={`w-14 h-14 rounded-full ${card.bg} flex items-center justify-center mx-auto`}
                   >
-                    <card.icon
-                      className={`w-7 h-7 ${card.color}`}
-                    />
+                    <card.icon className={`w-7 h-7 ${card.color}`} />
                   </div>
 
                   <h3 className="mt-5 text-[20px] tracking-[-0.5px] font-black text-[#1f1d1b]">
@@ -358,7 +330,6 @@ const Home = () => {
 
               <button className="hidden sm:flex items-center gap-2 text-[#e46a1d] text-[12px] uppercase tracking-[0.12em] font-black">
                 View All Openings
-
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -389,15 +360,15 @@ const Home = () => {
                     <span
                       className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.12em] font-black ${
                         (job.daysLeft || 0) > 7
-                          ? 'bg-[#e8fff0] text-[#13984b]'
-                          : 'bg-[#fff4df] text-[#c28500]'
+                          ? "bg-[#e8fff0] text-[#13984b]"
+                          : "bg-[#fff4df] text-[#c28500]"
                       }`}
                     >
-                      {(job.daysLeft || 0) > 7 ? 'ACTIVE' : 'CLOSING SOON'}
+                      {(job.daysLeft || 0) > 7 ? "ACTIVE" : "CLOSING SOON"}
                     </span>
 
                     <span className="text-[11px] text-[#857d77]">
-                      Ref. No: {job.postCode || 'N/A'}
+                      Ref. No: {job.postCode || "N/A"}
                     </span>
                   </div>
 
@@ -430,7 +401,11 @@ const Home = () => {
                       </div>
 
                       <div className="mt-2 text-[#1f1d1b] font-black text-[14px]">
-                        {(job.applicationFee?.general || job.applicationFee?.amount || 0).toLocaleString('en-IN')}
+                        {(
+                          job.applicationFee?.general ||
+                          job.applicationFee?.amount ||
+                          0
+                        ).toLocaleString("en-IN")}
                       </div>
                     </div>
 
@@ -449,9 +424,7 @@ const Home = () => {
 
                   <div className="flex gap-4 mt-7">
                     <button
-                      onClick={() =>
-                        navigate(`/jobs/${job._id}`)
-                      }
+                      onClick={() => navigate(`/jobs/${job._id}`)}
                       className="flex-1 h-[46px] border border-[#e0d7cd] hover:bg-[#f6f1ea] text-[#1f1d1b] rounded-[4px] uppercase tracking-[0.12em] text-[11px] font-black transition-all"
                     >
                       View Details
@@ -459,14 +432,11 @@ const Home = () => {
 
                     <button
                       onClick={() =>
-                        navigate(
-                          '/auth/candidate-login',
-                          {
-                            state: {
-                              jobId: job._id,
-                            },
-                          }
-                        )
+                        navigate("/auth/candidate-login", {
+                          state: {
+                            jobId: job._id,
+                          },
+                        })
                       }
                       className="flex-1 h-[46px] bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] uppercase tracking-[0.12em] text-[11px] font-black transition-all"
                     >
@@ -529,17 +499,15 @@ const Home = () => {
               {/* ITEMS */}
 
               {[
-                'How do I verify my eligibility for multiple posts?',
-                'Can I edit my application after submission?',
-                'What documents are mandatory for registration?',
+                "How do I verify my eligibility for multiple posts?",
+                "Can I edit my application after submission?",
+                "What documents are mandatory for registration?",
               ].map((item, index) => (
                 <button
                   key={index}
                   className="w-full px-7 py-5 border-b border-[#ebe2d8] last:border-0 flex items-center justify-between hover:bg-[#faf7f2] transition-all text-left"
                 >
-                  <span className="text-[#2a2724] text-[14px]">
-                    {item}
-                  </span>
+                  <span className="text-[#2a2724] text-[14px]">{item}</span>
 
                   <ChevronDown className="w-5 h-5 text-[#8a8179]" />
                 </button>
@@ -549,7 +517,7 @@ const Home = () => {
         </section>
       </div>
     </PublicLayout>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;

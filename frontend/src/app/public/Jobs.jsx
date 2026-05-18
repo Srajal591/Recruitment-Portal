@@ -1,19 +1,56 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { Briefcase, Calendar, MapPin, Search } from 'lucide-react'
-import PublicLayout from '../../components/layouts/PublicLayout'
-import Button from '../../components/ui/Button'
-import { jobService } from '../../services/job.service'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { Briefcase, Calendar, MapPin, Search } from "lucide-react";
+import toast from "react-hot-toast";
+import PublicLayout from "../../components/layouts/PublicLayout";
+import Button from "../../components/ui/Button";
+import { jobService } from "../../services/job.service";
+import { applicationService } from "../../services/application.service";
+import { useAuth, isCandidateUser } from "../../hooks/useAuth";
 
 const Jobs = () => {
-  const [search, setSearch] = useState('')
-  const { data, isLoading } = useQuery({
-    queryKey: ['public-jobs', search],
-    queryFn: () => jobService.getPublicJobs({ search, limit: 12 }),
-  })
+  const navigate = useNavigate();
+  const { token, user } = useAuth();
+  const [search, setSearch] = useState("");
+  const [applyingJobId, setApplyingJobId] = useState(null);
 
-  const jobs = data?.jobs || []
+  const { data, isLoading } = useQuery({
+    queryKey: ["public-jobs", search],
+    queryFn: () => jobService.getPublicJobs({ search, limit: 12 }),
+  });
+
+  const jobs = data?.jobs || [];
+
+  const applyMutation = useMutation({
+    mutationFn: (jobId) => applicationService.createApplication(jobId),
+    onSuccess: (result, jobId) => {
+      toast.success("Application started");
+      setApplyingJobId(null);
+      navigate("/application/personal-details", {
+        state: { applicationId: result?.application?._id, jobId },
+      });
+    },
+    onError: (err, jobId) => {
+      setApplyingJobId(null);
+      if (err.status === 409) {
+        toast.error("You have already applied for this job");
+        navigate("/candidate/applications");
+      } else {
+        toast.error(err.message || "Failed to start application");
+      }
+    },
+  });
+
+  const handleApply = (jobId) => {
+    if (!token || !user || !isCandidateUser(user)) {
+      navigate("/auth/candidate-login", { state: { jobId } });
+      return;
+    }
+    setApplyingJobId(jobId);
+    applyMutation.mutate(jobId);
+  };
 
   return (
     <PublicLayout>
@@ -21,8 +58,12 @@ const Jobs = () => {
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-black text-[#1f1d1b]">Active Job Listings</h1>
-              <p className="text-[#6d6761] mt-2">Browse published opportunities from the recruitment backend.</p>
+              <h1 className="text-3xl font-black text-[#1f1d1b]">
+                Active Job Listings
+              </h1>
+              <p className="text-[#6d6761] mt-2">
+                Browse published opportunities from the recruitment backend.
+              </p>
             </div>
             <div className="relative w-full md:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -35,7 +76,11 @@ const Jobs = () => {
             </div>
           </div>
 
-          {isLoading && <div className="bg-white border border-[#e0d7cd] rounded-lg p-6">Loading jobs...</div>}
+          {isLoading && (
+            <div className="bg-white border border-[#e0d7cd] rounded-lg p-6">
+              Loading jobs...
+            </div>
+          )}
 
           {!isLoading && jobs.length === 0 && (
             <div className="bg-white border border-[#e0d7cd] rounded-lg p-6 text-[#6d6761]">
@@ -45,11 +90,18 @@ const Jobs = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {jobs.map((job) => (
-              <div key={job._id} className="bg-white border border-[#e0d7cd] rounded-lg p-5">
+              <div
+                key={job._id}
+                className="bg-white border border-[#e0d7cd] rounded-lg p-5"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="font-black text-xl text-[#1f1d1b]">{job.title}</h2>
-                    <p className="mt-1 text-sm text-[#6d6761]">{job.department}</p>
+                    <h2 className="font-black text-xl text-[#1f1d1b]">
+                      {job.title}
+                    </h2>
+                    <p className="mt-1 text-sm text-[#6d6761]">
+                      {job.department}
+                    </p>
                   </div>
                   <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full">
                     {job.daysLeft ?? 0} days
@@ -63,11 +115,18 @@ const Jobs = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-orange-500" />
-                    {job.workLocation || job.projectId?.state || 'Location not specified'}
+                    {job.workLocation ||
+                      job.projectId?.state ||
+                      "Location not specified"}
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-orange-500" />
-                    Apply by {job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString('en-IN') : 'Not announced'}
+                    Apply by{" "}
+                    {job.applicationDeadline
+                      ? new Date(job.applicationDeadline).toLocaleDateString(
+                          "en-IN",
+                        )
+                      : "Not announced"}
                   </div>
                 </div>
 
@@ -75,8 +134,12 @@ const Jobs = () => {
                   <Button asChild variant="outline" className="flex-1">
                     <Link to={`/jobs/${job._id}`}>Details</Link>
                   </Button>
-                  <Button asChild className="flex-1 bg-orange-600 hover:bg-orange-700">
-                    <Link to="/auth/candidate-login" state={{ jobId: job._id }}>Apply</Link>
+                  <Button
+                    onClick={() => handleApply(job._id)}
+                    disabled={applyingJobId === job._id}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                  >
+                    {applyingJobId === job._id ? "Starting..." : "Apply"}
                   </Button>
                 </div>
               </div>
@@ -85,7 +148,7 @@ const Jobs = () => {
         </div>
       </div>
     </PublicLayout>
-  )
-}
+  );
+};
 
-export default Jobs
+export default Jobs;

@@ -78,6 +78,7 @@ const verifyOTP = asyncHandler(async (req, res) => {
     new ApiResponse(StatusCodes.OK, "OTP verified successfully", {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     }),
   );
 });
@@ -110,6 +111,7 @@ const loginCandidate = asyncHandler(async (req, res) => {
     new ApiResponse(StatusCodes.OK, "Login successful", {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     }),
   );
 });
@@ -142,6 +144,7 @@ const loginAdmin = asyncHandler(async (req, res) => {
     new ApiResponse(StatusCodes.OK, "Admin login successful", {
       user: result.employee,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     }),
   );
 });
@@ -161,13 +164,12 @@ const refreshToken = asyncHandler(async (req, res) => {
   const result = await authService.refreshAccessToken(token);
   authService.setAuthCookies(res, result.accessToken, result.refreshToken);
 
-  res
-    .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(StatusCodes.OK, "Token refreshed", {
-        accessToken: result.accessToken,
-      }),
-    );
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Token refreshed", {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    }),
+  );
 });
 
 /**
@@ -272,13 +274,37 @@ const getMe = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "User fetched", {
+      user: user.toSafeObject(),
+    }),
+  );
+});
+
+/**
+ * @swagger
+ * /api/auth/resend-otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Resend OTP for email verification
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email: { type: string }
+ *     responses:
+ *       200: { description: OTP resent }
+ *       404: { description: User not found }
+ */
+const resendOTP = asyncHandler(async (req, res) => {
+  const result = await authService.resendOTP(req.body.email);
   res
     .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(StatusCodes.OK, "User fetched", {
-        user: user.toSafeObject(),
-      }),
-    );
+    .json(new ApiResponse(StatusCodes.OK, result.message));
 });
 
 module.exports = {
@@ -291,9 +317,5 @@ module.exports = {
   resetPassword,
   logout,
   getMe,
+  resendOTP,
 };
-
-
-
-
-

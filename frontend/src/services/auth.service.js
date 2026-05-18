@@ -1,70 +1,110 @@
-import { apiClient, unwrapData } from '../api/client'
-import { STORAGE_KEYS } from '../api/config'
+import { apiClient, unwrapData } from "../api/client";
+import { STORAGE_KEYS } from "../api/config";
 
 // Normalise the user object so it always has a `role` field.
 // The Employee model has no role field — we infer it from employeeId / officialEmail.
 const normaliseUser = (user) => {
-  if (!user) return user
-  if (user.role) return user
-  if (user.employeeId || user.officialEmail) return { ...user, role: 'employee' }
-  return user
-}
+  if (!user) return user;
+  if (user.role) return user;
+  if (user.employeeId || user.officialEmail)
+    return { ...user, role: "employee" };
+  return user;
+};
 
-const saveSession = ({ user, accessToken }) => {
-  if (accessToken) localStorage.setItem(STORAGE_KEYS.accessToken, accessToken)
-  const normalisedUser = normaliseUser(user)
-  if (normalisedUser) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(normalisedUser))
-  return { user: normalisedUser, accessToken }
-}
+const saveSession = ({ user, accessToken, refreshToken }) => {
+  if (accessToken) localStorage.setItem(STORAGE_KEYS.accessToken, accessToken);
+  if (refreshToken)
+    localStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
+  const normalisedUser = normaliseUser(user);
+  if (normalisedUser)
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(normalisedUser));
+  return { user: normalisedUser, accessToken, refreshToken };
+};
 
 export const getStoredUser = () => {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || 'null')
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || "null");
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 export const authService = {
   async adminLogin(payload) {
-    const response = await apiClient.post('/auth/admin/login', payload)
-    return saveSession(unwrapData(response))
+    const response = await apiClient.post("/auth/admin/login", payload);
+    return saveSession(unwrapData(response));
   },
 
   async candidateLogin(payload) {
-    const response = await apiClient.post('/auth/login', payload)
-    return saveSession(unwrapData(response))
+    const response = await apiClient.post("/auth/login", payload);
+    return saveSession(unwrapData(response));
   },
 
   async register(payload) {
-    const response = await apiClient.post('/auth/register', payload)
-    return unwrapData(response)
+    const response = await apiClient.post("/auth/register", payload);
+    return unwrapData(response);
   },
 
   async verifyOtp(payload) {
-    const response = await apiClient.post('/auth/verify-otp', payload)
-    return saveSession(unwrapData(response))
+    const response = await apiClient.post("/auth/verify-otp", payload);
+    return saveSession(unwrapData(response));
+  },
+
+  async resendOtp(email) {
+    const response = await apiClient.post("/auth/resend-otp", { email });
+    return unwrapData(response);
   },
 
   async me() {
-    const response = await apiClient.get('/auth/me')
-    const data = unwrapData(response)
-    const user = normaliseUser(data?.user)
-    if (user) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user))
-    return user
+    const response = await apiClient.get("/auth/me");
+    const data = unwrapData(response);
+    const user = normaliseUser(data?.user);
+    if (user) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
+    return user;
+  },
+
+  async refreshSession() {
+    try {
+      const refreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
+      if (!refreshToken) return null;
+
+      const response = await apiClient.post("/auth/refresh-token", {
+        refreshToken,
+      });
+      const data = unwrapData(response);
+
+      if (data.accessToken) {
+        localStorage.setItem(STORAGE_KEYS.accessToken, data.accessToken);
+        if (data.refreshToken) {
+          localStorage.setItem(STORAGE_KEYS.refreshToken, data.refreshToken);
+        }
+
+        // Fetch user data after refresh
+        const user = await this.me();
+        return user;
+      }
+      return null;
+    } catch (error) {
+      // Refresh failed - clear session
+      localStorage.removeItem(STORAGE_KEYS.accessToken);
+      localStorage.removeItem(STORAGE_KEYS.refreshToken);
+      localStorage.removeItem(STORAGE_KEYS.user);
+      return null;
+    }
   },
 
   async logout() {
     try {
-      await apiClient.post('/auth/logout')
+      await apiClient.post("/auth/logout");
     } finally {
-      localStorage.removeItem(STORAGE_KEYS.accessToken)
-      localStorage.removeItem(STORAGE_KEYS.user)
+      localStorage.removeItem(STORAGE_KEYS.accessToken);
+      localStorage.removeItem(STORAGE_KEYS.refreshToken);
+      localStorage.removeItem(STORAGE_KEYS.user);
     }
   },
 
   async forgotPassword(email) {
-    const response = await apiClient.post('/auth/forgot-password', { email })
-    return unwrapData(response)
+    const response = await apiClient.post("/auth/forgot-password", { email });
+    return unwrapData(response);
   },
-}
+};

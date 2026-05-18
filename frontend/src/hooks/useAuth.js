@@ -7,9 +7,15 @@ export const getAuthState = () => ({
   user: getStoredUser(),
 })
 
-export const isAdminUser = (user) => ['admin', 'employee'].includes(user?.role) || Boolean(user?.employeeId)
+// Employee objects from the backend have no `role` field — auth.service normalises
+// them to role: 'employee', but we also check employeeId / officialEmail as fallback.
+export const isAdminUser = (user) =>
+  ['admin', 'employee'].includes(user?.role) ||
+  Boolean(user?.employeeId) ||
+  Boolean(user?.officialEmail)
 
-export const isCandidateUser = (user) => user?.role === 'candidate' || Boolean(user?.registeredMobile)
+export const isCandidateUser = (user) =>
+  user?.role === 'candidate' || Boolean(user?.registeredMobile)
 
 export const useAuth = () => {
   const [state, setState] = useState(() => ({
@@ -25,9 +31,11 @@ export const useAuth = () => {
       return undefined
     }
 
-    authService.me()
+    authService
+      .me()
       .then((user) => {
-        if (active) setState({ token: localStorage.getItem(STORAGE_KEYS.accessToken), user, isLoading: false })
+        if (active)
+          setState({ token: localStorage.getItem(STORAGE_KEYS.accessToken), user, isLoading: false })
       })
       .catch(() => {
         if (active) setState({ token: null, user: null, isLoading: false })

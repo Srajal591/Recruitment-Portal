@@ -13,6 +13,7 @@ export const apiClient = axios.create({
   },
 })
 
+// Attach Bearer token to every request
 apiClient.interceptors.request.use((config) => {
   const token = getStoredToken()
   if (token) {
@@ -30,7 +31,9 @@ apiClient.interceptors.response.use(
     const message =
       error.response?.data?.message ||
       error.response?.data?.error ||
-      (error.code === 'ECONNABORTED' ? 'Request timed out. Please confirm backend services are running.' : null) ||
+      (error.code === 'ECONNABORTED'
+        ? 'Request timed out. Please confirm backend services are running.'
+        : null) ||
       'Something went wrong. Please try again.'
 
     if (status === 401 && !originalRequest?._retry && !isAuthEndpoint) {

@@ -1,10 +1,20 @@
 import { apiClient, unwrapData } from '../api/client'
 import { STORAGE_KEYS } from '../api/config'
 
+// Normalise the user object so it always has a `role` field.
+// The Employee model has no role field — we infer it from employeeId / officialEmail.
+const normaliseUser = (user) => {
+  if (!user) return user
+  if (user.role) return user
+  if (user.employeeId || user.officialEmail) return { ...user, role: 'employee' }
+  return user
+}
+
 const saveSession = ({ user, accessToken }) => {
   if (accessToken) localStorage.setItem(STORAGE_KEYS.accessToken, accessToken)
-  if (user) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user))
-  return { user, accessToken }
+  const normalisedUser = normaliseUser(user)
+  if (normalisedUser) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(normalisedUser))
+  return { user: normalisedUser, accessToken }
 }
 
 export const getStoredUser = () => {
@@ -39,8 +49,9 @@ export const authService = {
   async me() {
     const response = await apiClient.get('/auth/me')
     const data = unwrapData(response)
-    if (data?.user) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(data.user))
-    return data?.user
+    const user = normaliseUser(data?.user)
+    if (user) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user))
+    return user
   },
 
   async logout() {

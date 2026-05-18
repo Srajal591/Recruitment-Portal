@@ -91,9 +91,9 @@ const postSelectionSchema = z.object({
     .array(
       z.object({
         jobId: z.string().min(1),
-        postCode: z.string().min(1),
+        postCode: z.string().optional().default(""),
         title: z.string().min(1),
-        department: z.string().min(1),
+        department: z.string().optional().default(""),
       }),
     )
     .min(1, "Select at least one post"),

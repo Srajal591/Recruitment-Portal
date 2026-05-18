@@ -61,7 +61,6 @@ const JobDetails = () => {
 
     applyMutation.mutate();
   };
-  };
 
   return (
     <PublicLayout>

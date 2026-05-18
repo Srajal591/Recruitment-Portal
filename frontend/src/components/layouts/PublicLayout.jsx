@@ -7,12 +7,12 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Bell, Phone, Mail, MapPin } from "lucide-react";
 
 import { useState } from "react";
-import { getStoredUser } from "../../services/auth.service";
+import { useAuth } from "../../hooks/useAuth";
 
 const PublicLayout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const user = getStoredUser();
-  const isLoggedIn = !!user;
+  const { user, token } = useAuth();
+  const isLoggedIn = !!(user && token);
 
   const location = useLocation();
 
@@ -129,21 +129,29 @@ const PublicLayout = ({ children }) => {
 
             <div className="flex items-center gap-3">
               {!isLoggedIn && (
+                <>
+                  <Link
+                    to="/auth/register"
+                    className="hidden sm:flex h-[42px] px-6 bg-white border-2 border-[#e46a1d] text-[#e46a1d] hover:bg-[#e46a1d] hover:text-white rounded-[4px] items-center justify-center text-[11px] uppercase tracking-[0.12em] font-black transition-all"
+                  >
+                    Register
+                  </Link>
+                  <Link
+                    to="/auth/candidate-login"
+                    className="hidden sm:flex h-[42px] px-6 bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] items-center justify-center text-[11px] uppercase tracking-[0.12em] font-black transition-all shadow-lg shadow-orange-200"
+                  >
+                    Login
+                  </Link>
+                </>
+              )}
+              {isLoggedIn && (
                 <Link
-                  to="/auth/register"
-                  className="hidden sm:flex h-[42px] px-6 bg-white border-2 border-[#e46a1d] text-[#e46a1d] hover:bg-[#e46a1d] hover:text-white rounded-[4px] items-center justify-center text-[11px] uppercase tracking-[0.12em] font-black transition-all"
+                  to="/candidate/dashboard"
+                  className="hidden sm:flex h-[42px] px-6 bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] items-center justify-center text-[11px] uppercase tracking-[0.12em] font-black transition-all shadow-lg shadow-orange-200"
                 >
-                  Register
+                  Dashboard
                 </Link>
               )}
-              <Link
-                to={
-                  isLoggedIn ? "/candidate/dashboard" : "/auth/candidate-login"
-                }
-                className="hidden sm:flex h-[42px] px-6 bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] items-center justify-center text-[11px] uppercase tracking-[0.12em] font-black transition-all shadow-lg shadow-orange-200"
-              >
-                {isLoggedIn ? "Dashboard" : "Login"}
-              </Link>
 
               {/* MOBILE */}
 
@@ -177,12 +185,30 @@ const PublicLayout = ({ children }) => {
                 </Link>
               ))}
 
-              <Link
-                to="/auth/candidate-login"
-                className="mt-4 flex h-[46px] bg-[#e46a1d] text-white rounded-[4px] items-center justify-center text-[12px] uppercase tracking-[0.12em] font-black"
-              >
-                Login
-              </Link>
+              {!isLoggedIn && (
+                <>
+                  <Link
+                    to="/auth/register"
+                    className="mt-4 flex h-[46px] bg-white border-2 border-[#e46a1d] text-[#e46a1d] rounded-[4px] items-center justify-center text-[12px] uppercase tracking-[0.12em] font-black"
+                  >
+                    Register
+                  </Link>
+                  <Link
+                    to="/auth/candidate-login"
+                    className="mt-2 flex h-[46px] bg-[#e46a1d] text-white rounded-[4px] items-center justify-center text-[12px] uppercase tracking-[0.12em] font-black"
+                  >
+                    Login
+                  </Link>
+                </>
+              )}
+              {isLoggedIn && (
+                <Link
+                  to="/candidate/dashboard"
+                  className="mt-4 flex h-[46px] bg-[#e46a1d] text-white rounded-[4px] items-center justify-center text-[12px] uppercase tracking-[0.12em] font-black"
+                >
+                  Dashboard
+                </Link>
+              )}
             </div>
           </div>
         )}

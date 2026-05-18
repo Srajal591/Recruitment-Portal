@@ -69,6 +69,52 @@ const Applications = () => {
     { id: "rejected", label: "Rejected" },
   ];
 
+  const handleViewApplication = (app) => {
+    // Always set sessionStorage so form pages can pick up the applicationId
+    const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
+    sessionStorage.setItem(
+      "app_draft",
+      JSON.stringify({
+        ...draft,
+        applicationId: app._id,
+        jobId: app.jobId?._id,
+      }),
+    );
+
+    // For submitted applications, go to success/view page
+    if (app.status === "submitted") {
+      navigate("/application/success", {
+        state: {
+          applicationId: app._id,
+          paymentSuccess: true,
+          amount: app.totalFee || 0,
+          selectedPosts: app.appliedPosts || [],
+          submittedAt: app.submittedAt,
+        },
+      });
+      return;
+    }
+
+    // For draft applications, navigate to the appropriate step
+    const stepRoutes = {
+      1: "/application/personal-details",
+      2: "/application/education",
+      3: "/application/additional-info",
+      4: "/application/address",
+      5: "/application/documents",
+      6: "/application/review",
+      7: "/application/post-selection",
+      8: "/application/payment",
+      9: "/application/success",
+    };
+
+    const route =
+      stepRoutes[app.currentStep] || "/application/personal-details";
+    navigate(route, {
+      state: { applicationId: app._id, jobId: app.jobId?._id },
+    });
+  };
+
   return (
     <CandidateLayout title="My Applications">
       <div className="space-y-6">
@@ -169,7 +215,8 @@ const Applications = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-orange-600"
+                      onClick={() => handleViewApplication(app)}
+                      className="text-orange-600 hover:text-orange-700"
                     >
                       <Eye className="w-4 h-4" />
                     </Button>

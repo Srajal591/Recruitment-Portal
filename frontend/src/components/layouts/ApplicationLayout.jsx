@@ -12,7 +12,7 @@ import {
   CheckCheck,
 } from "lucide-react";
 
-const ApplicationLayout = ({ children, currentStep = 1, title }) => {
+const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
   const steps = [
     {
       id: 1,
@@ -147,7 +147,9 @@ const ApplicationLayout = ({ children, currentStep = 1, title }) => {
               <h2 className="text-white font-semibold mb-2">
                 Application Steps
               </h2>
-              <p className="text-gray-400 text-sm">Post: Junior Engineer</p>
+              <p className="text-gray-400 text-sm truncate">
+                {jobTitle || "Application Form"}
+              </p>
             </div>
 
             <nav className="px-4 pb-4 space-y-1">

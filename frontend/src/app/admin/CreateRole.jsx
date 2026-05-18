@@ -1,359 +1,189 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Lock, Shield, FileText, BarChart3, Edit } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { ArrowLeft, Lock, Loader2 } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
-import { Card } from '../../components/ui/Card'
+import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import Input from '../../components/ui/Input'
+import { adminService } from '../../services/admin.service'
+
+const MODULES = [
+  { id: 'jobs',           label: 'Jobs Management' },
+  { id: 'applications',  label: 'Applications Management' },
+  { id: 'analytics',     label: 'Analytics & Reports' },
+  { id: 'employees',     label: 'Employee Management' },
+  { id: 'paymentSettings', label: 'Payment Settings' },
+  { id: 'support',       label: 'Support Management' },
+  { id: 'projects',      label: 'Project Management' },
+  { id: 'results',       label: 'Results Management' },
+]
+const ACTIONS = ['create', 'view', 'edit', 'delete', 'download']
+
+const emptyPermissions = () =>
+  Object.fromEntries(
+    MODULES.map(m => [m.id, Object.fromEntries(ACTIONS.map(a => [a, false]))])
+  )
 
 const CreateRole = () => {
   const navigate = useNavigate()
-  const [formData, setFormData] = useState({
-    roleName: '',
-    roleDescription: ''
+  const queryClient = useQueryClient()
+  const [roleName, setRoleName] = useState('')
+  const [roleDescription, setRoleDescription] = useState('')
+  const [permissions, setPermissions] = useState(emptyPermissions())
+  const [errors, setErrors] = useState({})
+
+  const { mutate: createRole, isPending } = useMutation({
+    mutationFn: adminService.createRole,
+    onSuccess: () => {
+      toast.success('Role created successfully')
+      queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
+      navigate('/admin/roles')
+    },
+    onError: (err) => toast.error(err.message || 'Failed to create role'),
   })
 
-  const [permissions, setPermissions] = useState({
-    jobs: { create: false, view: false, edit: false, delete: false, download: false },
-    applications: { create: false, view: false, edit: false, delete: false, download: false },
-    analytics: { create: false, view: false, edit: false, delete: false, download: false },
-    employees: { create: false, view: false, edit: false, delete: false, download: false },
-    paymentSettings: { create: false, view: false, edit: false, delete: false, download: false }
-  })
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
-
-  const handlePermissionChange = (module, action, checked) => {
+  const togglePermission = (moduleId, action) => {
     setPermissions(prev => ({
       ...prev,
-      [module]: {
-        ...prev[module],
-        [action]: checked
-      }
+      [moduleId]: { ...prev[moduleId], [action]: !prev[moduleId][action] },
     }))
   }
 
-  const handleSelectAll = (module) => {
-    const allSelected = Object.values(permissions[module]).every(val => val)
-    const newValue = !allSelected
-    
+  const toggleAll = (moduleId) => {
+    const allOn = ACTIONS.every(a => permissions[moduleId][a])
     setPermissions(prev => ({
       ...prev,
-      [module]: {
-        create: newValue,
-        view: newValue,
-        edit: newValue,
-        delete: newValue,
-        download: newValue
-      }
+      [moduleId]: Object.fromEntries(ACTIONS.map(a => [a, !allOn])),
     }))
   }
 
-  const getActivePermissions = () => {
-    let count = 0
-    Object.values(permissions).forEach(module => {
-      Object.values(module).forEach(permission => {
-        if (permission) count++
-      })
-    })
-    return count
+  const totalActive = Object.values(permissions).flatMap(Object.values).filter(Boolean).length
+
+  const handleSubmit = () => {
+    const e = {}
+    if (!roleName.trim()) e.roleName = 'Role name is required'
+    if (roleName.trim().length < 2) e.roleName = 'At least 2 characters'
+    setErrors(e)
+    if (Object.keys(e).length > 0) return
+    createRole({ roleName: roleName.trim(), roleDescription: roleDescription.trim() || undefined, permissions })
   }
-
-  const getAccessLevel = () => {
-    const total = getActivePermissions()
-    if (total >= 15) return { level: 'Senior Auditor', color: 'text-red-600' }
-    if (total >= 10) return { level: 'Partial Admin', color: 'text-orange-600' }
-    if (total >= 5) return { level: 'Standard User', color: 'text-blue-600' }
-    return { level: 'Limited Access', color: 'text-gray-600' }
-  }
-
-  const modules = [
-    {
-      id: 'jobs',
-      name: 'Jobs',
-      icon: '💼',
-      description: 'Job posting management and recruitment workflows'
-    },
-    {
-      id: 'applications',
-      name: 'Applications',
-      icon: FileText,
-      description: 'Candidate application processing and status updates'
-    },
-    {
-      id: 'analytics',
-      name: 'Analytics',
-      icon: BarChart3,
-      description: 'Performance metrics and recruitment insights'
-    },
-    {
-      id: 'employees',
-      name: 'Employees',
-      icon: '👥',
-      description: 'Staff management and organizational structure'
-    },
-    {
-      id: 'paymentSettings',
-      name: 'Payment Settings',
-      icon: '💳',
-      description: 'Financial configurations and payment gateways'
-    }
-  ]
-
-  const actions = [
-    { id: 'create', name: 'CREATE', color: 'text-green-600' },
-    { id: 'view', name: 'VIEW', color: 'text-blue-600' },
-    { id: 'edit', name: 'EDIT', color: 'text-yellow-600' },
-    { id: 'delete', name: 'DELETE', color: 'text-red-600' },
-    { id: 'download', name: 'DOWNLOAD', color: 'text-purple-600' }
-  ]
-
-  const handleSave = () => {
-    console.log('Creating role:', { formData, permissions })
-    navigate('/admin/roles')
-  }
-
-  const accessLevel = getAccessLevel()
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 bg-orange-50 min-h-screen p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
+    <AdminLayout title="Create Role">
+      <div className="max-w-5xl mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin/roles')}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Create New Role</h1>
+            <p className="text-gray-600 text-sm">Define permissions for this role.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Basic Information */}
-            <Card className="bg-white">
-              <div className="p-6">
-                <div className="flex items-center space-x-2 mb-6">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <Edit className="w-5 h-5 text-orange-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Basic Information</h3>
+            {/* Basic Info */}
+            <Card>
+              <CardHeader><h3 className="font-semibold text-gray-800">Basic Information</h3></CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role Name <span className="text-red-500">*</span>
+                  </label>
+                  <input type="text" placeholder="e.g. Recruitment Manager"
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors.roleName ? 'border-red-400' : 'border-gray-300'}`}
+                    value={roleName} onChange={(e) => { setRoleName(e.target.value); setErrors({}) }} />
+                  {errors.roleName && <p className="text-red-500 text-xs mt-1">{errors.roleName}</p>}
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Role Name
-                    </label>
-                    <Input
-                      value={formData.roleName}
-                      onChange={(e) => handleInputChange('roleName', e.target.value)}
-                      placeholder="e.g., Senior Auditor"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Role Description
-                    </label>
-                    <textarea
-                      value={formData.roleDescription}
-                      onChange={(e) => handleInputChange('roleDescription', e.target.value)}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder="Define the core responsibilities and scope of this role..."
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea rows="3" placeholder="Describe the responsibilities of this role..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    value={roleDescription} onChange={(e) => setRoleDescription(e.target.value)} />
                 </div>
-              </div>
+              </CardContent>
             </Card>
 
             {/* Permission Matrix */}
-            <Card className="bg-white">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <Lock className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-800">Permission Matrix</h3>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-orange-600" />
+                    <h3 className="font-semibold text-gray-800">Permission Matrix</h3>
                   </div>
-                  <Button variant="ghost" className="text-orange-600">
-                    Full Access
-                  </Button>
+                  <span className="text-sm text-gray-500">{totalActive} permissions active</span>
                 </div>
-
+              </CardHeader>
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">MODULE</th>
-                        {actions.map((action) => (
-                          <th key={action.id} className="text-center py-3 px-4 font-medium text-gray-500 text-sm">
-                            {action.name}
-                          </th>
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Module</th>
+                        {ACTIONS.map(a => (
+                          <th key={a} className="text-center py-3 px-3 text-xs font-medium text-gray-500 uppercase">{a}</th>
                         ))}
-                        <th className="text-center py-3 px-4 font-medium text-gray-500 text-sm">
-                          SELECT ALL
-                        </th>
+                        <th className="text-center py-3 px-3 text-xs font-medium text-gray-500 uppercase">All</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {modules.map((module) => (
-                        <tr key={module.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-4 px-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-                                {typeof module.icon === 'string' ? (
-                                  module.icon
-                                ) : (
-                                  (() => {
-                                    const IconComponent = module.icon
-                                    return <IconComponent className="w-4 h-4 text-gray-600" />
-                                  })()
-                                )}
-                              </div>
-                              <div>
-                                <div className="font-medium text-gray-800">{module.name}</div>
-                                <div className="text-xs text-gray-500">{module.description}</div>
-                              </div>
-                            </div>
-                          </td>
-                          {actions.map((action) => (
-                            <td key={action.id} className="py-4 px-4 text-center">
-                              <input
-                                type="checkbox"
-                                checked={permissions[module.id][action.id]}
-                                onChange={(e) => handlePermissionChange(module.id, action.id, e.target.checked)}
-                                className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                              />
+                    <tbody className="divide-y divide-gray-100">
+                      {MODULES.map(mod => (
+                        <tr key={mod.id} className="hover:bg-gray-50">
+                          <td className="py-3 px-4 text-sm font-medium text-gray-800">{mod.label}</td>
+                          {ACTIONS.map(action => (
+                            <td key={action} className="py-3 px-3 text-center">
+                              <input type="checkbox"
+                                checked={permissions[mod.id][action]}
+                                onChange={() => togglePermission(mod.id, action)}
+                                className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer" />
                             </td>
                           ))}
-                          <td className="py-4 px-4 text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSelectAll(module.id)}
-                              className="text-orange-600"
-                            >
-                              ☑️
-                            </Button>
+                          <td className="py-3 px-3 text-center">
+                            <button onClick={() => toggleAll(mod.id)}
+                              className="text-xs text-orange-600 hover:text-orange-800 font-medium">
+                              {ACTIONS.every(a => permissions[mod.id][a]) ? 'None' : 'All'}
+                            </button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-
-                <div className="mt-4 text-xs text-gray-500">
-                  💡 Changes are auto-saved as drafts
-                </div>
-              </div>
+              </CardContent>
             </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Auto-generated Summary */}
             <Card className="bg-gray-800 text-white">
-              <div className="p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-6 h-6 bg-yellow-500 rounded flex items-center justify-center">
-                    ⚡
-                  </div>
-                  <h3 className="font-semibold">Auto-generated Summary</h3>
+              <CardContent className="p-6 space-y-4">
+                <h3 className="font-semibold">Role Summary</h3>
+                <div>
+                  <p className="text-xs text-gray-400">ROLE NAME</p>
+                  <p className="font-medium text-white">{roleName || '—'}</p>
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-300">ACCESS LEVEL</div>
-                    <div className={`font-medium ${accessLevel.color}`}>
-                      Role "{formData.roleName || 'Untitled'}" currently has {accessLevel.level.toLowerCase()} access.
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-300 flex items-center space-x-2">
-                      <span>✅</span>
-                      <span>Applications</span>
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {permissions.applications.view ? 'Full access' : 'No permissions currently assigned'}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-300 flex items-center space-x-2">
-                      <span>⚠️</span>
-                      <span>Analytics & Employees</span>
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {permissions.analytics.view || permissions.employees.view ? 'View-only and Download capability enabled' : 'No permissions currently assigned'}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-300 flex items-center space-x-2">
-                      <Lock className="w-4 h-4" />
-                      <span>Payments & Support</span>
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {permissions.paymentSettings.view ? 'Limited access granted' : 'No permissions currently assigned'}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-600">
-                    <div className="text-sm text-gray-300">Total Permissions:</div>
-                    <div className="text-2xl font-bold text-orange-400">{getActivePermissions()} Active</div>
-                  </div>
+                <div>
+                  <p className="text-xs text-gray-400">ACTIVE PERMISSIONS</p>
+                  <p className="text-3xl font-bold text-orange-400">{totalActive}</p>
+                  <p className="text-xs text-gray-400">out of {MODULES.length * ACTIONS.length} total</p>
                 </div>
-              </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div className="bg-orange-500 h-2 rounded-full transition-all"
+                    style={{ width: `${(totalActive / (MODULES.length * ACTIONS.length)) * 100}%` }} />
+                </div>
+              </CardContent>
             </Card>
 
-            {/* Profile Completeness */}
-            <Card className="bg-white">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-800">PROFILE COMPLETENESS</h3>
-                  <span className="text-2xl font-bold text-orange-600">
-                    {formData.roleName && formData.roleDescription ? '85%' : '45%'}
-                  </span>
-                </div>
-                
-                <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-                  <div 
-                    className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full" 
-                    style={{ width: formData.roleName && formData.roleDescription ? '85%' : '45%' }}
-                  ></div>
-                </div>
-                
-                <div className="text-sm text-gray-600">
-                  {formData.roleName && formData.roleDescription 
-                    ? 'Role configuration is nearly complete. Review permissions and save.'
-                    : 'Complete role name and description to proceed with permission assignment.'
-                  }
-                </div>
-              </div>
-            </Card>
-
-            {/* Action Buttons */}
             <div className="space-y-3">
-              <Button 
-                onClick={handleSave}
-                className="w-full bg-orange-600 hover:bg-orange-700"
-                disabled={!formData.roleName || !formData.roleDescription}
-              >
-                💾 Save Role
+              <Button onClick={handleSubmit} disabled={isPending}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+                {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create Role'}
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/admin/roles')}
-                className="w-full"
-              >
-                ❌ Cancel
+              <Button variant="outline" onClick={() => navigate('/admin/roles')} className="w-full">
+                Cancel
               </Button>
             </div>
           </div>

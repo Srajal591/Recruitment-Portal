@@ -42,6 +42,20 @@ const JobPayment = () => {
   }
 
   const handleNext = () => {
+    const existing = JSON.parse(sessionStorage.getItem('job_draft') || '{}')
+    const enabledMethods = Object.entries(paymentConfig.paymentMethods)
+      .filter(([, enabled]) => enabled)
+      .map(([method]) => method)
+    sessionStorage.setItem('job_draft', JSON.stringify({
+      ...existing,
+      paymentConfig: {
+        applicationFee: Number(paymentConfig.applicationFee) || 0,
+        examFee: Number(paymentConfig.examFee) || 0,
+        processingFee: Number(paymentConfig.processingFee) || 0,
+        paymentMethods: enabledMethods,
+        refundPolicy: paymentConfig.refundPolicy || undefined,
+      },
+    }))
     navigate(`/admin/jobs/create/review${projectId ? `?project=${projectId}` : ''}`)
   }
 

@@ -164,6 +164,15 @@ const JobFormBuilder = () => {
   }
 
   const handleNext = () => {
+    const existing = JSON.parse(sessionStorage.getItem('job_draft') || '{}')
+    sessionStorage.setItem('job_draft', JSON.stringify({
+      ...existing,
+      formSections: formSections.map(section => ({
+        title: section.title,
+        required: section.required,
+        fields: section.fields.map(({ id: _id, ...field }) => field),
+      })),
+    }))
     navigate(`/admin/jobs/create/documents${projectId ? `?project=${projectId}` : ''}`)
   }
 

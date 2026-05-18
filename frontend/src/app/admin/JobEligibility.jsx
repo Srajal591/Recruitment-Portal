@@ -139,6 +139,28 @@ const JobEligibility = () => {
   }
 
   const handleNext = () => {
+    const existing = JSON.parse(sessionStorage.getItem('job_draft') || '{}')
+    sessionStorage.setItem('job_draft', JSON.stringify({
+      ...existing,
+      ageLimit: {
+        min: Number(formData.ageLimit.min) || undefined,
+        max: Number(formData.ageLimit.max) || undefined,
+        relaxation: {
+          sc: Number(formData.ageLimit.relaxation.sc) || 0,
+          st: Number(formData.ageLimit.relaxation.st) || 0,
+          obc: Number(formData.ageLimit.relaxation.obc) || 0,
+          pwd: Number(formData.ageLimit.relaxation.pwd) || 0,
+        },
+      },
+      education: {
+        essential: formData.education.essential.filter(e => e.degree),
+        desirable: formData.education.desirable.filter(e => e.degree),
+      },
+      experience: formData.experience,
+      physicalStandards: formData.physicalStandards,
+      medicalStandards: formData.medicalStandards,
+      otherRequirements: formData.otherRequirements.filter(r => r.trim()),
+    }))
     navigate(`/admin/jobs/create/form-builder${projectId ? `?project=${projectId}` : ''}`)
   }
 

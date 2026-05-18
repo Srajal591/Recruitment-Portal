@@ -1,397 +1,243 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Lock, Settings, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
-import { Card } from '../../components/ui/Card'
+import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import Input from '../../components/ui/Input'
+import { adminService } from '../../services/admin.service'
+
+const DEPARTMENTS = [
+  'Administration', 'Public Works', 'Healthcare', 'Education',
+  'Finance', 'Information Technology', 'Home Affairs', 'Revenue',
+  'Agriculture', 'Transport', 'Law & Justice', 'Other',
+]
 
 const AddEmployee = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [showPassword, setShowPassword] = useState(false)
+  const [errors, setErrors] = useState({})
+
   const [formData, setFormData] = useState({
-    // Personal Details
     fullName: '',
     dateOfBirth: '',
     gender: '',
     contactNumber: '',
-    
-    // Employment Details
     department: '',
     roleDesignation: '',
-    employeeId: 'BR-2024-8942',
+    employeeId: '',
     dateOfJoining: '',
-    
-    // Security & Access
     officialEmail: '',
-    temporaryPassword: '',
-    systemRole: ''
+    password: '',
+    systemRole: '',
   })
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+  // Fetch roles for the dropdown
+  const { data: rolesData } = useQuery({
+    queryKey: ['admin-roles'],
+    queryFn: () => adminService.getRoles(),
+  })
+  const roles = rolesData?.roles || rolesData || []
+
+  const { mutate: createEmployee, isPending } = useMutation({
+    mutationFn: adminService.createEmployee,
+    onSuccess: () => {
+      toast.success('Employee created successfully')
+      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-employee-stats'] })
+      navigate('/admin/employees')
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to create employee')
+    },
+  })
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  const validate = () => {
+    const e = {}
+    if (!formData.fullName.trim()) e.fullName = 'Full name is required'
+    if (!formData.contactNumber) e.contactNumber = 'Contact number is required'
+    else if (!/^[6-9]\d{9}$/.test(formData.contactNumber)) e.contactNumber = 'Enter valid 10-digit mobile number'
+    if (!formData.department) e.department = 'Department is required'
+    if (!formData.roleDesignation.trim()) e.roleDesignation = 'Role designation is required'
+    if (!formData.employeeId.trim()) e.employeeId = 'Employee ID is required'
+    if (!formData.dateOfJoining) e.dateOfJoining = 'Date of joining is required'
+    if (!formData.officialEmail) e.officialEmail = 'Official email is required'
+    else if (!/^\S+@\S+\.\S+$/.test(formData.officialEmail)) e.officialEmail = 'Invalid email format'
+    if (!formData.password) e.password = 'Password is required'
+    else if (formData.password.length < 8) e.password = 'Minimum 8 characters'
+    if (!formData.systemRole) e.systemRole = 'System role is required'
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
 
   const handleSubmit = () => {
-    console.log('Creating employee:', formData)
-    // API call to create employee
-    navigate('/admin/employees')
+    if (!validate()) return
+    const payload = {
+      fullName: formData.fullName.trim(),
+      contactNumber: formData.contactNumber,
+      department: formData.department,
+      roleDesignation: formData.roleDesignation.trim(),
+      employeeId: formData.employeeId.trim(),
+      dateOfJoining: formData.dateOfJoining,
+      officialEmail: formData.officialEmail.toLowerCase().trim(),
+      password: formData.password,
+      systemRole: formData.systemRole,
+      ...(formData.dateOfBirth && { dateOfBirth: formData.dateOfBirth }),
+      ...(formData.gender && { gender: formData.gender }),
+    }
+    createEmployee(payload)
   }
 
-  const systemRoles = [
-    {
-      id: 'admin',
-      title: 'Admin',
-      description: 'Full system access, user management, and audit logs',
-      icon: '🛡️',
-      selected: formData.systemRole === 'admin'
-    },
-    {
-      id: 'reviewer',
-      title: 'Reviewer',
-      description: 'Application review, profile assessments, and interview portal',
-      icon: '✅',
-      selected: formData.systemRole === 'reviewer'
-    },
-    {
-      id: 'support',
-      title: 'Support',
-      description: 'Helpdesk access, ticket resolution, and applicant assistance',
-      icon: '🎧',
-      selected: formData.systemRole === 'support'
-    }
-  ]
+  const Field = ({ label, required, error, children }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  )
+
+  const inputClass = (field) =>
+    `w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors[field] ? 'border-red-400' : 'border-gray-300'}`
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 bg-orange-50 min-h-screen p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
+    <AdminLayout title="Add Employee">
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin/employees')}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Add a New Employee</h1>
-            <p className="text-gray-600">Create New Profile</p>
-            <p className="text-sm text-gray-500">Register a new employee to the central recruitment administration system.</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm font-medium text-green-600">SYSTEM ONLINE</span>
+            <h1 className="text-2xl font-bold text-gray-800">Add New Employee</h1>
+            <p className="text-gray-600 text-sm">Register a new employee to the system.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Personal Details */}
-            <Card className="bg-white">
-              <div className="p-6">
-                <div className="flex items-center space-x-2 mb-6">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                    👤
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Personal Details</h3>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Personal Details */}
+          <Card>
+            <CardHeader>
+              <h3 className="font-semibold text-gray-800">Personal Details</h3>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Field label="Full Name" required error={errors.fullName}>
+                <input type="text" placeholder="Enter legal full name" className={inputClass('fullName')}
+                  value={formData.fullName} onChange={(e) => handleChange('fullName', e.target.value)} />
+              </Field>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      FULL NAME
-                    </label>
-                    <Input
-                      value={formData.fullName}
-                      onChange={(e) => handleInputChange('fullName', e.target.value)}
-                      placeholder="Enter legal full name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      DATE OF BIRTH
-                    </label>
-                    <Input
-                      type="date"
-                      value={formData.dateOfBirth}
-                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                      placeholder="mm/dd/yyyy"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      GENDER
-                    </label>
-                    <div className="flex space-x-4">
-                      {['Male', 'Female', 'Other'].map((gender) => (
-                        <label key={gender} className="flex items-center">
-                          <input
-                            type="radio"
-                            name="gender"
-                            value={gender}
-                            checked={formData.gender === gender}
-                            onChange={(e) => handleInputChange('gender', e.target.value)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm text-gray-700">{gender}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      CONTACT NUMBER
-                    </label>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-3 py-2 border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-l-md">
-                        +91
-                      </span>
-                      <Input
-                        value={formData.contactNumber}
-                        onChange={(e) => handleInputChange('contactNumber', e.target.value)}
-                        placeholder="98765 43210"
-                        className="rounded-l-none"
-                      />
-                    </div>
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Date of Birth" error={errors.dateOfBirth}>
+                  <input type="date" className={inputClass('dateOfBirth')}
+                    value={formData.dateOfBirth} onChange={(e) => handleChange('dateOfBirth', e.target.value)} />
+                </Field>
+                <Field label="Gender" error={errors.gender}>
+                  <select className={inputClass('gender')}
+                    value={formData.gender} onChange={(e) => handleChange('gender', e.target.value)}>
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </Field>
               </div>
-            </Card>
 
-            {/* Employment Details */}
-            <Card className="bg-white">
-              <div className="p-6">
-                <div className="flex items-center space-x-2 mb-6">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    💼
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Employment Details</h3>
+              <Field label="Contact Number" required error={errors.contactNumber}>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 py-3 border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-l-lg">+91</span>
+                  <input type="tel" placeholder="9876543210" maxLength={10}
+                    className={`flex-1 px-4 py-3 border rounded-r-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors.contactNumber ? 'border-red-400' : 'border-gray-300'}`}
+                    value={formData.contactNumber} onChange={(e) => handleChange('contactNumber', e.target.value.replace(/\D/g, ''))} />
                 </div>
+              </Field>
+            </CardContent>
+          </Card>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      DEPARTMENT
-                    </label>
-                    <select
-                      value={formData.department}
-                      onChange={(e) => handleInputChange('department', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="">Select Department</option>
-                      <option value="Public Works">Public Works</option>
-                      <option value="Healthcare">Healthcare</option>
-                      <option value="Education">Education</option>
-                      <option value="Finance">Finance</option>
-                      <option value="IT">Information Technology</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ROLE / DESIGNATION
-                    </label>
-                    <Input
-                      value={formData.roleDesignation}
-                      onChange={(e) => handleInputChange('roleDesignation', e.target.value)}
-                      placeholder="e.g. Senior Reviewer"
-                    />
-                  </div>
-                </div>
+          {/* Employment Details */}
+          <Card>
+            <CardHeader>
+              <h3 className="font-semibold text-gray-800">Employment Details</h3>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Field label="Department" required error={errors.department}>
+                <select className={inputClass('department')}
+                  value={formData.department} onChange={(e) => handleChange('department', e.target.value)}>
+                  <option value="">Select Department</option>
+                  {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </Field>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      EMPLOYEE ID
-                    </label>
-                    <div className="flex">
-                      <Input
-                        value={formData.employeeId}
-                        onChange={(e) => handleInputChange('employeeId', e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button variant="outline" className="ml-2 text-xs">
-                        AUTO-GENERATED
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      DATE OF JOINING
-                    </label>
-                    <Input
-                      type="date"
-                      value={formData.dateOfJoining}
-                      onChange={(e) => handleInputChange('dateOfJoining', e.target.value)}
-                      placeholder="mm/dd/yyyy"
-                    />
-                  </div>
-                </div>
+              <Field label="Role / Designation" required error={errors.roleDesignation}>
+                <input type="text" placeholder="e.g. Senior Reviewer"
+                  className={inputClass('roleDesignation')}
+                  value={formData.roleDesignation} onChange={(e) => handleChange('roleDesignation', e.target.value)} />
+              </Field>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Employee ID" required error={errors.employeeId}>
+                  <input type="text" placeholder="e.g. EMP-2026-001"
+                    className={inputClass('employeeId')}
+                    value={formData.employeeId} onChange={(e) => handleChange('employeeId', e.target.value)} />
+                </Field>
+                <Field label="Date of Joining" required error={errors.dateOfJoining}>
+                  <input type="date" className={inputClass('dateOfJoining')}
+                    value={formData.dateOfJoining} onChange={(e) => handleChange('dateOfJoining', e.target.value)} />
+                </Field>
               </div>
-            </Card>
+            </CardContent>
+          </Card>
 
-            {/* Security & Access */}
-            <Card className="bg-white">
-              <div className="p-6">
-                <div className="flex items-center space-x-2 mb-6">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Security & Access</h3>
-                </div>
+          {/* Security & Access */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <h3 className="font-semibold text-gray-800">Security & Access</h3>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Field label="Official Email" required error={errors.officialEmail}>
+                  <input type="email" placeholder="employee@gov.in"
+                    className={inputClass('officialEmail')}
+                    value={formData.officialEmail} onChange={(e) => handleChange('officialEmail', e.target.value)} />
+                </Field>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      OFFICIAL EMAIL
-                    </label>
-                    <Input
-                      type="email"
-                      value={formData.officialEmail}
-                      onChange={(e) => handleInputChange('officialEmail', e.target.value)}
-                      placeholder="employee.name@bihar.gov.in"
-                    />
+                <Field label="Password" required error={errors.password}>
+                  <div className="relative">
+                    <input type={showPassword ? 'text' : 'password'} placeholder="Min 8 characters"
+                      className={inputClass('password')}
+                      value={formData.password} onChange={(e) => handleChange('password', e.target.value)} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      TEMPORARY PASSWORD
-                    </label>
-                    <div className="flex">
-                      <Input
-                        type="password"
-                        value={formData.temporaryPassword}
-                        onChange={(e) => handleInputChange('temporaryPassword', e.target.value)}
-                        placeholder="••••••••"
-                        className="flex-1"
-                      />
-                      <Button variant="outline" className="ml-2">
-                        👁️
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                </Field>
 
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-4">
-                    SYSTEM ROLE
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {systemRoles.map((role) => (
-                      <div
-                        key={role.id}
-                        onClick={() => handleInputChange('systemRole', role.id)}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          role.selected 
-                            ? 'border-orange-500 bg-orange-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="text-2xl mb-2">{role.icon}</div>
-                          <div className="font-semibold text-gray-800 mb-1">{role.title}</div>
-                          <div className="text-xs text-gray-600">{role.description}</div>
-                        </div>
-                      </div>
+                <Field label="System Role" required error={errors.systemRole}>
+                  <select className={inputClass('systemRole')}
+                    value={formData.systemRole} onChange={(e) => handleChange('systemRole', e.target.value)}>
+                    <option value="">Select Role</option>
+                    {roles.map(role => (
+                      <option key={role._id} value={role._id}>{role.roleName}</option>
                     ))}
-                  </div>
-                </div>
+                  </select>
+                </Field>
               </div>
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Auto-generated Summary */}
-            <Card className="bg-gray-800 text-white">
-              <div className="p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-6 h-6 bg-yellow-500 rounded flex items-center justify-center">
-                    ⚡
-                  </div>
-                  <h3 className="font-semibold">Auto-generated Summary</h3>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-300">ACCESS LEVEL</div>
-                    <div className="font-medium">
-                      Role "{formData.systemRole || 'Not Selected'}" currently has partial administrative access.
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-300 flex items-center space-x-2">
-                      <span>✅</span>
-                      <span>Applications</span>
-                    </div>
-                    <div className="text-xs text-gray-400">Full access (Create, View, Edit, Download)</div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-300 flex items-center space-x-2">
-                      <span>⚠️</span>
-                      <span>Analytics & Employees</span>
-                    </div>
-                    <div className="text-xs text-gray-400">View-only and Download capability enabled</div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-300 flex items-center space-x-2">
-                      <Lock className="w-4 h-4" />
-                      <span>Payments & Support</span>
-                    </div>
-                    <div className="text-xs text-gray-400">No permissions currently assigned</div>
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-600">
-                    <div className="text-sm text-gray-300">Total Permissions:</div>
-                    <div className="text-2xl font-bold text-orange-400">12 Active</div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Profile Completeness */}
-            <Card className="bg-white">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-800">PROFILE COMPLETENESS</h3>
-                  <span className="text-2xl font-bold text-orange-600">65%</span>
-                </div>
-                
-                <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-                  <div className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full" style={{ width: '65%' }}></div>
-                </div>
-                
-                <div className="text-sm text-gray-600">
-                  Complete all required fields to enable full system access and role assignment.
-                </div>
-              </div>
-            </Card>
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <Button 
-                onClick={handleSubmit}
-                className="w-full bg-orange-600 hover:bg-orange-700"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Create Employee
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full"
-              >
-                💾 Save & Add Another
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/admin/employees')}
-                className="w-full text-gray-600"
-              >
-                ❌ Cancel
-              </Button>
-            </div>
-          </div>
+        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+          <Button variant="outline" onClick={() => navigate('/admin/employees')}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isPending} className="bg-orange-600 hover:bg-orange-700 text-white px-8">
+            {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create Employee'}
+          </Button>
         </div>
       </div>
     </AdminLayout>

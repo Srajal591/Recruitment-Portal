@@ -39,12 +39,12 @@ const checkPermission = (module, action) => {
         const Employee = require("../models/Employee");
         const Role = require("../models/Role");
 
-        const employee = await Employee.findById(req.user.id).select("roleId");
+        const employee = await Employee.findById(req.user.id).select("systemRole");
         if (!employee) {
           throw new ApiError(403, "Employee not found");
         }
 
-        const role = await Role.findById(employee.roleId);
+        const role = await Role.findById(employee.systemRole);
         if (!role) {
           throw new ApiError(403, "Role not found");
         }

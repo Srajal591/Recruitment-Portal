@@ -10,6 +10,7 @@ const authorize = (...allowedRoles) => {
       throw new ApiError(401, "Not authenticated");
     }
 
+    // Check if user's role is in the allowed roles
     if (!allowedRoles.includes(req.user.role)) {
       throw new ApiError(
         403,

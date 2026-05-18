@@ -9,12 +9,20 @@ import { adminService } from '../../services/admin.service'
 
 const Roles = () => {
   const navigate = useNavigate()
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['admin-roles'],
     queryFn: () => adminService.getRoles(),
   })
 
   const roles = data?.roles || []
+
+  if (error) {
+    return (
+      <AdminLayout title="Roles">
+        <div className="p-6 text-red-600">Error loading roles: {error.message}</div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout title="Roles">

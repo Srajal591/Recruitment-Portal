@@ -10,7 +10,7 @@ const {
   updateEmployeeSchema,
 } = require("../shared/validations/employee.validation");
 
-router.use(authenticate, authorize("admin"));
+router.use(authenticate, authorize("admin", "employee"));
 
 router.get("/", employeeController.getEmployees);
 router.get("/stats", employeeController.getEmployeeStats);

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -35,11 +35,11 @@ const AddEmployee = () => {
   })
 
   // Fetch roles for the dropdown
-  const { data: rolesData } = useQuery({
+  const { data: rolesData, isLoading: rolesLoading } = useQuery({
     queryKey: ['admin-roles'],
     queryFn: () => adminService.getRoles(),
   })
-  const roles = rolesData?.roles || rolesData || []
+  const roles = rolesData?.data?.roles || rolesData?.roles || []
 
   const { mutate: createEmployee, isPending } = useMutation({
     mutationFn: adminService.createEmployee,
@@ -54,12 +54,12 @@ const AddEmployee = () => {
     },
   })
 
-  const handleChange = (field, value) => {
+  const handleChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
-  }
+  }, [errors])
 
-  const validate = () => {
+  const validate = useCallback(() => {
     const e = {}
     if (!formData.fullName.trim()) e.fullName = 'Full name is required'
     if (!formData.contactNumber) e.contactNumber = 'Contact number is required'
@@ -75,9 +75,9 @@ const AddEmployee = () => {
     if (!formData.systemRole) e.systemRole = 'System role is required'
     setErrors(e)
     return Object.keys(e).length === 0
-  }
+  }, [formData])
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (!validate()) return
     const payload = {
       fullName: formData.fullName.trim(),
@@ -93,7 +93,7 @@ const AddEmployee = () => {
       ...(formData.gender && { gender: formData.gender }),
     }
     createEmployee(payload)
-  }
+  }, [formData, validate, createEmployee])
 
   const Field = ({ label, required, error, children }) => (
     <div>
@@ -221,8 +221,9 @@ const AddEmployee = () => {
 
                 <Field label="System Role" required error={errors.systemRole}>
                   <select className={inputClass('systemRole')}
-                    value={formData.systemRole} onChange={(e) => handleChange('systemRole', e.target.value)}>
-                    <option value="">Select Role</option>
+                    value={formData.systemRole} onChange={(e) => handleChange('systemRole', e.target.value)}
+                    disabled={rolesLoading}>
+                    <option value="">{rolesLoading ? 'Loading roles...' : 'Select Role'}</option>
                     {roles.map(role => (
                       <option key={role._id} value={role._id}>{role.roleName}</option>
                     ))}

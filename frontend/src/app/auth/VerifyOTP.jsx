@@ -95,7 +95,7 @@ const VerifyOTP = () => {
     try {
       await authService.verifyOtp({ email, otp: otpString })
       toast.success('Email verified successfully!')
-      navigate('/candidate/dashboard', { replace: true })
+      navigate('/application/personal-details', { replace: true })
     } catch (err) {
       setError(err.message || 'Invalid or expired OTP')
       setOtp(['', '', '', '', '', ''])

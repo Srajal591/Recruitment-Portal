@@ -69,14 +69,18 @@ const getEmployees = asyncHandler(async (req, res) => {
     Employee.countDocuments(filter),
   ]);
 
-  res.status(StatusCodes.OK).json(
-    new ApiResponse(
-      StatusCodes.OK,
-      "Employees fetched",
-      employees.map((e) => e.toSafeObject()),
-      paginationMeta(total, page, limit),
-    ),
-  );
+  res
+    .status(StatusCodes.OK)
+    .json(
+      new ApiResponse(
+        StatusCodes.OK,
+        "Employees fetched",
+        {
+          employees: employees.map((e) => e.toSafeObject()),
+          pagination: paginationMeta(total, page, limit),
+        },
+      ),
+    );
 });
 
 /**

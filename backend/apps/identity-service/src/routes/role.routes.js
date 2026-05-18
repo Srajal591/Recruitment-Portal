@@ -10,7 +10,7 @@ const {
   updateRoleSchema,
 } = require("../shared/validations/role.validation");
 
-router.use(authenticate, authorize("admin"));
+router.use(authenticate, authorize("admin", "employee"));
 
 router.get("/", roleController.getRoles);
 router.get("/permissions/structure", roleController.getPermissionsStructure);

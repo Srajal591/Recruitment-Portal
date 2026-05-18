@@ -19,8 +19,8 @@ const getJobs = asyncHandler(async (req, res) => {
     category,
     state,
     search,
-    sortBy = "applicationDeadline",
-    sortOrder = "asc",
+    sortBy = "publishedAt",
+    sortOrder = "desc",
   } = req.query;
 
   // Build filter - only show active jobs
@@ -37,16 +37,34 @@ const getJobs = asyncHandler(async (req, res) => {
     filter.projectId = { $in: projects };
   }
 
+  // Build search filter
+  const searchFilters = [];
   if (search) {
-    filter.$or = [
+    searchFilters.push(
       { title: new RegExp(search, "i") },
       { description: new RegExp(search, "i") },
       { department: new RegExp(search, "i") },
-    ];
+    );
   }
 
-  // Only show jobs with future application deadlines
-  filter.applicationDeadline = { $gte: new Date() };
+  // Build deadline filter - show jobs with future deadlines or no deadline
+  const deadlineFilters = [
+    { applicationDeadline: { $gte: new Date() } },
+    { applicationDeadline: null },
+  ];
+
+  // Combine all filters
+  const combinedFilters = [];
+  if (searchFilters.length > 0) {
+    combinedFilters.push({ $or: searchFilters });
+  }
+  combinedFilters.push({ $or: deadlineFilters });
+
+  if (combinedFilters.length > 0) {
+    filter.$and = combinedFilters;
+  } else {
+    filter.$or = deadlineFilters;
+  }
 
   // Build sort
   const sort = {};
@@ -76,9 +94,11 @@ const getJobs = asyncHandler(async (req, res) => {
       return {
         ...job.toObject(),
         totalApplicants: applicationCount,
-        daysLeft: Math.ceil(
-          (job.applicationDeadline - new Date()) / (1000 * 60 * 60 * 24),
-        ),
+        daysLeft: job.applicationDeadline
+          ? Math.ceil(
+              (job.applicationDeadline - new Date()) / (1000 * 60 * 60 * 24),
+            )
+          : null,
       };
     }),
   );

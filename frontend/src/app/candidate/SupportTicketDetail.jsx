@@ -1,0 +1,503 @@
+import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import {
+  ArrowLeft,
+  Loader2,
+  MessageSquare,
+  Send,
+  HelpCircle,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  User,
+  Shield,
+} from "lucide-react";
+import CandidateLayout from "../../components/layouts/CandidateLayout";
+import { Card, CardContent, CardHeader } from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
+import { candidateService } from "../../services/candidate.service";
+
+const STATUS_COLORS = {
+  Open: "bg-red-100 text-red-700",
+  "In Progress": "bg-yellow-100 text-yellow-700",
+  Resolved: "bg-green-100 text-green-700",
+  Closed: "bg-gray-100 text-gray-700",
+};
+
+const PRIORITY_COLORS = {
+  Low: "bg-green-100 text-green-700",
+  Medium: "bg-yellow-100 text-yellow-700",
+  High: "bg-orange-100 text-orange-700",
+  Critical: "bg-red-100 text-red-700",
+};
+
+const StatusIcon = ({ status }) => {
+  if (status === "Open")
+    return <AlertCircle className="w-4 h-4 text-red-500" />;
+  if (status === "In Progress")
+    return <Clock className="w-4 h-4 text-yellow-500" />;
+  if (status === "Resolved")
+    return <CheckCircle className="w-4 h-4 text-green-500" />;
+  return <XCircle className="w-4 h-4 text-gray-500" />;
+};
+
+const formatTime = (ts) => {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const SupportTicketDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [replyText, setReplyText] = useState("");
+  const messagesEndRef = useRef(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["candidate-ticket", id],
+    queryFn: () => candidateService.getTicket(id),
+    refetchInterval: 15000,
+  });
+
+  const ticket = data?.ticket || data;
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [ticket?.replies?.length]);
+
+  const { mutate: sendReply, isPending: isSending } = useMutation({
+    mutationFn: (message) => candidateService.replyToTicket(id, { message }),
+    onSuccess: () => {
+      setReplyText("");
+      queryClient.invalidateQueries({ queryKey: ["candidate-ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["candidate-tickets"] });
+    },
+    onError: (err) => toast.error(err.message || "Failed to send reply"),
+  });
+
+  const { mutate: closeTicket, isPending: isClosing } = useMutation({
+    mutationFn: () => candidateService.closeTicket(id),
+    onSuccess: () => {
+      toast.success("Ticket closed successfully");
+      queryClient.invalidateQueries({ queryKey: ["candidate-ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["candidate-tickets"] });
+    },
+    onError: (err) => toast.error(err.message || "Failed to close ticket"),
+  });
+
+  const handleSend = () => {
+    const msg = replyText.trim();
+    if (!msg) return;
+    sendReply(msg);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  if (isLoading)
+    return (
+      <CandidateLayout title="Support Ticket">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+          <span className="ml-3 text-gray-600">Loading ticket...</span>
+        </div>
+      </CandidateLayout>
+    );
+
+  if (!ticket)
+    return (
+      <CandidateLayout title="Support Ticket">
+        <div className="text-center py-20">
+          <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-600">Ticket not found.</p>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/candidate/support")}
+            className="mt-4"
+          >
+            Back to Support
+          </Button>
+        </div>
+      </CandidateLayout>
+    );
+
+  const replies = ticket.replies || [];
+  const isClosed = ticket.status === "Closed";
+  const isResolved = ticket.status === "Resolved";
+
+  return (
+    <CandidateLayout title="Support Ticket">
+      <div className="space-y-6 max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-start gap-4">
+          <button
+            onClick={() => navigate("/candidate/support")}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors mt-1 flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-gray-800 truncate">
+              {ticket.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className="text-sm font-mono text-orange-600">
+                {ticket.ticketId}
+              </span>
+              <span className="text-gray-400">•</span>
+              <span className="text-sm text-gray-500">{ticket.category}</span>
+              <span className="text-gray-400">•</span>
+              <span className="text-sm text-gray-500">
+                {formatTime(ticket.createdAt)}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Badge
+              className={
+                PRIORITY_COLORS[ticket.priority] || "bg-gray-100 text-gray-700"
+              }
+            >
+              {ticket.priority}
+            </Badge>
+            <Badge
+              className={`flex items-center gap-1 ${STATUS_COLORS[ticket.status] || "bg-gray-100 text-gray-700"}`}
+            >
+              <StatusIcon status={ticket.status} />
+              {ticket.status}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main — Conversation */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Original Issue */}
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-orange-600" />
+                  Issue Description
+                </h3>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                  {ticket.description}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Conversation Thread */}
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-orange-600" />
+                  Conversation
+                  <span className="text-sm font-normal text-gray-500">
+                    ({replies.length} messages)
+                  </span>
+                </h3>
+              </CardHeader>
+              <CardContent className="p-0">
+                {/* Messages */}
+                <div className="min-h-[200px] max-h-[420px] overflow-y-auto p-4 space-y-4">
+                  {replies.length === 0 ? (
+                    <div className="text-center py-8">
+                      <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">No messages yet.</p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        Our support team will respond shortly.
+                      </p>
+                    </div>
+                  ) : (
+                    replies.map((msg, i) => {
+                      const isAgent = msg.sentByModel === "Employee";
+                      return (
+                        <div
+                          key={msg._id || i}
+                          className={`flex ${isAgent ? "justify-start" : "justify-end"}`}
+                        >
+                          <div
+                            className={`flex items-start gap-2 max-w-[80%] ${isAgent ? "flex-row" : "flex-row-reverse"}`}
+                          >
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                isAgent ? "bg-orange-100" : "bg-blue-100"
+                              }`}
+                            >
+                              {isAgent ? (
+                                <Shield className="w-4 h-4 text-orange-600" />
+                              ) : (
+                                <User className="w-4 h-4 text-blue-600" />
+                              )}
+                            </div>
+                            <div>
+                              <div
+                                className={`flex items-center gap-2 mb-1 ${isAgent ? "" : "justify-end"}`}
+                              >
+                                <span className="text-xs font-medium text-gray-600">
+                                  {isAgent
+                                    ? msg.sentByName || "Support Team"
+                                    : "You"}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {formatTime(msg.createdAt)}
+                                </span>
+                              </div>
+                              <div
+                                className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                                  isAgent
+                                    ? "bg-orange-50 border border-orange-200 text-gray-800 rounded-tl-none"
+                                    : "bg-blue-600 text-white rounded-tr-none"
+                                }`}
+                              >
+                                {msg.message}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Reply / Closed state */}
+                {isClosed ? (
+                  <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-lg text-center">
+                    <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
+                      <XCircle className="w-4 h-4" />
+                      This ticket is closed. You cannot reply to a closed
+                      ticket.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 border-t border-gray-100">
+                    <div className="flex gap-3">
+                      <textarea
+                        rows={2}
+                        placeholder="Type your message… (Enter to send, Shift+Enter for new line)"
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm resize-none"
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                      />
+                      <Button
+                        onClick={handleSend}
+                        disabled={!replyText.trim() || isSending}
+                        className="bg-orange-600 hover:bg-orange-700 text-white self-end px-4 py-3"
+                      >
+                        {isSending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Ticket Info */}
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold text-gray-800">Ticket Info</h3>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium">
+                    Status
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <StatusIcon status={ticket.status} />
+                    <span className="text-sm font-medium text-gray-800">
+                      {ticket.status}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium">
+                    Priority
+                  </p>
+                  <Badge
+                    className={`mt-1 ${PRIORITY_COLORS[ticket.priority] || "bg-gray-100 text-gray-700"}`}
+                  >
+                    {ticket.priority}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium">
+                    Category
+                  </p>
+                  <p className="text-sm font-medium text-gray-800 mt-1">
+                    {ticket.category}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium">
+                    Ticket ID
+                  </p>
+                  <p className="text-sm font-mono text-orange-600 mt-1">
+                    {ticket.ticketId}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium">
+                    Created
+                  </p>
+                  <p className="text-sm text-gray-800 mt-1">
+                    {formatTime(ticket.createdAt)}
+                  </p>
+                </div>
+                {ticket.resolvedAt && (
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-medium">
+                      Resolved
+                    </p>
+                    <p className="text-sm text-gray-800 mt-1">
+                      {formatTime(ticket.resolvedAt)}
+                    </p>
+                  </div>
+                )}
+                {ticket.assignedTo && (
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-medium">
+                      Assigned To
+                    </p>
+                    <p className="text-sm text-gray-800 mt-1">
+                      {ticket.assignedTo.fullName || "Support Agent"}
+                    </p>
+                  </div>
+                )}
+
+                {/* Close Ticket — only show when Resolved */}
+                {isResolved && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-2">
+                      Issue resolved? Close this ticket.
+                    </p>
+                    <Button
+                      onClick={() => closeTicket()}
+                      disabled={isClosing}
+                      variant="outline"
+                      className="w-full text-gray-600 border-gray-300 hover:bg-gray-50"
+                    >
+                      {isClosing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Closing...
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Close Ticket
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Timeline */}
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-orange-600" />
+                  Timeline
+                </h3>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-gray-800">
+                        Ticket Created
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatTime(ticket.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  {replies.length > 0 && (
+                    <div className="flex gap-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-800">
+                          First Response
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatTime(replies[0]?.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {ticket.resolvedAt && (
+                    <div className="flex gap-3">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-800">
+                          Resolved
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatTime(ticket.resolvedAt)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {ticket.closedAt && (
+                    <div className="flex gap-3">
+                      <div className="w-2 h-2 rounded-full bg-gray-400 mt-1.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-800">
+                          Closed
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatTime(ticket.closedAt)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Help tip */}
+            <Card className="bg-orange-50 border-orange-200">
+              <CardContent className="p-4">
+                <p className="text-sm font-medium text-orange-800 mb-1">
+                  Need faster help?
+                </p>
+                <p className="text-xs text-orange-700">
+                  For urgent payment issues, mark your ticket as Critical. Our
+                  team responds to Critical tickets within 2 hours.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </CandidateLayout>
+  );
+};
+
+export default SupportTicketDetail;

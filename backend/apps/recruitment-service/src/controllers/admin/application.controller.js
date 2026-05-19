@@ -3,7 +3,10 @@ const Application = require("../../shared/models/Application");
 const Job = require("../../shared/models/Job");
 const User = require("../../shared/models/User");
 const ApiError = require("../../shared/utils/ApiError");
-const { ApiResponse, paginationMeta } = require("../../shared/utils/ApiResponse");
+const {
+  ApiResponse,
+  paginationMeta,
+} = require("../../shared/utils/ApiResponse");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const {
   emitToAdmins,
@@ -12,6 +15,7 @@ const {
 } = require("../../shared/socket/index");
 const { getPaginationParams } = require("../../shared/utils/helpers");
 const { saveAuditLog } = require("../../shared/middlewares/auditLog");
+const { notify } = require("../../shared/utils/notify");
 
 /**
  * @desc    Get all applications with filters
@@ -184,7 +188,36 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
 
   await application.save();
 
-  // Real-time notifications
+  // Persist notification in DB + real-time push
+  const notifType =
+    status === "verified" || status === "approved"
+      ? "application_approved"
+      : status === "rejected"
+        ? "application_rejected"
+        : "general";
+
+  const notifTitle =
+    status === "verified" || status === "approved"
+      ? "Application Approved"
+      : status === "rejected"
+        ? "Application Rejected"
+        : "Application Status Updated";
+
+  const notifMessage =
+    status === "rejected" && rejectionReason
+      ? `Your application ${application.applicationId} was rejected. Reason: ${rejectionReason}`
+      : `Your application ${application.applicationId} for ${application.jobId?.title || "the job"} has been ${status}.`;
+
+  await notify({
+    recipientId: application.candidateId._id,
+    type: notifType,
+    title: notifTitle,
+    message: notifMessage,
+    link: `/candidate/applications`,
+    metadata: { applicationId: application.applicationId, status },
+  });
+
+  // Real-time socket to admins
   emitToAdmins(SOCKET_EVENTS.APPLICATION_STATUS_CHANGED, {
     type: "application_status_changed",
     message: `Application ${application.applicationId} status changed from ${oldStatus} to ${status}`,
@@ -383,6 +416,19 @@ const verifyDocument = asyncHandler(async (req, res) => {
     },
   );
 
+  // Persist notification
+  await notify({
+    recipientId: application.candidateId._id,
+    type: "document_verified",
+    title: "Document Verified",
+    message: `Your ${document.type.replace(/_/g, " ")} has been verified for application ${application.applicationId}.`,
+    link: `/candidate/applications`,
+    metadata: {
+      applicationId: application.applicationId,
+      documentType: document.type,
+    },
+  });
+
   res.status(StatusCodes.OK).json(
     new ApiResponse(StatusCodes.OK, "Document verified successfully", {
       message: "Document verified successfully",
@@ -456,6 +502,19 @@ const rejectDocument = asyncHandler(async (req, res) => {
       timestamp: new Date(),
     },
   );
+
+  // Persist notification
+  await notify({
+    recipientId: application.candidateId._id,
+    type: "document_rejected",
+    title: "Document Rejected",
+    message: `Your ${document.type.replace(/_/g, " ")} was rejected${rejectionReason ? `: ${rejectionReason}` : ". Please re-upload."}`,
+    link: `/application/documents`,
+    metadata: {
+      applicationId: application.applicationId,
+      documentType: document.type,
+    },
+  });
 
   res.status(StatusCodes.OK).json(
     new ApiResponse(StatusCodes.OK, "Document rejected successfully", {
@@ -546,5 +605,3 @@ module.exports = {
   rejectDocument,
   getApplicationStats,
 };
-
-

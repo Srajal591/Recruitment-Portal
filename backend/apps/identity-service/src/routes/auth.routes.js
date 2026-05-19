@@ -57,5 +57,7 @@ router.post("/resend-otp", authController.resendOTP);
 // ── Protected routes ──────────────────────────────────────────
 router.post("/logout", authenticate, authController.logout);
 router.get("/me", authenticate, authController.getMe);
+router.put("/profile", authenticate, authController.updateProfile);
+router.put("/change-password", authenticate, authController.changePassword);
 
 module.exports = router;

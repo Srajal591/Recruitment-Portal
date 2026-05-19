@@ -1,4 +1,7 @@
 const SupportTicket = require("../models/SupportTicket");
+// Must be imported so mongoose has User and Employee registered before populate runs
+const User = require("../models/User");
+const Employee = require("../models/Employee");
 const ApiError = require("../utils/ApiError");
 const { getPaginationParams } = require("../utils/helpers");
 const { paginationMeta } = require("../utils/ApiResponse");
@@ -12,6 +15,7 @@ const {
   sendTicketReplyEmail,
   sendTicketResolvedEmail,
 } = require("./email.service");
+const { notify } = require("../utils/notify");
 
 let ticketCounter = 1000;
 const generateTicketId = () => `TKT-${Date.now()}-${++ticketCounter}`;
@@ -73,10 +77,20 @@ const updateTicket = async (id, data, updatedBy) => {
     ticket.resolvedAt = new Date();
     await ticket.save();
 
-    // Notify candidate
+    // Notify candidate via socket
     emitToCandidate(ticket.raisedBy.toString(), SOCKET_EVENTS.TICKET_RESOLVED, {
       ticketId: ticket.ticketId,
       message: "Your support ticket has been resolved.",
+    });
+
+    // Persist notification in DB
+    await notify({
+      recipientId: ticket.raisedBy,
+      type: "ticket_resolved",
+      title: "Support Ticket Resolved",
+      message: `Your support ticket ${ticket.ticketId} has been resolved. Please close it if your issue is fixed.`,
+      link: `/candidate/support/${id}`,
+      metadata: { ticketId: ticket.ticketId },
     });
 
     // Send email notification
@@ -96,17 +110,27 @@ const addReply = async (ticketId, message, sentBy, sentByModel, sentByName) => {
 
   // Notify the other party
   if (sentByModel === "Employee") {
-    // Admin replied — notify candidate
+    // Admin replied — notify candidate via socket
     emitToCandidate(ticket.raisedBy.toString(), SOCKET_EVENTS.TICKET_REPLY, {
       ticketId: ticket.ticketId,
       message,
       from: sentByName,
     });
 
+    // Persist notification in DB for candidate
+    await notify({
+      recipientId: ticket.raisedBy,
+      type: "ticket_reply",
+      title: "Support Team Replied",
+      message: `${sentByName || "Support Team"} replied to your ticket ${ticket.ticketId}: "${message.substring(0, 80)}${message.length > 80 ? "..." : ""}"`,
+      link: `/candidate/support/${ticketId}`,
+      metadata: { ticketId: ticket.ticketId },
+    });
+
     // Send email notification
     await sendTicketReplyEmail(ticket.raisedByEmail, ticket.ticketId, message);
   } else {
-    // Candidate replied — notify assigned admin
+    // Candidate replied — notify assigned admin via socket
     emitToAdmins(SOCKET_EVENTS.TICKET_REPLY, {
       ticketId: ticket.ticketId,
       message,

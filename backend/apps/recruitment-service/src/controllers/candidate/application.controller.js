@@ -23,6 +23,7 @@ const {
   validateFileSize,
   deleteFromCloudinary,
 } = require("../../shared/services/upload.service");
+const { notify } = require("../../shared/utils/notify");
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -639,6 +640,29 @@ const finalizeApplication = asyncHandler(async (req, res) => {
   await app.save();
 
   const candidate = await User.findById(req.user.id).select("fullName email");
+
+  // Notify candidate — payment success
+  await notify({
+    recipientId: req.user.id,
+    type: "payment_success",
+    title: "Payment Successful",
+    message: `Your payment for application ${app.applicationId} was successful. Application submitted!`,
+    link: `/candidate/applications`,
+    metadata: {
+      applicationId: app.applicationId,
+      transactionId: req.body.transactionId || "",
+    },
+  });
+
+  // Notify candidate — application submitted
+  await notify({
+    recipientId: req.user.id,
+    type: "application_submitted",
+    title: "Application Submitted",
+    message: `Your application ${app.applicationId} for ${app.jobId?.title || "the job"} has been submitted successfully.`,
+    link: `/candidate/applications`,
+    metadata: { applicationId: app.applicationId },
+  });
 
   try {
     emitToAdmins(SOCKET_EVENTS.APPLICATION_SUBMITTED, {

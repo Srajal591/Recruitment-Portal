@@ -116,6 +116,12 @@ export const candidateService = {
     );
     return unwrapData(response);
   },
+  async closeTicket(id) {
+    const response = await apiClient.patch(
+      `/candidate/support/tickets/${id}/close`,
+    );
+    return unwrapData(response);
+  },
 
   // ── Payments ──────────────────────────────────────────────
   async getMyPayments(params = {}) {

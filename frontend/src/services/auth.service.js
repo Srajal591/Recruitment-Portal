@@ -107,4 +107,18 @@ export const authService = {
     const response = await apiClient.post("/auth/forgot-password", { email });
     return unwrapData(response);
   },
+
+  async updateProfile(data) {
+    const response = await apiClient.put("/auth/profile", data);
+    const result = unwrapData(response);
+    // Update stored user with fresh data
+    const user = normaliseUser(result?.user);
+    if (user) localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
+    return user;
+  },
+
+  async changePassword(data) {
+    const response = await apiClient.put("/auth/change-password", data);
+    return unwrapData(response);
+  },
 };

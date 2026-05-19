@@ -99,6 +99,9 @@ const Payments = lazy(() => import("../app/candidate/Payments"));
 const AdmitCard = lazy(() => import("../app/candidate/AdmitCard"));
 const CandidateResults = lazy(() => import("../app/candidate/Results"));
 const CandidateSupport = lazy(() => import("../app/candidate/Support"));
+const CandidateSupportTicketDetail = lazy(
+  () => import("../app/candidate/SupportTicketDetail"),
+);
 const Notifications = lazy(() => import("../app/candidate/Notifications"));
 
 const AppRoutes = () => {
@@ -522,6 +525,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute role="candidate">
               <CandidateSupport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/candidate/support/:id"
+          element={
+            <ProtectedRoute role="candidate">
+              <CandidateSupportTicketDetail />
             </ProtectedRoute>
           }
         />

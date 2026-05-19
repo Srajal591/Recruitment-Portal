@@ -11,8 +11,9 @@ const {
 
 router.use(authenticate, authorize("admin", "employee"));
 
-router.get("/tickets", supportController.getTickets);
+// Stats must come BEFORE /:id to avoid being matched as a param
 router.get("/stats", supportController.getStats);
+router.get("/tickets", supportController.getTickets);
 router.get("/tickets/:id", supportController.getTicketById);
 router.put(
   "/tickets/:id",
@@ -26,4 +27,3 @@ router.post(
 );
 
 module.exports = router;
-

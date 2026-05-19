@@ -281,6 +281,101 @@ const getMe = asyncHandler(async (req, res) => {
   );
 });
 
+const updateProfile = asyncHandler(async (req, res) => {
+  const User = require("../shared/models/User");
+  const ApiError = require("../shared/utils/ApiError");
+
+  if (req.user.role !== "candidate") {
+    throw new ApiError(
+      403,
+      "Only candidates can update profile via this endpoint",
+    );
+  }
+
+  // Fields allowed to be updated
+  const allowed = [
+    "fullName",
+    "dateOfBirth",
+    "gender",
+    "category",
+    "fatherName",
+    "motherName",
+    "maritalStatus",
+    "religion",
+    "identificationMark",
+    "registeredMobile",
+    "isDomicileOfBihar",
+    "profilePhoto",
+  ];
+
+  const updates = {};
+  allowed.forEach((field) => {
+    if (req.body[field] !== undefined) updates[field] = req.body[field];
+  });
+
+  if (Object.keys(updates).length === 0) {
+    throw new ApiError(400, "No valid fields to update");
+  }
+
+  // Calculate profile completion
+  const user = await User.findById(req.user.id);
+  if (!user) throw new ApiError(404, "User not found");
+
+  Object.assign(user, updates);
+
+  // Recalculate completion percentage
+  const completionFields = [
+    "fullName",
+    "dateOfBirth",
+    "gender",
+    "category",
+    "fatherName",
+    "registeredMobile",
+    "isDomicileOfBihar",
+  ];
+  const filled = completionFields.filter(
+    (f) => user[f] != null && user[f] !== "",
+  ).length;
+  user.profileCompletionPercentage = Math.round(
+    (filled / completionFields.length) * 100,
+  );
+
+  await user.save({ validateBeforeSave: false });
+
+  // Update localStorage token data — return fresh user
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Profile updated successfully", {
+      user: user.toSafeObject(),
+    }),
+  );
+});
+
+const changePassword = asyncHandler(async (req, res) => {
+  const User = require("../shared/models/User");
+  const ApiError = require("../shared/utils/ApiError");
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    throw new ApiError(400, "Current password and new password are required");
+  }
+  if (newPassword.length < 8) {
+    throw new ApiError(400, "New password must be at least 8 characters");
+  }
+
+  const user = await User.findById(req.user.id).select("+password");
+  if (!user) throw new ApiError(404, "User not found");
+
+  const isMatch = await user.comparePassword(currentPassword);
+  if (!isMatch) throw new ApiError(401, "Current password is incorrect");
+
+  user.password = newPassword; // pre-save hook will hash it
+  await user.save({ validateBeforeSave: false });
+
+  res
+    .status(StatusCodes.OK)
+    .json(new ApiResponse(StatusCodes.OK, "Password changed successfully"));
+});
+
 /**
  * @swagger
  * /api/auth/resend-otp:
@@ -317,5 +412,7 @@ module.exports = {
   resetPassword,
   logout,
   getMe,
+  updateProfile,
+  changePassword,
   resendOTP,
 };

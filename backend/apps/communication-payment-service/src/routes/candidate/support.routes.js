@@ -23,6 +23,6 @@ router.post(
   validate(addReplySchema),
   supportController.addReply,
 );
+router.patch("/tickets/:id/close", supportController.closeTicket);
 
 module.exports = router;
-

@@ -1,169 +1,540 @@
-import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { Bell, Briefcase, Clock, Download, Eye, FileText, Plus } from 'lucide-react'
-import CandidateLayout from '../../components/layouts/CandidateLayout'
-import { Card, CardContent, CardHeader } from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
-import { dashboardService } from '../../services/dashboard.service'
-import { getStoredUser } from '../../services/auth.service'
+import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Bell,
+  Briefcase,
+  Clock,
+  FileText,
+  Plus,
+  PlayCircle,
+  Eye,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  ArrowRight,
+  User,
+  HelpCircle,
+  CreditCard,
+  ChevronRight,
+} from "lucide-react";
+import CandidateLayout from "../../components/layouts/CandidateLayout";
+import { Card, CardContent, CardHeader } from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
+import { dashboardService } from "../../services/dashboard.service";
+import { getStoredUser } from "../../services/auth.service";
+
+// ── Helpers ───────────────────────────────────────────────────
+
+const STEP_ROUTES = {
+  1: "/application/personal-details",
+  2: "/application/education",
+  3: "/application/additional-info",
+  4: "/application/address",
+  5: "/application/documents",
+  6: "/application/review",
+  7: "/application/post-selection",
+  8: "/application/payment",
+  9: "/application/success",
+};
+
+const STATUS_CONFIG = {
+  draft: { label: "Draft", color: "bg-gray-100 text-gray-700", icon: Clock },
+  submitted: {
+    label: "Submitted",
+    color: "bg-blue-100 text-blue-700",
+    icon: FileText,
+  },
+  under_review: {
+    label: "Under Review",
+    color: "bg-yellow-100 text-yellow-700",
+    icon: AlertCircle,
+  },
+  verified: {
+    label: "Verified",
+    color: "bg-green-100 text-green-700",
+    icon: CheckCircle,
+  },
+  approved: {
+    label: "Approved",
+    color: "bg-green-100 text-green-700",
+    icon: CheckCircle,
+  },
+  rejected: {
+    label: "Rejected",
+    color: "bg-red-100 text-red-700",
+    icon: XCircle,
+  },
+};
+
+const NOTIF_ICONS = {
+  application_submitted: FileText,
+  application_approved: CheckCircle,
+  application_rejected: XCircle,
+  document_verified: CheckCircle,
+  document_rejected: XCircle,
+  payment_success: CreditCard,
+  ticket_reply: HelpCircle,
+  ticket_resolved: HelpCircle,
+  general: Bell,
+};
+
+const formatDate = (d) =>
+  d
+    ? new Date(d).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+      })
+    : "";
+
+const daysLeft = (deadline) => {
+  if (!deadline) return null;
+  return Math.ceil((new Date(deadline) - new Date()) / (1000 * 60 * 60 * 24));
+};
+
+// ── Stat Card ─────────────────────────────────────────────────
+
+const Stat = ({ icon: Icon, label, value, color = "text-orange-600", sub }) => (
+  <Card className="bg-white">
+    <CardContent className="p-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+            {label}
+          </p>
+          <p className={`text-3xl font-bold ${color}`}>{value}</p>
+          {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+        </div>
+        <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+          <Icon className="w-5 h-5 text-orange-500" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// ── Main Dashboard ────────────────────────────────────────────
 
 const CandidateDashboard = () => {
-  const user = getStoredUser()
-  const { data, isLoading } = useQuery({
-    queryKey: ['candidate-dashboard'],
-    queryFn: dashboardService.candidateDashboard,
-  })
+  const navigate = useNavigate();
+  const user = getStoredUser();
 
-  const applications = data?.applications || []
-  const jobs = data?.jobs || []
-  const notifications = data?.notifications?.notifications || []
-  const unreadCount = data?.notifications?.unreadCount || 0
-  const submittedCount = applications.filter((app) => app.status !== 'draft').length
-  const draftCount = applications.filter((app) => app.status === 'draft').length
+  const { data, isLoading } = useQuery({
+    queryKey: ["candidate-dashboard"],
+    queryFn: dashboardService.candidateDashboard,
+    staleTime: 30000,
+  });
+
+  // Normalize applications — service returns raw array or nested
+  const rawApps = data?.applications;
+  const applications = Array.isArray(rawApps)
+    ? rawApps
+    : rawApps?.applications || rawApps?.data || [];
+
+  const jobs = data?.jobs || [];
+  const notifData = data?.notifications;
+  const notifications = notifData?.notifications || [];
+  const unreadCount = notifData?.unreadCount || 0;
+
+  const submittedCount = applications.filter(
+    (a) => a.status !== "draft",
+  ).length;
+  const draftCount = applications.filter((a) => a.status === "draft").length;
+  const completionPct = user?.profileCompletionPercentage || 0;
+
+  const handleAppAction = (app) => {
+    const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
+    sessionStorage.setItem(
+      "app_draft",
+      JSON.stringify({
+        ...draft,
+        applicationId: app._id,
+        jobId: app.jobId?._id,
+      }),
+    );
+    if (app.status === "draft") {
+      navigate(STEP_ROUTES[app.currentStep || 1], {
+        state: { applicationId: app._id, jobId: app.jobId?._id },
+      });
+    } else {
+      // Navigate to the dedicated application status page
+      navigate(`/candidate/applications/${app._id}`);
+    }
+  };
 
   return (
-    <CandidateLayout title="Candidate Dashboard">
+    <CandidateLayout title="Dashboard">
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-lg p-6 text-white">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Welcome banner */}
+        <div className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl p-6 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold mb-2">Welcome, {user?.fullName || user?.email || 'Candidate'}</h1>
-              <p className="text-orange-100">Track applications, active jobs, and recruitment notifications.</p>
+              <h1 className="text-2xl font-bold">
+                Welcome back,{" "}
+                {user?.fullName?.split(" ")[0] ||
+                  user?.email?.split("@")[0] ||
+                  "Candidate"}{" "}
+                👋
+              </h1>
+              <p className="text-orange-100 text-sm mt-1">
+                {draftCount > 0
+                  ? `You have ${draftCount} draft application${draftCount > 1 ? "s" : ""} waiting to be completed.`
+                  : "Track your applications and stay updated on recruitment news."}
+              </p>
             </div>
-            <Button asChild className="bg-white text-orange-600 hover:bg-orange-50">
-              <Link to="/jobs">
+            <Button
+              asChild
+              className="bg-white text-orange-600 hover:bg-orange-50 flex-shrink-0"
+            >
+              <Link to="/candidate/jobs">
                 <Plus className="w-4 h-4 mr-2" />
-                Apply for New Job
+                Apply for Jobs
               </Link>
             </Button>
           </div>
+
+          {/* Profile completion bar */}
+          {completionPct < 100 && (
+            <div className="mt-4 pt-4 border-t border-orange-500/40">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-orange-100">
+                  Profile Completion
+                </span>
+                <span className="text-xs font-bold text-white">
+                  {completionPct}%
+                </span>
+              </div>
+              <div className="w-full bg-orange-500/40 rounded-full h-1.5">
+                <div
+                  className="bg-white h-1.5 rounded-full transition-all"
+                  style={{ width: `${completionPct}%` }}
+                />
+              </div>
+              <Link
+                to="/candidate/profile"
+                className="text-xs text-orange-200 hover:text-white mt-1.5 inline-flex items-center gap-1"
+              >
+                Complete your profile <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Stat icon={FileText} label="Applications" value={applications.length} />
-          <Stat icon={Clock} label="Drafts" value={draftCount} />
-          <Stat icon={Briefcase} label="Submitted" value={submittedCount} />
-          <Stat icon={Bell} label="Unread Alerts" value={unreadCount} />
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Stat
+            icon={FileText}
+            label="Total Applications"
+            value={applications.length}
+          />
+          <Stat
+            icon={Clock}
+            label="Drafts"
+            value={draftCount}
+            color="text-yellow-600"
+            sub="Incomplete"
+          />
+          <Stat
+            icon={Briefcase}
+            label="Submitted"
+            value={submittedCount}
+            color="text-blue-600"
+          />
+          <Stat
+            icon={Bell}
+            label="Unread Alerts"
+            value={unreadCount}
+            color={unreadCount > 0 ? "text-red-600" : "text-gray-600"}
+          />
         </div>
 
-        {isLoading && <Card><CardContent className="p-6">Loading dashboard...</CardContent></Card>}
-
+        {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Applications — 2/3 width */}
           <Card className="lg:col-span-2">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold text-gray-800">My Applications</h3>
-                  <p className="text-sm text-orange-600">Latest records from backend</p>
-                </div>
-                <Button asChild variant="outline" size="sm" className="border-orange-200 text-orange-600">
-                  <Link to="/candidate/applications">View All</Link>
-                </Button>
+                <h3 className="font-semibold text-gray-800">My Applications</h3>
+                <Link
+                  to="/candidate/applications"
+                  className="text-xs text-orange-600 hover:underline font-medium flex items-center gap-1"
+                >
+                  View All <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             </CardHeader>
-            <CardContent>
-              {!isLoading && applications.length === 0 && (
-                <div className="rounded-lg border border-orange-100 bg-orange-50 p-4 text-sm text-orange-700">
-                  You have not started any applications yet.
+            <CardContent className="p-0">
+              {isLoading && (
+                <div className="p-6 space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-16 bg-gray-100 rounded-lg animate-pulse"
+                    />
+                  ))}
                 </div>
               )}
-              <div className="space-y-4">
-                {applications.map((application) => (
-                  <div key={application._id} className="flex items-center justify-between p-4 border border-orange-100 rounded-lg hover:bg-orange-50 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-orange-600" />
+              {!isLoading && applications.length === 0 && (
+                <div className="p-8 text-center">
+                  <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm font-medium">
+                    No applications yet
+                  </p>
+                  <Link
+                    to="/candidate/jobs"
+                    className="mt-3 inline-flex items-center gap-1.5 text-sm text-orange-600 font-semibold hover:underline"
+                  >
+                    Browse Jobs <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              )}
+              {applications.slice(0, 5).map((app) => {
+                const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.draft;
+                const StatusIcon = cfg.icon;
+                const isDraft = app.status === "draft";
+                const stepPct = Math.round(((app.currentStep || 1) / 9) * 100);
+
+                return (
+                  <div
+                    key={app._id}
+                    className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-orange-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isDraft ? "bg-gray-100" : "bg-orange-100"}`}
+                      >
+                        <FileText
+                          className={`w-4 h-4 ${isDraft ? "text-gray-500" : "text-orange-600"}`}
+                        />
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-800">{application.jobId?.title || 'Application'}</div>
-                        <div className="text-sm text-orange-600">{application.jobId?.department || 'Department pending'}</div>
-                        <div className="text-xs text-gray-500">{application.applicationId}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <Badge variant={application.status === 'submitted' ? 'success' : 'warning'}>
-                          {application.status}
-                        </Badge>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {application.createdAt ? new Date(application.createdAt).toLocaleDateString('en-IN') : ''}
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-800 text-sm truncate">
+                          {app.jobId?.title || "Job Application"}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-xs text-gray-500 truncate">
+                            {app.applicationId}
+                          </p>
+                          {isDraft && (
+                            <div className="flex items-center gap-1">
+                              <div className="w-16 bg-gray-200 rounded-full h-1">
+                                <div
+                                  className="bg-orange-500 h-1 rounded-full"
+                                  style={{ width: `${stepPct}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-orange-600">
+                                {stepPct}%
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-orange-600 hover:bg-orange-100">
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                      <Badge className={`${cfg.color} text-xs hidden sm:flex`}>
+                        <StatusIcon className="w-3 h-3 mr-1" />
+                        {cfg.label}
+                      </Badge>
+                      <button
+                        onClick={() => handleAppAction(app)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          isDraft
+                            ? "bg-orange-600 hover:bg-orange-700 text-white"
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {isDraft ? (
+                          <>
+                            <PlayCircle className="w-3.5 h-3.5" />
+                            Resume
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3.5 h-3.5" />
+                            View
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </CardContent>
           </Card>
 
-          <div className="space-y-6">
+          {/* Right column */}
+          <div className="space-y-5">
+            {/* Active Jobs */}
             <Card>
               <CardHeader>
-                <h3 className="font-semibold text-gray-800">Active Jobs</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-800">Active Jobs</h3>
+                  <Link
+                    to="/candidate/jobs"
+                    className="text-xs text-orange-600 hover:underline font-medium"
+                  >
+                    View All
+                  </Link>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {jobs.length === 0 && <p className="text-sm text-gray-600">No active jobs available.</p>}
-                {jobs.slice(0, 3).map((job) => (
-                  <Link key={job._id} to={`/jobs/${job._id}`} className="block p-3 bg-orange-50 rounded-lg hover:bg-orange-100">
-                    <div className="font-medium text-gray-800 text-sm">{job.title}</div>
-                    <div className="text-xs text-orange-600">{job.department}</div>
+              <CardContent className="p-0">
+                {jobs.length === 0 && (
+                  <p className="text-sm text-gray-500 px-4 pb-4">
+                    No active jobs right now.
+                  </p>
+                )}
+                {jobs.slice(0, 4).map((job) => {
+                  const days = daysLeft(job.applicationDeadline);
+                  return (
+                    <Link
+                      key={job._id}
+                      to={`/jobs/${job._id}`}
+                      className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-orange-50 transition-colors group"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-800 text-sm truncate group-hover:text-orange-600 transition-colors">
+                          {job.title}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {job.department}
+                        </p>
+                      </div>
+                      {days !== null && (
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                            days < 0
+                              ? "bg-red-100 text-red-700"
+                              : days <= 7
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {days < 0 ? "Closed" : `${days}d`}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Notifications */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span className="bg-orange-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </h3>
+                  <Link
+                    to="/candidate/notifications"
+                    className="text-xs text-orange-600 hover:underline font-medium"
+                  >
+                    View All
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {notifications.length === 0 && (
+                  <p className="text-sm text-gray-500 px-4 pb-4">
+                    No notifications yet.
+                  </p>
+                )}
+                {notifications.slice(0, 4).map((n) => {
+                  const Icon = NOTIF_ICONS[n.type] || Bell;
+                  return (
+                    <Link
+                      key={n._id}
+                      to="/candidate/notifications"
+                      className={`flex items-start gap-3 px-4 py-3 border-b border-gray-100 last:border-0 transition-colors ${
+                        n.isRead
+                          ? "hover:bg-gray-50"
+                          : "bg-orange-50 hover:bg-orange-100"
+                      }`}
+                    >
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          n.isRead ? "bg-gray-100" : "bg-orange-100"
+                        }`}
+                      >
+                        <Icon
+                          className={`w-3.5 h-3.5 ${n.isRead ? "text-gray-400" : "text-orange-600"}`}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-xs font-semibold truncate ${n.isRead ? "text-gray-600" : "text-gray-900"}`}
+                        >
+                          {n.title}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {formatDate(n.createdAt)}
+                        </p>
+                      </div>
+                      {!n.isRead && (
+                        <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1.5" />
+                      )}
+                    </Link>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Quick links */}
+            <Card>
+              <CardHeader>
+                <h3 className="font-semibold text-gray-800">Quick Actions</h3>
+              </CardHeader>
+              <CardContent className="p-3 space-y-1">
+                {[
+                  {
+                    to: "/candidate/profile",
+                    icon: User,
+                    label: "Complete Profile",
+                  },
+                  {
+                    to: "/candidate/jobs",
+                    icon: Briefcase,
+                    label: "Browse Jobs",
+                  },
+                  {
+                    to: "/candidate/applications",
+                    icon: FileText,
+                    label: "My Applications",
+                  },
+                  {
+                    to: "/candidate/support",
+                    icon: HelpCircle,
+                    label: "Get Support",
+                  },
+                  {
+                    to: "/candidate/payments",
+                    icon: CreditCard,
+                    label: "Payment History",
+                  },
+                ].map(({ to, icon: Icon, label }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-colors group"
+                  >
+                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-orange-500 transition-colors" />
+                    {label}
+                    <ChevronRight className="w-3.5 h-3.5 ml-auto text-gray-300 group-hover:text-orange-400" />
                   </Link>
                 ))}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <h3 className="font-semibold text-gray-800">Notifications</h3>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {notifications.length === 0 && <p className="text-sm text-gray-600">No notifications yet.</p>}
-                {notifications.slice(0, 4).map((notification) => (
-                  <div key={notification._id} className="p-3 bg-orange-50 rounded-lg">
-                    <div className="font-medium text-gray-800 text-sm">{notification.title || notification.message}</div>
-                    {notification.message && <div className="text-xs text-gray-600 mt-1">{notification.message}</div>}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <h3 className="font-semibold text-gray-800">Admit Cards</h3>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="font-medium text-gray-800 text-sm">Available after verification</div>
-                    <div className="text-xs text-gray-500">Backend record dependent</div>
-                  </div>
-                  <Button size="sm" disabled className="bg-orange-600 hover:bg-orange-700">
-                    <Download className="w-4 h-4" />
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
     </CandidateLayout>
-  )
-}
+  );
+};
 
-const Stat = ({ icon: Icon, label, value }) => (
-  <Card>
-    <CardContent className="p-5 flex items-center justify-between">
-      <div>
-        <div className="text-2xl font-bold text-gray-800">{value}</div>
-        <div className="text-sm text-orange-600">{label}</div>
-      </div>
-      <Icon className="w-6 h-6 text-orange-500" />
-    </CardContent>
-  </Card>
-)
-
-export default CandidateDashboard
+export default CandidateDashboard;

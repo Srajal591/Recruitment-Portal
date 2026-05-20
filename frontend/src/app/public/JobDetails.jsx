@@ -9,240 +9,39 @@ import {
   FileBadge,
   IndianRupee,
   MapPin,
+  Clock,
+  Users,
+  AlertCircle,
+  PlayCircle,
+  Eye,
+  Loader2,
+  ChevronRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PublicLayout from "../../components/layouts/PublicLayout";
 import Button from "../../components/ui/Button";
 import { jobService } from "../../services/job.service";
+import { candidateService } from "../../services/candidate.service";
 import { applicationService } from "../../services/application.service";
 import { useAuth, isCandidateUser } from "../../hooks/useAuth";
 
-const JobDetails = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { token, user } = useAuth();
+// ── Helpers ───────────────────────────────────────────────────
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["public-job", id],
-    queryFn: () => jobService.getPublicJob(id),
-    enabled: Boolean(id),
-  });
-
-  const job = data?.job;
-
-  const applyMutation = useMutation({
-    mutationFn: () => applicationService.createApplication(id),
-    onSuccess: (result) => {
-      toast.success("Application started");
-      navigate("/application/personal-details", {
-        state: { applicationId: result?.application?._id, jobId: id },
-      });
-    },
-    onError: (err) => {
-      if (err.status === 409) {
-        toast.error("You have already applied for this job");
-        navigate("/candidate/applications");
-      } else {
-        toast.error(err.message || "Failed to start application");
-      }
-    },
-  });
-
-  const handleApply = () => {
-    if (!token || !user) {
-      navigate("/auth/candidate-login", { state: { jobId: id } });
-      return;
-    }
-
-    if (!isCandidateUser(user)) {
-      navigate("/auth/candidate-login", { state: { jobId: id } });
-      return;
-    }
-
-    applyMutation.mutate();
-  };
-
-  return (
-    <PublicLayout>
-      <div className="min-h-screen bg-[#f5efe9] px-5 lg:px-10 xl:px-14 py-8">
-        <div className="max-w-7xl mx-auto">
-          <Link
-            to="/jobs"
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#8c7a72] hover:text-orange-600 mb-5"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Jobs
-          </Link>
-
-          {isLoading && (
-            <div className="bg-white border border-[#eadfd7] rounded-lg p-8">
-              Loading job details...
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-white border border-red-200 rounded-lg p-8 text-red-700">
-              {error.message || "Unable to load this job."}
-            </div>
-          )}
-
-          {job && (
-            <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
-              <div className="space-y-5">
-                <div className="bg-white border border-[#eadfd7] rounded-[24px] p-7 shadow-sm">
-                  <div className="inline-flex items-center gap-2 bg-[#ecfdf3] text-[#16a34a] border border-[#bbf7d0] px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide mb-4">
-                    <span className="w-2 h-2 bg-[#22c55e] rounded-full" />
-                    {job.status || "active"}
-                  </div>
-                  <h1 className="text-3xl lg:text-4xl leading-tight font-extrabold text-[#2d2a27] mb-3">
-                    {job.title}
-                  </h1>
-                  <div className="flex items-center gap-2 text-[#6b625d] text-sm mb-6">
-                    <Building2 className="w-4 h-4" />
-                    <span>{job.department}</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Info
-                      icon={Briefcase}
-                      label="Vacancies"
-                      value={job.totalPosts || 0}
-                    />
-                    <Info
-                      icon={Calendar}
-                      label="Last Date"
-                      value={
-                        job.applicationDeadline
-                          ? new Date(
-                              job.applicationDeadline,
-                            ).toLocaleDateString("en-IN")
-                          : "Not announced"
-                      }
-                    />
-                    <Info
-                      icon={MapPin}
-                      label="Location"
-                      value={
-                        job.workLocation ||
-                        job.projectId?.state ||
-                        "Not specified"
-                      }
-                    />
-                    <Info
-                      icon={IndianRupee}
-                      label="Fee"
-                      value={(
-                        job.applicationFee?.general ||
-                        job.applicationFee?.amount ||
-                        0
-                      ).toLocaleString("en-IN")}
-                    />
-                  </div>
-                </div>
-
-                <Section title="Job Description">
-                  <p className="text-sm leading-7 text-[#5c5753] whitespace-pre-line">
-                    {job.description ||
-                      "Detailed job description has not been published yet."}
-                  </p>
-                </Section>
-
-                <Section title="Eligibility">
-                  <div className="space-y-3 text-sm text-[#5c5753]">
-                    <p>
-                      <strong>Category:</strong>{" "}
-                      {job.category || "All eligible categories"}
-                    </p>
-                    <p>
-                      <strong>Salary:</strong>{" "}
-                      {job.salaryRange?.min || job.salaryRange?.max
-                        ? `${job.salaryRange?.min || ""} - ${job.salaryRange?.max || ""}`
-                        : "As per rules"}
-                    </p>
-                    <p>
-                      <strong>Education:</strong>{" "}
-                      {job.education?.essential?.degree ||
-                        job.education?.minimumQualification ||
-                        "See official notification"}
-                    </p>
-                    <p>
-                      <strong>Experience:</strong>{" "}
-                      {job.experience?.required
-                        ? `${job.experience?.years || 0}+ years`
-                        : "Not mandatory unless specified"}
-                    </p>
-                  </div>
-                </Section>
-
-                <Section title="Required Documents">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(job.requiredDocuments?.length
-                      ? job.requiredDocuments
-                      : [
-                          "Passport photo",
-                          "Signature",
-                          "Educational certificates",
-                          "Identity proof",
-                        ]
-                    ).map((document) => (
-                      <div
-                        key={
-                          typeof document === "string"
-                            ? document
-                            : document.type
-                        }
-                        className="flex items-center gap-3 bg-[#faf7f4] border border-[#ede3dc] rounded-lg p-4"
-                      >
-                        <FileBadge className="w-5 h-5 text-orange-500" />
-                        <span className="text-sm font-semibold text-[#4b4744]">
-                          {typeof document === "string"
-                            ? document
-                            : document.label || document.type}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </Section>
-              </div>
-
-              <aside className="space-y-5">
-                <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
-                  <div className="bg-[#f97316] px-5 py-4">
-                    <h2 className="font-bold text-white text-[15px]">
-                      Application Status
-                    </h2>
-                  </div>
-                  <div className="p-5 space-y-4">
-                    <div className="rounded-lg bg-green-50 border border-green-200 p-4 text-green-700 flex items-center gap-2 text-sm font-semibold">
-                      <CheckCircle2 className="w-4 h-4" />
-                      {job.isApplicationOpen === false
-                        ? "Applications closed"
-                        : "Applications open"}
-                    </div>
-                    <Button
-                      onClick={handleApply}
-                      disabled={
-                        applyMutation.isPending ||
-                        job.isApplicationOpen === false
-                      }
-                      className="w-full h-[50px] bg-[#f97316] hover:bg-orange-600"
-                    >
-                      {applyMutation.isPending ? "Starting..." : "Apply Now"}
-                    </Button>
-                    <p className="text-xs text-[#9d918b] leading-5 text-center">
-                      Candidate login is required before starting an
-                      application.
-                    </p>
-                  </div>
-                </div>
-              </aside>
-            </div>
-          )}
-        </div>
-      </div>
-    </PublicLayout>
-  );
+const daysLeft = (deadline) => {
+  if (!deadline) return null;
+  return Math.ceil((new Date(deadline) - new Date()) / (1000 * 60 * 60 * 24));
 };
+
+const formatDate = (d) =>
+  d
+    ? new Date(d).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "Not announced";
+
+// ── Sub-components ────────────────────────────────────────────
 
 const Info = ({ icon: Icon, label, value }) => (
   <div className="bg-[#faf7f4] border border-[#ede3dc] rounded-2xl px-5 py-4">
@@ -250,8 +49,8 @@ const Info = ({ icon: Icon, label, value }) => (
       {label}
     </div>
     <div className="flex items-center gap-2 text-sm font-bold text-[#2e2e2e]">
-      <Icon className="w-4 h-4 text-orange-500" />
-      {value}
+      <Icon className="w-4 h-4 text-orange-500 flex-shrink-0" />
+      <span>{value}</span>
     </div>
   </div>
 );
@@ -264,5 +63,665 @@ const Section = ({ title, children }) => (
     <div className="px-6 py-5">{children}</div>
   </div>
 );
+
+// ── Apply Sidebar ─────────────────────────────────────────────
+
+const ApplySidebar = ({
+  job,
+  isLoggedIn,
+  isCandidate,
+  existingApp,
+  applyMutation,
+}) => {
+  const navigate = useNavigate();
+  const days = daysLeft(job.applicationDeadline);
+  const isClosed = days !== null && days < 0;
+  const fee = job.applicationFee?.general || job.applicationFee?.amount || 0;
+
+  // Already applied
+  if (existingApp) {
+    const isDraft = existingApp.status === "draft";
+    const stepProgress = Math.round(((existingApp.currentStep || 1) / 9) * 100);
+
+    const handleResume = () => {
+      const STEP_ROUTES = {
+        1: "/application/personal-details",
+        2: "/application/education",
+        3: "/application/additional-info",
+        4: "/application/address",
+        5: "/application/documents",
+        6: "/application/review",
+        7: "/application/post-selection",
+        8: "/application/payment",
+        9: "/application/success",
+      };
+      const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
+      sessionStorage.setItem(
+        "app_draft",
+        JSON.stringify({
+          ...draft,
+          applicationId: existingApp._id,
+          jobId: job._id,
+        }),
+      );
+      if (isDraft) {
+        navigate(STEP_ROUTES[existingApp.currentStep || 1], {
+          state: { applicationId: existingApp._id, jobId: job._id },
+        });
+      } else {
+        // Go to the dedicated application status page
+        navigate(`/candidate/applications/${existingApp._id}`);
+      }
+    };
+
+    return (
+      <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
+        <div
+          className={`px-5 py-4 ${isDraft ? "bg-orange-500" : "bg-green-600"}`}
+        >
+          <h2 className="font-bold text-white text-[15px]">
+            {isDraft ? "Application In Progress" : "Application Submitted"}
+          </h2>
+        </div>
+        <div className="p-5 space-y-4">
+          {isDraft ? (
+            <>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-orange-800 mb-1">
+                  Draft — Not Submitted
+                </p>
+                <p className="text-xs text-orange-700">
+                  Step {existingApp.currentStep || 1}/9 completed
+                </p>
+                <div className="w-full bg-orange-200 rounded-full h-1.5 mt-2">
+                  <div
+                    className="bg-orange-600 h-1.5 rounded-full"
+                    style={{ width: `${stepProgress}%` }}
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={handleResume}
+                className="w-full h-[50px] bg-orange-600 hover:bg-orange-700 text-white gap-2"
+              >
+                <PlayCircle className="w-5 h-5" />
+                Resume Application
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-green-800">
+                    Application Submitted
+                  </p>
+                  <p className="text-xs text-green-700 font-mono mt-0.5">
+                    {existingApp.applicationId}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleResume}
+                className="w-full h-[50px] bg-green-600 hover:bg-green-700 text-white gap-2"
+              >
+                <Eye className="w-5 h-5" />
+                View Application
+              </Button>
+            </>
+          )}
+          <button
+            onClick={() => navigate("/candidate/applications")}
+            className="w-full text-center text-xs text-gray-500 hover:text-orange-600 transition-colors"
+          >
+            Go to My Applications →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Not logged in
+  if (!isLoggedIn) {
+    return (
+      <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
+        <div className="bg-[#f97316] px-5 py-4">
+          <h2 className="font-bold text-white text-[15px]">
+            Apply for this Job
+          </h2>
+        </div>
+        <div className="p-5 space-y-4">
+          {!isClosed ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2 text-sm font-semibold text-green-700">
+              <CheckCircle2 className="w-4 h-4" />
+              Applications Open
+            </div>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm font-semibold text-red-700">
+              <AlertCircle className="w-4 h-4" />
+              Applications Closed
+            </div>
+          )}
+          {fee > 0 && (
+            <div className="text-center py-2">
+              <p className="text-xs text-gray-500">Application Fee</p>
+              <p className="text-2xl font-bold text-orange-600">
+                ₹{fee.toLocaleString("en-IN")}
+              </p>
+            </div>
+          )}
+          <Link
+            to="/auth/candidate-login"
+            state={{ jobId: job._id }}
+            className={`flex items-center justify-center gap-2 w-full h-[50px] rounded-lg font-bold text-sm transition-all ${
+              isClosed
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none"
+                : "bg-[#f97316] hover:bg-orange-600 text-white"
+            }`}
+          >
+            Login to Apply <ChevronRight className="w-4 h-4" />
+          </Link>
+          <p className="text-xs text-[#9d918b] text-center">
+            New candidate?{" "}
+            <Link
+              to="/auth/register"
+              className="text-orange-600 hover:underline font-medium"
+            >
+              Register here
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Logged in but not a candidate (admin viewing)
+  if (!isCandidate) {
+    return (
+      <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
+        <div className="bg-gray-600 px-5 py-4">
+          <h2 className="font-bold text-white text-[15px]">Admin View</h2>
+        </div>
+        <div className="p-5">
+          <p className="text-sm text-gray-600 text-center">
+            Admins cannot apply for jobs.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Logged in candidate, not yet applied
+  return (
+    <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
+      <div className="bg-[#f97316] px-5 py-4">
+        <h2 className="font-bold text-white text-[15px]">Apply for this Job</h2>
+      </div>
+      <div className="p-5 space-y-4">
+        {!isClosed ? (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2 text-sm font-semibold text-green-700">
+            <CheckCircle2 className="w-4 h-4" />
+            Applications Open
+            {days !== null && days <= 7 && (
+              <span className="ml-auto text-xs font-bold text-orange-600">
+                {days}d left!
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm font-semibold text-red-700">
+            <AlertCircle className="w-4 h-4" />
+            Applications Closed
+          </div>
+        )}
+        {fee > 0 && (
+          <div className="text-center py-2">
+            <p className="text-xs text-gray-500">Application Fee</p>
+            <p className="text-2xl font-bold text-orange-600">
+              ₹{fee.toLocaleString("en-IN")}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">Non-refundable</p>
+          </div>
+        )}
+        <Button
+          onClick={() => applyMutation.mutate()}
+          disabled={applyMutation.isPending || isClosed}
+          className="w-full h-[50px] bg-[#f97316] hover:bg-orange-600 text-white disabled:bg-gray-200 disabled:text-gray-400"
+        >
+          {applyMutation.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Starting...
+            </>
+          ) : isClosed ? (
+            "Applications Closed"
+          ) : (
+            "Apply Now"
+          )}
+        </Button>
+        <p className="text-xs text-[#9d918b] text-center leading-5">
+          Ensure your profile is complete before applying.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ── Main Component ────────────────────────────────────────────
+
+const JobDetails = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { token, user } = useAuth();
+  const isLoggedIn = !!(token && user);
+  const isCandidate = isLoggedIn && isCandidateUser(user);
+
+  // Fetch job details
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["public-job", id],
+    queryFn: () => jobService.getPublicJob(id),
+    enabled: Boolean(id),
+  });
+
+  // Fetch candidate's applications to check if already applied
+  const { data: myAppsData } = useQuery({
+    queryKey: ["candidate-applications-ids"],
+    queryFn: () => candidateService.getMyApplications({ limit: 200 }),
+    enabled: isCandidate,
+    staleTime: 30000,
+  });
+
+  const job = data?.job || data;
+
+  const myApps = Array.isArray(myAppsData)
+    ? myAppsData
+    : myAppsData?.applications || myAppsData?.data || [];
+  const existingApp = myApps.find((a) => (a.jobId?._id || a.jobId) === id);
+
+  const applyMutation = useMutation({
+    mutationFn: () => applicationService.createApplication(id),
+    onSuccess: (result) => {
+      toast.success("Application started!");
+      navigate("/application/personal-details", {
+        state: { applicationId: result?.application?._id, jobId: id },
+      });
+    },
+    onError: (err) => {
+      if (err.status === 409) {
+        // Already applied — refresh applications list and show correct state
+        toast("You have already applied for this job", { icon: "ℹ️" });
+        navigate("/candidate/applications");
+      } else {
+        toast.error(err.message || "Failed to start application");
+      }
+    },
+  });
+
+  const days = daysLeft(job?.applicationDeadline);
+
+  return (
+    <PublicLayout>
+      <div className="min-h-screen bg-[#f5efe9] px-5 lg:px-10 xl:px-14 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-[#8c7a72] mb-6">
+            <Link to="/" className="hover:text-orange-600 transition-colors">
+              Home
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <Link
+              to="/jobs"
+              className="hover:text-orange-600 transition-colors"
+            >
+              Jobs
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-[#3b2e2a] font-medium truncate max-w-[200px]">
+              {job?.title || "Job Details"}
+            </span>
+          </div>
+
+          {/* Loading skeleton */}
+          {isLoading && (
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 animate-pulse">
+              <div className="space-y-5">
+                <div className="bg-white rounded-[24px] p-7 h-64" />
+                <div className="bg-white rounded-[24px] p-7 h-40" />
+              </div>
+              <div className="bg-white rounded-[24px] h-64" />
+            </div>
+          )}
+
+          {/* Error */}
+          {error && !isLoading && (
+            <div className="bg-white border border-red-200 rounded-[24px] p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+              <p className="text-red-700 font-medium">
+                Unable to load this job
+              </p>
+              <p className="text-red-500 text-sm mt-1">{error.message}</p>
+              <Link
+                to="/jobs"
+                className="mt-4 inline-flex items-center gap-2 text-orange-600 hover:underline text-sm font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Jobs
+              </Link>
+            </div>
+          )}
+
+          {/* Job content */}
+          {job && !isLoading && (
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
+              {/* Left — Main content */}
+              <div className="space-y-5">
+                {/* Hero card */}
+                <div className="bg-white border border-[#eadfd7] rounded-[24px] p-7 shadow-sm">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="inline-flex items-center gap-2 bg-[#ecfdf3] text-[#16a34a] border border-[#bbf7d0] px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide">
+                      <span className="w-2 h-2 bg-[#22c55e] rounded-full" />
+                      {job.status || "Active"}
+                    </div>
+                    {days !== null && (
+                      <span
+                        className={`text-xs font-bold px-3 py-1 rounded-full ${
+                          days < 0
+                            ? "bg-red-100 text-red-700"
+                            : days <= 3
+                              ? "bg-red-100 text-red-700 animate-pulse"
+                              : days <= 7
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {days < 0 ? "Deadline passed" : `${days} days left`}
+                      </span>
+                    )}
+                  </div>
+
+                  <h1 className="text-3xl lg:text-4xl leading-tight font-extrabold text-[#2d2a27] mb-3">
+                    {job.title}
+                  </h1>
+                  <div className="flex items-center gap-2 text-[#6b625d] text-sm mb-6">
+                    <Building2 className="w-4 h-4" />
+                    <span>{job.department}</span>
+                    {job.postCode && (
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">
+                          {job.postCode}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <Info
+                      icon={Users}
+                      label="Vacancies"
+                      value={`${job.totalPosts || 0} posts`}
+                    />
+                    <Info
+                      icon={Calendar}
+                      label="Last Date"
+                      value={formatDate(job.applicationDeadline)}
+                    />
+                    <Info
+                      icon={MapPin}
+                      label="Location"
+                      value={
+                        job.workLocation ||
+                        job.projectId?.state ||
+                        "Not specified"
+                      }
+                    />
+                    <Info
+                      icon={IndianRupee}
+                      label="Fee (General)"
+                      value={
+                        (job.applicationFee?.general ||
+                          job.applicationFee?.amount ||
+                          0) === 0
+                          ? "Free"
+                          : `₹${(job.applicationFee?.general || job.applicationFee?.amount || 0).toLocaleString("en-IN")}`
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                {job.description && (
+                  <Section title="Job Description">
+                    <p className="text-sm leading-7 text-[#5c5753] whitespace-pre-line">
+                      {job.description}
+                    </p>
+                  </Section>
+                )}
+
+                {/* Eligibility */}
+                <Section title="Eligibility & Qualifications">
+                  <div className="space-y-3 text-sm text-[#5c5753]">
+                    {job.category && (
+                      <div className="flex gap-2">
+                        <span className="font-semibold text-[#3b2e2a] w-28 flex-shrink-0">
+                          Category:
+                        </span>
+                        <span>{job.category}</span>
+                      </div>
+                    )}
+                    {(job.salaryRange?.min || job.salaryRange?.max) && (
+                      <div className="flex gap-2">
+                        <span className="font-semibold text-[#3b2e2a] w-28 flex-shrink-0">
+                          Salary:
+                        </span>
+                        <span>
+                          ₹{job.salaryRange?.min?.toLocaleString("en-IN")} – ₹
+                          {job.salaryRange?.max?.toLocaleString("en-IN")} per
+                          month
+                        </span>
+                      </div>
+                    )}
+                    {(job.education?.essential?.degree ||
+                      job.education?.minimumQualification) && (
+                      <div className="flex gap-2">
+                        <span className="font-semibold text-[#3b2e2a] w-28 flex-shrink-0">
+                          Education:
+                        </span>
+                        <span>
+                          {job.education?.essential?.degree ||
+                            job.education?.minimumQualification}
+                        </span>
+                      </div>
+                    )}
+                    {job.ageLimit && (
+                      <div className="flex gap-2">
+                        <span className="font-semibold text-[#3b2e2a] w-28 flex-shrink-0">
+                          Age Limit:
+                        </span>
+                        <span>
+                          {job.ageLimit.min}–{job.ageLimit.max} years
+                        </span>
+                      </div>
+                    )}
+                    {/* Fee table */}
+                    {job.applicationFee && (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <p className="font-semibold text-[#3b2e2a] mb-3">
+                          Application Fee
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            ["General", job.applicationFee.general],
+                            ["OBC", job.applicationFee.obc],
+                            ["SC/ST", job.applicationFee.scst],
+                            ["PwD", job.applicationFee.pwd],
+                          ]
+                            .filter(([, v]) => v !== undefined)
+                            .map(([cat, fee]) => (
+                              <div
+                                key={cat}
+                                className="bg-[#faf7f4] border border-[#ede3dc] rounded-lg p-3 text-center"
+                              >
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {cat}
+                                </p>
+                                <p className="font-bold text-orange-600">
+                                  {fee === 0 ? "Free" : `₹${fee}`}
+                                </p>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Section>
+
+                {/* Selection process */}
+                {job.selectionProcess?.length > 0 && (
+                  <Section title="Selection Process">
+                    <div className="space-y-3">
+                      {job.selectionProcess.map((step, i) => (
+                        <div key={i} className="flex items-center gap-4">
+                          <div className="w-7 h-7 rounded-full bg-orange-100 text-orange-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                            {i + 1}
+                          </div>
+                          <span className="text-sm text-[#5c5753]">{step}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </Section>
+                )}
+
+                {/* Required Documents */}
+                <Section title="Required Documents">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(job.requiredDocuments?.length
+                      ? job.requiredDocuments
+                      : [
+                          "Passport Photo",
+                          "Signature",
+                          "Educational Certificates",
+                          "Identity Proof (Aadhar/PAN)",
+                          "Category Certificate (if applicable)",
+                        ]
+                    ).map((doc) => (
+                      <div
+                        key={typeof doc === "string" ? doc : doc.type}
+                        className="flex items-center gap-3 bg-[#faf7f4] border border-[#ede3dc] rounded-lg p-4"
+                      >
+                        <FileBadge className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                        <span className="text-sm font-semibold text-[#4b4744]">
+                          {typeof doc === "string"
+                            ? doc
+                            : doc.label || doc.type}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+
+                {/* Important dates */}
+                {(job.applicationStartDate ||
+                  job.applicationDeadline ||
+                  job.examDate ||
+                  job.resultDate) && (
+                  <Section title="Important Dates">
+                    <div className="space-y-3">
+                      {[
+                        ["Application Start", job.applicationStartDate],
+                        ["Application Deadline", job.applicationDeadline],
+                        ["Exam Date", job.examDate],
+                        ["Result Date", job.resultDate],
+                      ]
+                        .filter(([, d]) => d)
+                        .map(([label, date]) => (
+                          <div
+                            key={label}
+                            className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                          >
+                            <span className="text-sm text-gray-600">
+                              {label}
+                            </span>
+                            <span className="text-sm font-semibold text-[#3b2e2a]">
+                              {formatDate(date)}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </Section>
+                )}
+              </div>
+
+              {/* Right — Sidebar */}
+              <aside className="space-y-5">
+                <ApplySidebar
+                  job={job}
+                  isLoggedIn={isLoggedIn}
+                  isCandidate={isCandidate}
+                  existingApp={existingApp}
+                  applyMutation={applyMutation}
+                />
+
+                {/* Quick info card */}
+                <div className="bg-white border border-[#eadfd7] rounded-[24px] p-5 space-y-3">
+                  <h3 className="font-bold text-[#3b2e2a] text-sm">
+                    Quick Info
+                  </h3>
+                  {[
+                    {
+                      icon: Briefcase,
+                      label: "Total Posts",
+                      value: job.totalPosts || 0,
+                    },
+                    {
+                      icon: Clock,
+                      label: "Deadline",
+                      value: formatDate(job.applicationDeadline),
+                    },
+                    {
+                      icon: Building2,
+                      label: "Department",
+                      value: job.department,
+                    },
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div
+                      key={label}
+                      className="flex items-center gap-3 text-sm"
+                    >
+                      <Icon className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                      <span className="text-gray-500 w-24 flex-shrink-0">
+                        {label}
+                      </span>
+                      <span className="font-medium text-gray-800 truncate">
+                        {value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Help */}
+                <div className="bg-orange-50 border border-orange-200 rounded-[24px] p-5">
+                  <p className="text-sm font-semibold text-orange-800 mb-1">
+                    Need Help?
+                  </p>
+                  <p className="text-xs text-orange-700 leading-relaxed">
+                    For queries about this job, raise a support ticket from your
+                    dashboard after logging in.
+                  </p>
+                  <Link
+                    to="/contact"
+                    className="mt-3 inline-flex items-center gap-1 text-xs text-orange-600 font-semibold hover:underline"
+                  >
+                    Contact Support <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </aside>
+            </div>
+          )}
+        </div>
+      </div>
+    </PublicLayout>
+  );
+};
 
 export default JobDetails;

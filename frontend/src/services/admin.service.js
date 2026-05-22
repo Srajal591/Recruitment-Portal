@@ -222,11 +222,20 @@ export const adminService = {
     const response = await apiClient.get("/admin/payment-gateways");
     return unwrapData(response);
   },
+  async getPaymentGateway(name) {
+    const response = await apiClient.get(`/admin/payment-gateways/${name}`);
+    return unwrapData(response);
+  },
   async upsertPaymentGateway(name, data) {
-    const response = await apiClient.put(
-      `/admin/payment-gateways/${name}`,
-      data,
-    );
+    const response = await apiClient.put(`/admin/payment-gateways/${name}`, data);
+    return unwrapData(response);
+  },
+  async testPaymentGateway(name) {
+    const response = await apiClient.post(`/admin/payment-gateways/${name}/test`);
+    return unwrapData(response);
+  },
+  async setDefaultGateway(name) {
+    const response = await apiClient.post(`/admin/payment-gateways/${name}/set-default`);
     return unwrapData(response);
   },
 

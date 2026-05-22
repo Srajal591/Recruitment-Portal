@@ -4,10 +4,11 @@ const paymentGatewaySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      enum: ["Razorpay", "Cashfree", "BillDesk", "CCAvenue"],
+      enum: ["Razorpay", "Cashfree", "Paytm", "PhonePe"],
       required: true,
       unique: true,
     },
+    displayName: { type: String },
     status: {
       type: String,
       enum: ["ACTIVE", "INACTIVE", "LIMITED"],
@@ -18,11 +19,17 @@ const paymentGatewaySchema = new mongoose.Schema(
       enum: ["Live", "Test"],
       default: "Test",
     },
+    isDefault: { type: Boolean, default: false },
     // Stored encrypted — use helpers.encrypt / helpers.decrypt
     apiKey: { type: String, select: false },
     secretKey: { type: String, select: false },
     webhookSecret: { type: String, select: false },
-    settlementDays: { type: String, default: "1-2 Days" },
+    merchantId: { type: String, select: false }, // Paytm / PhonePe
+    settlementDays: { type: String, default: "T+2 Days" },
+    supportedMethods: {
+      type: [String],
+      default: ["card", "upi", "netbanking", "wallet"],
+    },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",

@@ -128,4 +128,19 @@ export const candidateService = {
     const response = await apiClient.get("/candidate/payments", { params });
     return unwrapData(response);
   },
+  async initiatePayment(applicationId, gateway = "razorpay") {
+    const response = await apiClient.post("/candidate/payments/initiate", {
+      applicationId,
+      gateway,
+    });
+    return unwrapData(response);
+  },
+  async verifyPayment(data) {
+    const response = await apiClient.post("/candidate/payments/verify", data);
+    return unwrapData(response);
+  },
+  async getPaymentByTransaction(transactionId) {
+    const response = await apiClient.get(`/candidate/payments/${transactionId}`);
+    return unwrapData(response);
+  },
 };

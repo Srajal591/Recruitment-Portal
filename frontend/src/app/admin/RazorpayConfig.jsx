@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import { adminService } from '../../services/admin.service'
+import { WEBHOOK_BASE_URL } from '../../api/config'
 
 const RazorpayConfig = () => {
   const navigate = useNavigate()
@@ -73,7 +74,7 @@ const RazorpayConfig = () => {
   const razorpay = gateways.find(g => g.name === 'Razorpay')
   const isActive = razorpay?.status === 'ACTIVE'
 
-  const WEBHOOK_URL = `${window.location.origin}/api/candidate/payments/razorpay/webhook`
+  const WEBHOOK_URL = `${WEBHOOK_BASE_URL}/api/candidate/payments/razorpay/webhook`
 
   return (
     <AdminLayout title="Razorpay Configuration">

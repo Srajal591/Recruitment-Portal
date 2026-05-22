@@ -53,7 +53,7 @@ const AuthDebug = lazy(() => import("../app/test/AuthDebug"));
 // Admin Pages
 const AdminDashboard = lazy(() => import("../app/admin/Dashboard"));
 const PaymentSettings = lazy(() => import("../app/admin/PaymentSettings"));
-const RazorpayConfig = lazy(() => import("../app/admin/RazorpayConfig"));
+const GatewayConfig = lazy(() => import("../app/admin/GatewayConfig"));
 const AddPaymentGateway = lazy(() => import("../app/admin/AddPaymentGateway"));
 const Projects = lazy(() => import("../app/admin/Projects"));
 const CreateProject = lazy(() => import("../app/admin/CreateProject"));
@@ -232,18 +232,18 @@ const AppRoutes = () => {
           }
         />
         <Route
-          path="/admin/payment-settings/razorpay"
-          element={
-            <ProtectedRoute role="admin">
-              <RazorpayConfig />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/admin/payment-settings/add-gateway"
           element={
             <ProtectedRoute role="admin">
               <AddPaymentGateway />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/payment-settings/:name"
+          element={
+            <ProtectedRoute role="admin">
+              <GatewayConfig />
             </ProtectedRoute>
           }
         />

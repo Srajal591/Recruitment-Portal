@@ -58,6 +58,9 @@ app.use("/api/admin", adminPaymentRoutes); // /payments + /payment-gateways
 app.use("/api/admin/support", adminSupportRoutes);
 app.use("/api/candidate/notifications", candidateNotificationRoutes);
 app.use("/api/candidate/support", candidateSupportRoutes);
+// NOTE: webhook route inside candidatePaymentRoutes uses express.raw() — must be
+// registered BEFORE express.json() parses the body. The route file handles this
+// by using express.raw() on the specific webhook path only.
 app.use("/api/candidate/payments", candidatePaymentRoutes);
 
 // ── Health ────────────────────────────────────────────────────

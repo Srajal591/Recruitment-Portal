@@ -2,6 +2,11 @@
 // prefix to the correct microservice, so no CORS issues and no gateway path-stripping.
 export const API_BASE_URL = "/api";
 
+// Webhook base URL — used for displaying webhook URLs in admin panel
+// Defaults to current origin if not specified in environment
+export const WEBHOOK_BASE_URL =
+  import.meta.env.VITE_WEBHOOK_BASE_URL || `${window.location.origin}`;
+
 const splitUrls = (value) =>
   value
     ?.split(",")

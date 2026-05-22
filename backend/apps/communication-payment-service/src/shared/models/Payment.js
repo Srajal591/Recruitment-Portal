@@ -21,7 +21,7 @@ const paymentSchema = new mongoose.Schema(
     currency: { type: String, default: "INR" },
     gateway: {
       type: String,
-      enum: ["razorpay", "payu", "ccavenue", "billdesk"],
+      enum: ["razorpay", "cashfree", "paytm", "phonepe"],
       required: true,
     },
     gatewayOrderId: { type: String },

@@ -9,20 +9,19 @@ const {
   verifyPaymentSchema,
 } = require("../../shared/validations/payment.validation");
 
+// ── Webhook (no auth — raw body needed for signature verification) ──
+router.post(
+  "/razorpay/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.razorpayWebhook,
+);
+
+// ── Authenticated routes ──────────────────────────────────────
 router.use(authenticate, authorize("candidate"));
 
-router.post(
-  "/initiate",
-  validate(initiatePaymentSchema),
-  paymentController.initiatePayment,
-);
-router.post(
-  "/verify",
-  validate(verifyPaymentSchema),
-  paymentController.verifyPayment,
-);
+router.post("/initiate", validate(initiatePaymentSchema), paymentController.initiatePayment);
+router.post("/verify", validate(verifyPaymentSchema), paymentController.verifyPayment);
 router.get("/history", paymentController.getHistory);
 router.get("/:transactionId", paymentController.getByTransaction);
 
 module.exports = router;
-

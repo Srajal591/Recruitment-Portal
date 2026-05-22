@@ -476,16 +476,76 @@ const updatePostSelection = asyncHandler(async (req, res) => {
   await app.populate("jobId");
 
   const candidate = await User.findById(req.user.id).select("category");
+  const activeJobPosts = (app.jobId.posts || []).filter(
+    (post) => post.status !== "inactive",
+  );
+  const availablePosts =
+    activeJobPosts.length > 0
+      ? activeJobPosts
+      : [
+          {
+            _id: app.jobId._id,
+            postCode: app.jobId.postCode,
+            title: app.jobId.title,
+            designation: app.jobId.title,
+            department: app.jobId.department,
+            vacancies: app.jobId.totalPosts,
+          },
+        ];
+  const availablePostMap = new Map(
+    availablePosts.map((post) => [post._id.toString(), post]),
+  );
+  const preferences = new Set();
+  const selectedPostIds = new Set();
 
-  // Calculate total fee
-  let totalFee = 0;
   const postsWithFee = (appliedPosts || []).map((post) => {
-    const fee = calculateFee(
-      app.jobId.applicationFee || {},
-      candidate?.category,
-    );
-    totalFee += fee;
-    return { ...post, fee };
+    const key = (post.postId || post.jobId || "").toString();
+    const jobPost = availablePostMap.get(key);
+    if (!jobPost) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "Selected post is not available for this job",
+      );
+    }
+
+    if (selectedPostIds.has(key)) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "A post can be selected only once",
+      );
+    }
+    selectedPostIds.add(key);
+
+    if (preferences.has(post.preference)) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "Post preferences must be unique",
+      );
+    }
+    preferences.add(post.preference);
+
+    return {
+      jobId: app.jobId._id,
+      postId: jobPost._id,
+      postCode: jobPost.postCode || "",
+      title: jobPost.title || jobPost.designation,
+      designation: jobPost.designation || jobPost.title,
+      department: jobPost.department || app.jobId.department || "",
+      vacancies: jobPost.vacancies || 0,
+      preference: post.preference,
+      fee: 0,
+    };
+  });
+
+  postsWithFee.sort((a, b) => a.preference - b.preference);
+
+  const totalFee = calculateFee(
+    app.jobId.applicationFee || {},
+    candidate?.category,
+  );
+  postsWithFee.forEach((post, index) => {
+    post.preference = index + 1;
+    post.fee = index === 0 ? totalFee : 0;
   });
 
   app.appliedPosts = postsWithFee;

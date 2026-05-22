@@ -4,13 +4,14 @@ import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import JobStepProgress from './JobStepProgress'
-import { ArrowRight, ArrowLeft, FileText, Calendar, Users, DollarSign } from 'lucide-react'
+import { ArrowRight, ArrowLeft, FileText, Calendar, Users, DollarSign, Plus, X } from 'lucide-react'
 
 const STORAGE_KEY = 'job_draft'
 
 const JobBasicInfo = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const returnToReview = searchParams.get('returnTo') === 'review'
   // Use URL param first, fall back to whatever was already saved in the draft
   const urlProjectId = searchParams.get('project')
   const savedDraft = (() => { try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}') } catch { return {} } })()
@@ -33,6 +34,18 @@ const JobBasicInfo = () => {
         applicationDeadline: saved.applicationDeadline ? saved.applicationDeadline.split('T')[0] : '',
         examDate: saved.examDate ? saved.examDate.split('T')[0] : '',
         description: saved.description || '',
+        posts: saved.posts?.length ? saved.posts : [
+          {
+            postCode: saved.postCode || '',
+            title: saved.title || '',
+            designation: saved.title || '',
+            department: saved.department || '',
+            category: saved.category || 'General',
+            vacancies: saved.totalPosts || '',
+            payLevel: '',
+            location: saved.workLocation || '',
+          },
+        ],
       }
     } catch { return {
       jobTitle: '', postCode: '', department: '', category: 'General',
@@ -40,6 +53,7 @@ const JobBasicInfo = () => {
       salaryRange: { min: '', max: '' }, jobType: 'Permanent', workLocation: '',
       applicationFee: { general: '', scSt: '', pwd: '' },
       applicationDeadline: '', examDate: '', description: '',
+      posts: [{ postCode: '', title: '', designation: '', department: '', category: 'General', vacancies: '', payLevel: '', location: '' }],
     }}
   })
   const [errors, setErrors] = useState({})
@@ -63,13 +77,51 @@ const JobBasicInfo = () => {
     else if (formData.postCode.trim().length < 2) e.postCode = 'Post code must be at least 2 characters'
     if (!formData.department.trim()) e.department = 'Department is required'
     else if (formData.department.trim().length < 2) e.department = 'Department must be at least 2 characters'
-    if (!formData.totalPosts || Number(formData.totalPosts) < 1) e.totalPosts = 'At least 1 post required'
+    formData.posts.forEach((post, index) => {
+      if (!post.title?.trim()) e[`posts.${index}.title`] = 'Post title is required'
+      if (!post.designation?.trim()) e[`posts.${index}.designation`] = 'Designation is required'
+      if (!post.vacancies || Number(post.vacancies) < 1) e[`posts.${index}.vacancies`] = 'Vacancies must be at least 1'
+    })
+    if (formData.posts.reduce((sum, post) => sum + (Number(post.vacancies) || 0), 0) < 1) e.totalPosts = 'At least 1 vacancy is required'
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
+  const updatePost = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      posts: prev.posts.map((post, i) => i === index ? { ...post, [field]: value } : post),
+    }))
+  }
+
+  const addPost = () => {
+    setFormData(prev => ({
+      ...prev,
+      posts: [
+        ...prev.posts,
+        { postCode: '', title: '', designation: '', department: prev.department, category: prev.category, vacancies: '', payLevel: '', location: prev.workLocation },
+      ],
+    }))
+  }
+
+  const removePost = (index) => {
+    setFormData(prev => ({ ...prev, posts: prev.posts.filter((_, i) => i !== index) }))
+  }
+
   const handleNext = () => {
     if (!validate()) return
+    const posts = formData.posts.map(post => ({
+      postCode: post.postCode?.trim() || '',
+      title: post.title.trim(),
+      designation: post.designation.trim(),
+      department: post.department?.trim() || formData.department.trim(),
+      category: post.category || formData.category,
+      vacancies: Number(post.vacancies) || 0,
+      payLevel: post.payLevel?.trim() || '',
+      location: post.location?.trim() || formData.workLocation,
+      status: 'active',
+    }))
+    const totalPosts = posts.reduce((sum, post) => sum + post.vacancies, 0)
     // Save to sessionStorage
     const existing = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}')
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -79,7 +131,8 @@ const JobBasicInfo = () => {
       postCode: formData.postCode.trim(),
       department: formData.department.trim(),
       category: formData.category,
-      totalPosts: Number(formData.totalPosts),
+      totalPosts,
+      posts,
       reservedPosts: {
         sc: Number(formData.reservedPosts.sc) || 0,
         st: Number(formData.reservedPosts.st) || 0,
@@ -102,11 +155,14 @@ const JobBasicInfo = () => {
       examDate: formData.examDate || undefined,
       description: formData.description,
     }))
-    navigate(`/admin/jobs/create/eligibility${projectId ? `?project=${projectId}` : ''}`)
+    navigate(returnToReview
+      ? `/admin/jobs/create/review${projectId ? `?project=${projectId}` : ''}`
+      : `/admin/jobs/create/eligibility${projectId ? `?project=${projectId}` : ''}`)
   }
 
   const inputClass = (field) =>
     `w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors[field] ? 'border-red-400' : 'border-gray-300'}`
+  const postVacancyTotal = formData.posts.reduce((sum, post) => sum + (Number(post.vacancies) || 0), 0)
 
   return (
     <AdminLayout title="Create Job - Basic Info">
@@ -202,9 +258,10 @@ const JobBasicInfo = () => {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Total Posts <span className="text-red-500">*</span></label>
-                      <input type="number" min="1" placeholder="e.g. 50" className={inputClass('totalPosts')}
-                        value={formData.totalPosts} onChange={(e) => set('totalPosts', e.target.value)} />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Total Vacancies</label>
+                      <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 font-semibold text-gray-800">
+                        {postVacancyTotal.toLocaleString('en-IN')}
+                      </div>
                       {errors.totalPosts && <p className="text-red-500 text-xs mt-1">{errors.totalPosts}</p>}
                     </div>
                     <div>
@@ -216,6 +273,64 @@ const JobBasicInfo = () => {
                         <option value="Temporary">Temporary</option>
                       </select>
                     </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Post Types / Designations <span className="text-red-500">*</span></label>
+                        <p className="text-xs text-gray-500 mt-0.5">Add each designation candidates can choose and rank by preference.</p>
+                      </div>
+                      <Button type="button" onClick={addPost} variant="outline" size="sm">
+                        <Plus className="w-4 h-4 mr-1" />Add Post
+                      </Button>
+                    </div>
+                    {formData.posts.map((post, index) => (
+                      <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-700">Post {index + 1}</span>
+                          {formData.posts.length > 1 && (
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removePost(index)} className="text-red-600 hover:bg-red-50">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Post Code</label>
+                            <input value={post.postCode || ''} onChange={(e) => updatePost(index, 'postCode', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="e.g. TC-01" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Post Title</label>
+                            <input value={post.title || ''} onChange={(e) => updatePost(index, 'title', e.target.value)} className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors[`posts.${index}.title`] ? 'border-red-400' : 'border-gray-300'}`} placeholder="e.g. Ticket Collector" />
+                            {errors[`posts.${index}.title`] && <p className="text-red-500 text-xs mt-1">{errors[`posts.${index}.title`]}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Designation</label>
+                            <input value={post.designation || ''} onChange={(e) => updatePost(index, 'designation', e.target.value)} className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors[`posts.${index}.designation`] ? 'border-red-400' : 'border-gray-300'}`} placeholder="e.g. Commercial Clerk" />
+                            {errors[`posts.${index}.designation`] && <p className="text-red-500 text-xs mt-1">{errors[`posts.${index}.designation`]}</p>}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Vacancies</label>
+                            <input type="number" min="1" value={post.vacancies || ''} onChange={(e) => updatePost(index, 'vacancies', e.target.value)} className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors[`posts.${index}.vacancies`] ? 'border-red-400' : 'border-gray-300'}`} placeholder="100" />
+                            {errors[`posts.${index}.vacancies`] && <p className="text-red-500 text-xs mt-1">{errors[`posts.${index}.vacancies`]}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Department</label>
+                            <input value={post.department || ''} onChange={(e) => updatePost(index, 'department', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder={formData.department || 'Department'} />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Pay Level</label>
+                            <input value={post.payLevel || ''} onChange={(e) => updatePost(index, 'payLevel', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Level 5" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Location</label>
+                            <input value={post.location || ''} onChange={(e) => updatePost(index, 'location', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder={formData.workLocation || 'Zone/City'} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Reserved Posts</label>
@@ -314,7 +429,7 @@ const JobBasicInfo = () => {
               <ArrowLeft className="w-4 h-4 mr-2" />Back to Jobs
             </Button>
             <Button onClick={handleNext} className="bg-orange-600 hover:bg-orange-700 text-white px-8">
-              Next: Eligibility<ArrowRight className="w-4 h-4 ml-2" />
+              {returnToReview ? 'Save & Return to Review' : 'Next: Eligibility'}<ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>

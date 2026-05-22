@@ -21,44 +21,47 @@ const JobEligibility = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const projectId = searchParams.get('project')
+  const returnToReview = searchParams.get('returnTo') === 'review'
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => {
+    const saved = JSON.parse(sessionStorage.getItem('job_draft') || '{}')
+    return {
     ageLimit: {
-      min: '',
-      max: '',
+      min: saved.ageLimit?.min || '',
+      max: saved.ageLimit?.max || '',
       relaxation: {
-        sc: '',
-        st: '',
-        obc: '',
-        pwd: ''
+        sc: saved.ageLimit?.relaxation?.sc || '',
+        st: saved.ageLimit?.relaxation?.st || '',
+        obc: saved.ageLimit?.relaxation?.obc || '',
+        pwd: saved.ageLimit?.relaxation?.pwd || ''
       }
     },
     education: {
-      essential: [
+      essential: saved.education?.essential?.length ? saved.education.essential : [
         { degree: '', specialization: '', university: 'Any recognized university' }
       ],
-      desirable: []
+      desirable: saved.education?.desirable || []
     },
     experience: {
-      required: false,
-      years: '',
-      type: '',
-      description: ''
+      required: saved.experience?.required || false,
+      years: saved.experience?.years || '',
+      type: saved.experience?.type || '',
+      description: saved.experience?.description || ''
     },
-    otherRequirements: [],
+    otherRequirements: saved.otherRequirements || [],
     physicalStandards: {
-      required: false,
-      height: { male: '', female: '' },
-      chest: { male: '', female: '' },
-      weight: { male: '', female: '' }
+      required: saved.physicalStandards?.required || false,
+      height: saved.physicalStandards?.height || { male: '', female: '' },
+      chest: saved.physicalStandards?.chest || { male: '', female: '' },
+      weight: saved.physicalStandards?.weight || { male: '', female: '' }
     },
     medicalStandards: {
-      required: false,
-      vision: '',
-      hearing: '',
-      other: ''
+      required: saved.medicalStandards?.required || false,
+      vision: saved.medicalStandards?.vision || '',
+      hearing: saved.medicalStandards?.hearing || '',
+      other: saved.medicalStandards?.other || ''
     }
-  })
+  }})
 
   const handleInputChange = (field, value) => {
     if (field.includes('.')) {
@@ -161,7 +164,9 @@ const JobEligibility = () => {
       medicalStandards: formData.medicalStandards,
       otherRequirements: formData.otherRequirements.filter(r => r.trim()),
     }))
-    navigate(`/admin/jobs/create/form-builder${projectId ? `?project=${projectId}` : ''}`)
+    navigate(returnToReview
+      ? `/admin/jobs/create/review${projectId ? `?project=${projectId}` : ''}`
+      : `/admin/jobs/create/form-builder${projectId ? `?project=${projectId}` : ''}`)
   }
 
   const handleBack = () => {
@@ -672,7 +677,7 @@ const JobEligibility = () => {
             onClick={handleNext}
             className="bg-orange-600 hover:bg-orange-700 text-white px-8"
           >
-            Next: Form Builder
+            {returnToReview ? 'Save & Return to Review' : 'Next: Form Builder'}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

@@ -26,6 +26,13 @@ const SOCKET_EVENTS = [
 ];
 
 const uniqueUrls = (urls) => [...new Set(urls.filter(Boolean))];
+const TEARDOWN_GRACE_MS = 2000;
+
+let activeSockets = [];
+let activeToken = null;
+let activeSubscribers = new Set();
+let teardownTimer = null;
+let subscriberCount = 0;
 
 export const getRealtimeToken = () =>
   localStorage.getItem(STORAGE_KEYS.accessToken);
@@ -38,10 +45,18 @@ export const getRealtimeSocketUrls = () => {
   return uniqueUrls(Object.values(SERVICE_SOCKET_URLS));
 };
 
-export const createRealtimeSockets = ({ onEvent, onStatusChange }) => {
-  const token = getRealtimeToken();
+const disconnectActiveSockets = () => {
+  activeSockets.forEach((socket) => {
+    SOCKET_EVENTS.forEach((eventName) => socket.off(eventName));
+    socket.disconnect();
+  });
+  activeSockets = [];
+};
 
-  const sockets = getRealtimeSocketUrls().map((url) => {
+const createSocketConnections = (token) => {
+  activeToken = token;
+
+  activeSockets = getRealtimeSocketUrls().map((url) => {
     const socket = io(url, {
       auth: token ? { token } : {},
       withCredentials: true,
@@ -51,33 +66,74 @@ export const createRealtimeSockets = ({ onEvent, onStatusChange }) => {
       reconnectionDelay: 500,
       reconnectionDelayMax: 5000,
       timeout: 10000,
+      autoConnect: true,
     });
 
     socket.on("connect", () => {
-      onStatusChange?.({ url, connected: true, socketId: socket.id });
+      activeSubscribers.forEach((subscriber) => {
+        subscriber.onStatusChange?.({
+          url,
+          connected: true,
+          socketId: socket.id,
+        });
+      });
     });
 
     socket.on("disconnect", (reason) => {
-      onStatusChange?.({ url, connected: false, reason });
+      activeSubscribers.forEach((subscriber) => {
+        subscriber.onStatusChange?.({ url, connected: false, reason });
+      });
     });
 
     socket.on("connect_error", (error) => {
-      onStatusChange?.({ url, connected: false, reason: error.message });
+      activeSubscribers.forEach((subscriber) => {
+        subscriber.onStatusChange?.({
+          url,
+          connected: false,
+          reason: error.message,
+        });
+      });
     });
 
     SOCKET_EVENTS.forEach((eventName) => {
       socket.on(eventName, (payload) => {
-        onEvent?.({ eventName, payload, source: url });
+        activeSubscribers.forEach((subscriber) => {
+          subscriber.onEvent?.({ eventName, payload, source: url });
+        });
       });
     });
 
     return socket;
   });
+};
+
+export const createRealtimeSockets = ({ onEvent, onStatusChange }) => {
+  const token = getRealtimeToken();
+  const subscriber = { onEvent, onStatusChange };
+
+  if (teardownTimer) {
+    window.clearTimeout(teardownTimer);
+    teardownTimer = null;
+  }
+
+  activeSubscribers.add(subscriber);
+  subscriberCount += 1;
+
+  if (activeSockets.length === 0 || activeToken !== token) {
+    disconnectActiveSockets();
+    createSocketConnections(token);
+  }
 
   return () => {
-    sockets.forEach((socket) => {
-      SOCKET_EVENTS.forEach((eventName) => socket.off(eventName));
-      socket.disconnect();
-    });
+    activeSubscribers.delete(subscriber);
+    subscriberCount = Math.max(0, subscriberCount - 1);
+
+    teardownTimer = window.setTimeout(() => {
+      if (subscriberCount === 0) {
+        disconnectActiveSockets();
+        activeToken = null;
+      }
+      teardownTimer = null;
+    }, TEARDOWN_GRACE_MS);
   };
 };

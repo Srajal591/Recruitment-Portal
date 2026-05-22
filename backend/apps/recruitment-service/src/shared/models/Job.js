@@ -17,6 +17,25 @@ const applicationFeeSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const jobPostSchema = new mongoose.Schema(
+  {
+    postCode: { type: String, trim: true },
+    title: { type: String, required: true, trim: true },
+    designation: { type: String, required: true, trim: true },
+    department: { type: String, trim: true },
+    category: { type: String, trim: true },
+    vacancies: { type: Number, required: true, min: 1 },
+    payLevel: { type: String, trim: true },
+    location: { type: String, trim: true },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+  },
+  { _id: true },
+);
+
 const ageRelaxationSchema = new mongoose.Schema(
   { sc: Number, st: Number, obc: Number, pwd: Number },
   { _id: false },
@@ -164,6 +183,7 @@ const jobSchema = new mongoose.Schema(
 
     // Vacancy details
     totalPosts: { type: Number, default: 0 },
+    posts: [jobPostSchema],
     reservedPosts: { type: reservedPostsSchema, default: () => ({}) },
     salaryRange: { type: salaryRangeSchema, default: () => ({}) },
     applicationFee: { type: applicationFeeSchema, default: () => ({}) },

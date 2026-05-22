@@ -1,5 +1,18 @@
 const { z } = require("zod");
 
+const jobPostSchema = z.object({
+  _id: z.string().optional(),
+  postCode: z.string().max(50).optional().default(""),
+  title: z.string().min(2, "Post title is required").max(200),
+  designation: z.string().min(2, "Designation is required").max(200),
+  department: z.string().max(200).optional().default(""),
+  category: z.string().max(100).optional().default(""),
+  vacancies: z.number().int().min(1, "Vacancies must be at least 1"),
+  payLevel: z.string().max(100).optional().default(""),
+  location: z.string().max(200).optional().default(""),
+  status: z.enum(["active", "inactive"]).optional().default("active"),
+});
+
 const createJobSchema = z.object({
   projectId: z.string().min(1, "Project ID is required"),
   title: z.string().min(3, "Job title must be at least 3 characters").max(200),
@@ -12,6 +25,7 @@ const createJobSchema = z.object({
   workLocation: z.string().optional(),
   description: z.string().max(5000).optional(),
   totalPosts: z.number().int().min(1).optional(),
+  posts: z.array(jobPostSchema).optional(),
   reservedPosts: z
     .object({
       sc: z.number().int().min(0).optional(),

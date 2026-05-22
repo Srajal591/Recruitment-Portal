@@ -254,16 +254,20 @@ const PublicLayout = ({ children }) => {
               </h3>
 
               <div className="mt-6 space-y-4">
-                {["Latest Jobs", "Results", "Admit Cards", "Notifications"].map(
-                  (item) => (
-                    <button
-                      key={item}
-                      className="block text-white/65 hover:text-orange-300 transition-colors text-[14px]"
-                    >
-                      {item}
-                    </button>
-                  ),
-                )}
+                {[
+                  ["Latest Jobs", "/jobs"],
+                  ["Results", "/results"],
+                  ["Admit Cards", "/admit-cards"],
+                  ["Notifications", "/notices"],
+                ].map(([item, path]) => (
+                  <Link
+                    key={item}
+                    to={path}
+                    className="block text-white/65 hover:text-orange-300 transition-colors text-[14px]"
+                  >
+                    {item}
+                  </Link>
+                ))}
               </div>
             </div>
 
@@ -275,16 +279,20 @@ const PublicLayout = ({ children }) => {
               </h3>
 
               <div className="mt-6 space-y-4">
-                {["FAQ", "Contact Us", "Help Center", "Technical Support"].map(
-                  (item) => (
-                    <button
-                      key={item}
-                      className="block text-white/65 hover:text-orange-300 transition-colors text-[14px]"
-                    >
-                      {item}
-                    </button>
-                  ),
-                )}
+                {[
+                  ["FAQ", "/faq"],
+                  ["Contact Us", "/contact"],
+                  ["Help Center", "/how-to-apply"],
+                  ["Technical Support", "/contact"],
+                ].map(([item, path]) => (
+                  <Link
+                    key={item}
+                    to={path}
+                    className="block text-white/65 hover:text-orange-300 transition-colors text-[14px]"
+                  >
+                    {item}
+                  </Link>
+                ))}
               </div>
             </div>
 
@@ -327,17 +335,17 @@ const PublicLayout = ({ children }) => {
             </p>
 
             <div className="flex items-center gap-6 text-white/40 text-[12px]">
-              <button className="hover:text-orange-300 transition-colors">
+              <Link to="/about" className="hover:text-orange-300 transition-colors">
                 Privacy Policy
-              </button>
+              </Link>
 
-              <button className="hover:text-orange-300 transition-colors">
+              <Link to="/about" className="hover:text-orange-300 transition-colors">
                 Terms & Conditions
-              </button>
+              </Link>
 
-              <button className="hover:text-orange-300 transition-colors">
+              <Link to="/about" className="hover:text-orange-300 transition-colors">
                 Accessibility
-              </button>
+              </Link>
             </div>
           </div>
         </div>

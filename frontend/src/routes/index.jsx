@@ -47,6 +47,7 @@ const AdmitCards = lazy(() => import("../app/public/AdmitCards"));
 const Downloads = lazy(() => import("../app/public/Downloads"));
 const FAQ = lazy(() => import("../app/public/FAQ"));
 const Contact = lazy(() => import("../app/public/Contact"));
+const HowToApply = lazy(() => import("../app/public/HowToApply"));
 const AuthDebug = lazy(() => import("../app/test/AuthDebug"));
 
 // Admin Pages
@@ -206,6 +207,7 @@ const AppRoutes = () => {
         <Route path="/downloads" element={<Downloads />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/how-to-apply" element={<HowToApply />} />
         <Route path="/auth-debug" element={<AuthDebug />} />
 
         {/* Admin Routes */}

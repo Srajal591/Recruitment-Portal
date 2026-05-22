@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -16,6 +16,17 @@ const DEPARTMENTS = [
 ]
 
 const STATUS_OPTIONS = ['Active', 'Inactive', 'On Leave']
+
+// Field component - moved outside to prevent recreation
+const Field = ({ label, required, error, children }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    {children}
+    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+  </div>
+)
 
 const EditEmployee = () => {
   const { id } = useParams()
@@ -87,12 +98,12 @@ const EditEmployee = () => {
     },
   })
 
-  const handleChange = useCallback((field, value) => {
+  const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
-  }, [errors])
+  }
 
-  const validate = useCallback(() => {
+  const validate = () => {
     const e = {}
     if (!formData.fullName.trim()) e.fullName = 'Full name is required'
     if (!formData.contactNumber) e.contactNumber = 'Contact number is required'
@@ -104,9 +115,9 @@ const EditEmployee = () => {
     if (formData.password && formData.password.length < 8) e.password = 'Minimum 8 characters'
     setErrors(e)
     return Object.keys(e).length === 0
-  }, [formData])
+  }
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     if (!validate()) return
     const payload = {
       fullName: formData.fullName.trim(),
@@ -121,17 +132,7 @@ const EditEmployee = () => {
       ...(formData.password && { password: formData.password }),
     }
     updateEmployee({ id, data: payload })
-  }, [formData, validate, updateEmployee, id])
-
-  const Field = ({ label, required, error, children }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      {children}
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-    </div>
-  )
+  }
 
   const inputClass = (field) =>
     `w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors[field] ? 'border-red-400' : 'border-gray-300'}`

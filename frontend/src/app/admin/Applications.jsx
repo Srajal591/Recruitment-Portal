@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
   FileText, Eye, CheckCircle, X, Search, Download,
-  ChevronLeft, ChevronRight, Filter, Loader2,
+  ChevronLeft, ChevronRight, Loader2,
 } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card } from '../../components/ui/Card'
@@ -58,10 +58,11 @@ const Applications = () => {
   })
 
   const { mutate: updateStatus, isPending: isUpdating } = useMutation({
-    mutationFn: ({ id, status, notes }) => adminService.updateApplicationStatus(id, { status, notes }),
+    mutationFn: ({ id, status, rejectionReason }) => adminService.updateApplicationStatus(id, { status, rejectionReason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-applications'] })
       queryClient.invalidateQueries({ queryKey: ['admin-application-stats'] })
+      toast.success('Application status updated')
     },
     onError: (err) => toast.error(err.message || 'Failed to update'),
   })
@@ -97,11 +98,11 @@ const Applications = () => {
 
   const handleBulkApply = async () => {
     if (!bulkAction || selected.length === 0) return
-    const newStatus = bulkAction === 'approve' ? 'verified' : 'rejected'
+    const newStatus = bulkAction === 'approve' ? 'approved' : 'rejected'
     let done = 0
     for (const id of selected) {
       await new Promise(resolve => {
-        updateStatus({ id, status: newStatus }, { onSettled: resolve })
+        updateStatus({ id, status: newStatus, rejectionReason: '' }, { onSettled: resolve })
       })
       done++
     }
@@ -302,14 +303,14 @@ const Applications = () => {
                         {['submitted', 'under_review'].includes(app.status) && (
                           <>
                             <button
-                              onClick={() => updateStatus({ id: app._id, status: 'verified' })}
+                              onClick={() => updateStatus({ id: app._id, status: 'approved', rejectionReason: '' })}
                               className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                               title="Approve"
                             >
                               <CheckCircle className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => updateStatus({ id: app._id, status: 'rejected' })}
+                              onClick={() => updateStatus({ id: app._id, status: 'rejected', rejectionReason: '' })}
                               className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Reject"
                             >

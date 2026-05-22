@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -13,6 +13,17 @@ const DEPARTMENTS = [
   'Finance', 'Information Technology', 'Home Affairs', 'Revenue',
   'Agriculture', 'Transport', 'Law & Justice', 'Other',
 ]
+
+// Field component - moved outside to prevent recreation
+const Field = ({ label, required, error, children }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    {children}
+    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+  </div>
+)
 
 const AddEmployee = () => {
   const navigate = useNavigate()
@@ -54,12 +65,12 @@ const AddEmployee = () => {
     },
   })
 
-  const handleChange = useCallback((field, value) => {
+  const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
-  }, [errors])
+  }
 
-  const validate = useCallback(() => {
+  const validate = () => {
     const e = {}
     if (!formData.fullName.trim()) e.fullName = 'Full name is required'
     if (!formData.contactNumber) e.contactNumber = 'Contact number is required'
@@ -75,9 +86,9 @@ const AddEmployee = () => {
     if (!formData.systemRole) e.systemRole = 'System role is required'
     setErrors(e)
     return Object.keys(e).length === 0
-  }, [formData])
+  }
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     if (!validate()) return
     const payload = {
       fullName: formData.fullName.trim(),
@@ -93,17 +104,7 @@ const AddEmployee = () => {
       ...(formData.gender && { gender: formData.gender }),
     }
     createEmployee(payload)
-  }, [formData, validate, createEmployee])
-
-  const Field = ({ label, required, error, children }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      {children}
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-    </div>
-  )
+  }
 
   const inputClass = (field) =>
     `w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors[field] ? 'border-red-400' : 'border-gray-300'}`

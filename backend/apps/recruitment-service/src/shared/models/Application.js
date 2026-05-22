@@ -67,9 +67,13 @@ const documentSchema = new mongoose.Schema(
 const appliedPostSchema = new mongoose.Schema(
   {
     jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true },
+    postId: { type: mongoose.Schema.Types.ObjectId },
     postCode: String,
     title: String,
+    designation: String,
     department: String,
+    vacancies: Number,
+    preference: Number,
     fee: Number,
   },
   { _id: false },

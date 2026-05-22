@@ -57,7 +57,7 @@ const getJobs = asyncHandler(async (req, res) => {
   const jobs = await Job.find(filter)
     .populate("projectId", "name department state")
     .select(
-      "title postCode department category totalPosts salaryRange applicationDeadline examDate workLocation publishedAt applicationFee",
+      "title postCode department category totalPosts posts salaryRange applicationDeadline examDate workLocation publishedAt applicationFee",
     )
     .sort(sort)
     .skip(skip)

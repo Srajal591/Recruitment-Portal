@@ -4,6 +4,11 @@ const env = require("../config/env");
 const logger = require("../utils/logger");
 
 let io = null;
+const NORMAL_DISCONNECT_REASONS = new Set([
+  "client namespace disconnect",
+  "server namespace disconnect",
+  "transport close",
+]);
 
 /**
  * Initialize Socket.IO on the HTTP server.
@@ -66,7 +71,9 @@ const initSocket = (httpServer) => {
     }
 
     socket.on("disconnect", (reason) => {
-      logger.debug(`Socket disconnected: ${socket.id} | reason: ${reason}`);
+      const message = `Socket disconnected: ${socket.id} | reason: ${reason}`;
+      if (NORMAL_DISCONNECT_REASONS.has(reason)) logger.silly(message);
+      else logger.debug(message);
     });
 
     socket.on("error", (err) => {

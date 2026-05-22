@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import ApplicationLayout from "../../components/layouts/ApplicationLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -21,22 +21,19 @@ const getAppId = () => {
 const PostSelection = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const applicationId = location.state?.applicationId || getAppId();
+  const [selectedPosts, setSelectedPosts] = useState([]);
 
   useEffect(() => {
-    const stateId = location.state?.applicationId;
-    if (stateId) {
+    if (location.state?.applicationId) {
       const existing = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
       sessionStorage.setItem(
         APP_KEY,
-        JSON.stringify({ ...existing, applicationId: stateId }),
+        JSON.stringify({ ...existing, applicationId: location.state.applicationId }),
       );
     }
   }, [location.state]);
 
-  const applicationId = location.state?.applicationId || getAppId();
-  const [selectedPosts, setSelectedPosts] = useState([]);
-
-  // Load the application to get the job details
   const { data: appData, isLoading } = useQuery({
     queryKey: ["application-post-selection", applicationId],
     queryFn: () => candidateService.getApplication(applicationId),
@@ -47,66 +44,107 @@ const PostSelection = () => {
   const app = appData?.application || appData;
   const job = app?.jobId;
 
-  // Pre-select already saved posts
+  const availablePosts = useMemo(() => {
+    if (!job) return [];
+    if (job.posts?.length) {
+      return job.posts
+        .filter((post) => post.status !== "inactive")
+        .map((post) => ({
+          postId: post._id,
+          jobId: job._id,
+          postCode: post.postCode || "",
+          title: post.title || post.designation,
+          designation: post.designation || post.title,
+          department: post.department || job.department || "",
+          vacancies: post.vacancies || 0,
+          payLevel: post.payLevel || "",
+          location: post.location || job.workLocation || "",
+        }));
+    }
+
+    return [
+      {
+        postId: job._id,
+        jobId: job._id,
+        postCode: job.postCode || "",
+        title: job.title || "Untitled Post",
+        designation: job.title || "Untitled Post",
+        department: job.department || "",
+        vacancies: job.totalPosts || 0,
+        payLevel: "",
+        location: job.workLocation || "",
+      },
+    ];
+  }, [job]);
+
   useEffect(() => {
     if (app?.appliedPosts?.length > 0 && selectedPosts.length === 0) {
-      const saved = app.appliedPosts.map((p) => ({
-        jobId: p.jobId || job?._id,
-        postCode: p.postCode,
-        title: p.title,
-        department: p.department,
-        fee: p.fee || 0,
-      }));
-      setSelectedPosts(saved);
+      setSelectedPosts(
+        [...app.appliedPosts]
+          .sort((a, b) => (a.preference || 0) - (b.preference || 0))
+          .map((post, index) => ({
+            postId: post.postId || post.jobId,
+            jobId: post.jobId || job?._id,
+            postCode: post.postCode || "",
+            title: post.title || post.designation,
+            designation: post.designation || post.title,
+            department: post.department || "",
+            vacancies: post.vacancies || 0,
+            preference: post.preference || index + 1,
+          })),
+      );
     }
-  }, [app]);
+  }, [app, job, selectedPosts.length]);
 
-  // The job itself is the post to apply for
-  const availablePosts = job
-    ? [
-        {
-          jobId: job._id,
-          postCode: job.postCode || "",
-          title: job.title || "Untitled Post",
-          department: job.department || "",
-          vacancies: job.totalPosts,
-          fee: job.applicationFee?.general || 0,
-          category: job.category,
-        },
-      ]
-    : [];
+  const applicationFee =
+    job?.applicationFee?.general || job?.paymentConfig?.applicationFee || 0;
+
+  const isSelected = (postId) =>
+    selectedPosts.some((post) => post.postId === postId);
+
+  const normalizePreferences = (posts) =>
+    posts.map((post, index) => ({ ...post, preference: index + 1 }));
 
   const togglePost = (post) => {
-    const exists = selectedPosts.find((p) => p.jobId === post.jobId);
-    if (exists) {
-      setSelectedPosts(selectedPosts.filter((p) => p.jobId !== post.jobId));
+    if (isSelected(post.postId)) {
+      setSelectedPosts((current) =>
+        normalizePreferences(current.filter((item) => item.postId !== post.postId)),
+      );
     } else {
-      setSelectedPosts([...selectedPosts, post]);
+      setSelectedPosts((current) =>
+        normalizePreferences([...current, { ...post, preference: current.length + 1 }]),
+      );
     }
   };
 
-  const totalFee = selectedPosts.reduce((sum, p) => sum + (p.fee || 0), 0);
+  const movePost = (index, direction) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= selectedPosts.length) return;
+    setSelectedPosts((current) => {
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      next.splice(nextIndex, 0, item);
+      return normalizePreferences(next);
+    });
+  };
 
   const { mutate: savePostSelection, isPending } = useMutation({
-    mutationFn: (data) =>
-      candidateService.savePostSelection(applicationId, data),
+    mutationFn: (data) => candidateService.savePostSelection(applicationId, data),
     onSuccess: (result) => {
-      toast.success("Post selection saved");
+      toast.success("Post preferences saved");
       navigate("/application/payment", {
         state: {
           applicationId,
-          totalFee: result?.totalFee || totalFee,
+          totalFee: result?.totalFee || applicationFee,
           selectedPosts,
         },
       });
     },
     onError: (err) => {
-      // Global interceptor already toasts for 400s — only show field-level detail if available
       if (err?.errors?.length > 0) {
-        const fieldErrors = err.errors
-          .map((e) => `${e.field}: ${e.message}`)
-          .join(", ");
-        toast.error(`Validation: ${fieldErrors}`);
+        toast.error(
+          err.errors.map((e) => `${e.field}: ${e.message}`).join(", "),
+        );
       }
     },
   });
@@ -118,98 +156,106 @@ const PostSelection = () => {
       return;
     }
     if (selectedPosts.length === 0) {
-      toast.error("Please select at least one post");
+      toast.error("Please select at least one post preference");
       return;
     }
+
     savePostSelection({
-      appliedPosts: selectedPosts.map((p) => ({
-        jobId: p.jobId,
-        postCode: p.postCode || "",
-        title: p.title || "",
-        department: p.department || "",
+      appliedPosts: selectedPosts.map((post, index) => ({
+        jobId: job._id,
+        postId: post.postId,
+        postCode: post.postCode || "",
+        title: post.title || post.designation || "",
+        designation: post.designation || post.title || "",
+        department: post.department || "",
+        vacancies: post.vacancies || 0,
+        preference: index + 1,
       })),
     });
   };
 
   return (
-    <ApplicationLayout currentStep={7} title="Post Selection & Application Fee">
+    <ApplicationLayout currentStep={7} title="Post Preference Selection">
       <div className="space-y-6">
         <Card className="shadow-sm">
           <CardHeader>
             <h2 className="text-xl font-semibold text-gray-800">
-              Select Posts to Apply
+              Select Post Preferences
             </h2>
             <p className="text-gray-600">
-              Choose the posts you want to apply for. Application fee will be
-              calculated based on your selection.
+              Select the designations you want to apply for and arrange them in
+              your preference order. Preference 1 is considered first.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             {isLoading && (
               <div className="flex items-center gap-2 text-gray-500">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Loading job details...
+                Loading posts...
               </div>
             )}
+
             {!isLoading && availablePosts.length === 0 && (
               <p className="text-gray-500 text-sm">
-                No posts available for this application.
+                No posts are available for this application.
               </p>
             )}
+
             {availablePosts.map((post) => (
-              <div
-                key={post.jobId}
+              <button
+                type="button"
+                key={post.postId}
                 onClick={() => togglePost(post)}
-                className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                  selectedPosts.find((p) => p.jobId === post.jobId)
+                className={`w-full text-left border rounded-lg p-4 transition-all ${
+                  isSelected(post.postId)
                     ? "border-orange-500 bg-orange-50"
                     : "border-gray-200 hover:border-orange-300"
                 }`}
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       readOnly
-                      checked={Boolean(
-                        selectedPosts.find((p) => p.jobId === post.jobId),
-                      )}
+                      checked={isSelected(post.postId)}
                       className="mt-1 w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
                     />
                     <div>
                       <h3 className="font-medium text-gray-800">
-                        {post.title}
+                        {post.designation}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {post.department}
-                      </p>
-                      <div className="flex items-center gap-4 mt-2">
-                        {post.category && (
+                      <p className="text-sm text-gray-600 mt-1">{post.title}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {post.postCode && (
                           <Badge variant="outline" className="text-xs">
-                            {post.category}
+                            {post.postCode}
                           </Badge>
                         )}
-                        {post.vacancies && (
+                        <span className="text-xs text-gray-500">
+                          Vacancies: {post.vacancies}
+                        </span>
+                        {post.payLevel && (
                           <span className="text-xs text-gray-500">
-                            Vacancies: {post.vacancies}
+                            Pay: {post.payLevel}
                           </span>
                         )}
-                        {post.postCode && (
+                        {post.location && (
                           <span className="text-xs text-gray-500">
-                            Code: {post.postCode}
+                            {post.location}
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-orange-600">
-                      ₹{(post.fee || 0).toLocaleString("en-IN")}
+                  {isSelected(post.postId) && (
+                    <div className="rounded-full bg-orange-600 text-white text-xs font-bold px-3 py-1">
+                      Preference{" "}
+                      {selectedPosts.find((item) => item.postId === post.postId)
+                        ?.preference}
                     </div>
-                    <div className="text-xs text-gray-500">Application Fee</div>
-                  </div>
+                  )}
                 </div>
-              </div>
+              </button>
             ))}
           </CardContent>
         </Card>
@@ -218,28 +264,52 @@ const PostSelection = () => {
           <Card className="shadow-sm bg-orange-50 border-orange-200">
             <CardHeader>
               <h3 className="text-lg font-semibold text-gray-800">
-                Fee Summary
+                Preference Order
               </h3>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {selectedPosts.map((post) => (
+                {selectedPosts.map((post, index) => (
                   <div
-                    key={post.jobId}
-                    className="flex justify-between items-center"
+                    key={post.postId}
+                    className="flex items-center justify-between gap-3 bg-white border border-orange-100 rounded-lg p-3"
                   >
-                    <span className="text-sm text-gray-700">{post.title}</span>
-                    <span className="font-medium text-gray-800">
-                      ₹{(post.fee || 0).toLocaleString("en-IN")}
-                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {index + 1}. {post.designation}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {post.postCode || "No code"} • {post.vacancies} vacancies
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={index === 0}
+                        onClick={() => movePost(index, -1)}
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={index === selectedPosts.length - 1}
+                        onClick={() => movePost(index, 1)}
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 <div className="border-t border-orange-200 pt-3 flex justify-between items-center">
                   <span className="font-semibold text-gray-800">
-                    Total Amount
+                    Application Fee
                   </span>
                   <span className="font-bold text-orange-600 text-lg">
-                    ₹{totalFee.toLocaleString("en-IN")}
+                    ₹{applicationFee.toLocaleString("en-IN")}
                   </span>
                 </div>
               </div>
@@ -253,15 +323,9 @@ const PostSelection = () => {
               Important Instructions
             </h4>
             <ul className="text-sm text-blue-700 space-y-1">
-              <li>
-                • Application fee is non-refundable once payment is completed
-              </li>
-              <li>
-                • Ensure you meet the eligibility criteria for selected posts
-              </li>
-              <li>
-                • Fee payment must be completed within 24 hours of selection
-              </li>
+              <li>• Preference order cannot be changed after final payment.</li>
+              <li>• You must meet eligibility for every selected designation.</li>
+              <li>• Application fee is charged once for this recruitment.</li>
             </ul>
           </CardContent>
         </Card>

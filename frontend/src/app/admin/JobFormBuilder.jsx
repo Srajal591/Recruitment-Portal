@@ -31,8 +31,22 @@ const JobFormBuilder = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const projectId = searchParams.get('project')
+  const returnToReview = searchParams.get('returnTo') === 'review'
 
-  const [formSections, setFormSections] = useState([
+  const [formSections, setFormSections] = useState(() => {
+    const saved = JSON.parse(sessionStorage.getItem('job_draft') || '{}')
+    if (saved.formSections?.length) {
+      return saved.formSections.map((section, sectionIndex) => ({
+        id: sectionIndex + 1,
+        title: section.title,
+        required: section.required,
+        fields: (section.fields || []).map((field, fieldIndex) => ({
+          id: Date.now() + sectionIndex * 100 + fieldIndex,
+          ...field,
+        })),
+      }))
+    }
+    return [
     {
       id: 1,
       title: 'Personal Information',
@@ -56,7 +70,8 @@ const JobFormBuilder = () => {
         { id: 9, type: 'text', label: 'PIN Code', required: true, placeholder: 'Enter PIN code' }
       ]
     }
-  ])
+    ]
+  })
 
   const [selectedSection, setSelectedSection] = useState(1)
   const [showFieldModal, setShowFieldModal] = useState(false)
@@ -173,7 +188,9 @@ const JobFormBuilder = () => {
         fields: section.fields.map(({ id: _id, ...field }) => field),
       })),
     }))
-    navigate(`/admin/jobs/create/documents${projectId ? `?project=${projectId}` : ''}`)
+    navigate(returnToReview
+      ? `/admin/jobs/create/review${projectId ? `?project=${projectId}` : ''}`
+      : `/admin/jobs/create/documents${projectId ? `?project=${projectId}` : ''}`)
   }
 
   const handleBack = () => {
@@ -574,7 +591,7 @@ const JobFormBuilder = () => {
             onClick={handleNext}
             className="bg-orange-600 hover:bg-orange-700 text-white px-8"
           >
-            Next: Documents
+            {returnToReview ? 'Save & Return to Review' : 'Next: Documents'}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

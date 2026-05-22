@@ -10,19 +10,23 @@ const JobPayment = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const projectId = searchParams.get('project')
+  const returnToReview = searchParams.get('returnTo') === 'review'
 
-  const [paymentConfig, setPaymentConfig] = useState({
-    applicationFee: '',
-    examFee: '',
-    processingFee: '',
+  const [paymentConfig, setPaymentConfig] = useState(() => {
+    const saved = JSON.parse(sessionStorage.getItem('job_draft') || '{}')
+    const methods = saved.paymentConfig?.paymentMethods || ['razorpay']
+    return {
+    applicationFee: saved.paymentConfig?.applicationFee || '',
+    examFee: saved.paymentConfig?.examFee || '',
+    processingFee: saved.paymentConfig?.processingFee || '',
     paymentMethods: {
-      razorpay: true,
-      payu: false,
-      ccavenue: false
+      razorpay: methods.includes('razorpay'),
+      payu: methods.includes('payu'),
+      ccavenue: methods.includes('ccavenue')
     },
-    refundPolicy: '',
+    refundPolicy: saved.paymentConfig?.refundPolicy || '',
     paymentDeadline: ''
-  })
+  }})
 
   const handleInputChange = (field, value) => {
     setPaymentConfig(prev => ({
@@ -222,7 +226,7 @@ const JobPayment = () => {
               onClick={handleNext}
               className="bg-orange-600 hover:bg-orange-700 text-white px-8"
             >
-              Next: Review
+              {returnToReview ? 'Save & Return to Review' : 'Next: Review'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

@@ -20,6 +20,18 @@ const {
   saveAuditLog,
 } = require("../../shared/middlewares/auditLog");
 
+const normalizePosts = (posts = []) =>
+  posts
+    .filter((post) => post && post.title && post.designation)
+    .map((post) => ({
+      ...post,
+      vacancies: Number(post.vacancies) || 0,
+      status: post.status || "active",
+    }));
+
+const getPostVacancyTotal = (posts = []) =>
+  posts.reduce((sum, post) => sum + (Number(post.vacancies) || 0), 0);
+
 /**
  * @swagger
  * /api/admin/jobs:
@@ -314,6 +326,27 @@ const updateJob = asyncHandler(async (req, res) => {
     }
   }
 
+  if (Array.isArray(req.body.posts)) {
+    const posts = normalizePosts(req.body.posts);
+    if (posts.length === 0) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "At least one post/designation is required",
+      );
+    }
+
+    const totalPostVacancies = getPostVacancyTotal(posts);
+    if (totalPostVacancies < 1) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "Total post vacancies must be at least 1",
+      );
+    }
+
+    req.body.posts = posts;
+    req.body.totalPosts = totalPostVacancies;
+  }
+
   // Update job with provided fields
   Object.keys(req.body).forEach((key) => {
     if (req.body[key] !== undefined) {
@@ -377,6 +410,18 @@ const publishJob = asyncHandler(async (req, res) => {
       StatusCodes.BAD_REQUEST,
       `Missing required fields: ${missingFields.join(", ")}`,
     );
+  }
+
+  if (!job.posts?.length) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "At least one post/designation must be added before publishing",
+    );
+  }
+
+  const totalPostVacancies = getPostVacancyTotal(job.posts);
+  if (totalPostVacancies !== job.totalPosts) {
+    job.totalPosts = totalPostVacancies;
   }
 
   job.status = "active";

@@ -17,8 +17,21 @@ const JobDocuments = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const projectId = searchParams.get('project')
+  const returnToReview = searchParams.get('returnTo') === 'review'
   
-  const [documents, setDocuments] = useState([
+  const [documents, setDocuments] = useState(() => {
+    const saved = JSON.parse(sessionStorage.getItem('job_draft') || '{}')
+    if (saved.documentRequirements?.length) {
+      return saved.documentRequirements.map((doc, index) => ({
+        id: index + 1,
+        name: doc.name,
+        required: doc.required,
+        formats: doc.formats || [],
+        maxSize: doc.maxSizeKB ? `${Math.round(doc.maxSizeKB / 1024)}MB` : '5MB',
+        description: doc.description || '',
+      }))
+    }
+    return [
     {
       id: 1,
       name: 'Resume/CV',
@@ -51,7 +64,8 @@ const JobDocuments = () => {
       maxSize: '2MB',
       description: 'Upload government issued identity proof (Aadhar, PAN, etc.)'
     }
-  ])
+    ]
+  })
 
   const [newDocument, setNewDocument] = useState({
     name: '',
@@ -96,7 +110,9 @@ const JobDocuments = () => {
         maxSizeKB: doc.maxSize ? parseInt(doc.maxSize) * 1024 : undefined,
       })),
     }))
-    navigate(`/admin/jobs/create/payment${projectId ? `?project=${projectId}` : ''}`)
+    navigate(returnToReview
+      ? `/admin/jobs/create/review${projectId ? `?project=${projectId}` : ''}`
+      : `/admin/jobs/create/payment${projectId ? `?project=${projectId}` : ''}`)
   }
 
   const handleBack = () => {
@@ -281,7 +297,7 @@ const JobDocuments = () => {
               onClick={handleNext}
               className="bg-orange-600 hover:bg-orange-700 text-white px-8"
             >
-              Next: Payment
+              {returnToReview ? 'Save & Return to Review' : 'Next: Payment'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

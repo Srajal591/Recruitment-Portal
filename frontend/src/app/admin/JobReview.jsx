@@ -9,7 +9,7 @@ import Badge from '../../components/ui/Badge'
 import JobStepProgress from './JobStepProgress'
 import {
   ArrowLeft, CheckCircle, FileText, GraduationCap,
-  CreditCard, Calendar, Edit, Loader2, AlertTriangle
+  CreditCard, Calendar, Edit, Loader2, AlertTriangle, Users
 } from 'lucide-react'
 import { adminService } from '../../services/admin.service'
 
@@ -56,13 +56,14 @@ const JobReview = () => {
     catch { return {} }
   })()
 
-  const missingRequired = !draft.title || !draft.postCode || !draft.department || !draft.projectId || !/^[a-f\d]{24}$/i.test(draft.projectId || '')
+  const missingRequired = !draft.title || !draft.postCode || !draft.department || !draft.projectId || !/^[a-f\d]{24}$/i.test(draft.projectId || '') || !draft.posts?.length
 
   const missingFields = [
     (!draft.projectId || !/^[a-f\d]{24}$/i.test(draft.projectId)) && 'Project — go back to Jobs, select a project, then click Create Job',
     !draft.title && 'Job Title (Step 1)',
     !draft.postCode && 'Post Code (Step 1)',
     !draft.department && 'Department (Step 1)',
+    !draft.posts?.length && 'Post Types / Designations (Step 1)',
   ].filter(Boolean)
 
   // Step 1: Create job as draft
@@ -131,8 +132,8 @@ const JobReview = () => {
       toast.error('Application deadline is required to publish')
       return
     }
-    if (!draft.totalPosts || draft.totalPosts < 1) {
-      toast.error('Total posts is required to publish')
+    if (!draft.posts?.length || !draft.totalPosts || draft.totalPosts < 1) {
+      toast.error('Post types and vacancies are required to publish')
       return
     }
     try {
@@ -169,7 +170,7 @@ const JobReview = () => {
     </div>
   )
 
-  const editStep = (step) => navigate(`/admin/jobs/create/${step}${projectId ? `?project=${projectId}` : ''}`)
+  const editStep = (step) => navigate(`/admin/jobs/create/${step}?${projectId ? `project=${projectId}&` : ''}returnTo=review`)
 
   return (
     <AdminLayout title="Create Job - Review">
@@ -226,6 +227,42 @@ const JobReview = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {draft.posts?.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-5 h-5 text-orange-600" />
+                        <h3 className="font-semibold text-gray-800">Post Types & Preferences</h3>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => editStep('basic-info')} className="text-orange-600 hover:bg-orange-50">
+                        <Edit className="w-3.5 h-3.5 mr-1" />Edit
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {draft.posts.map((post, index) => (
+                        <div key={index} className="p-3 rounded-lg border border-gray-200">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="font-medium text-gray-900">{post.designation || post.title}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{post.postCode || 'No code'} • {post.department || draft.department}</p>
+                            </div>
+                            <Badge className="bg-blue-100 text-blue-800">{post.vacancies} vacancies</Badge>
+                          </div>
+                          {(post.payLevel || post.location) && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              {[post.payLevel, post.location].filter(Boolean).join(' • ')}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Eligibility */}
               <Card>

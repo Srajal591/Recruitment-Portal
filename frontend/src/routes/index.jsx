@@ -87,6 +87,8 @@ const SupportTicketDetails = lazy(
 );
 const Employees = lazy(() => import("../app/admin/Employees"));
 const Roles = lazy(() => import("../app/admin/Roles"));
+const SettingsProfile = lazy(() => import("../app/admin/SettingsProfile"));
+const AdminNotifications = lazy(() => import("../app/admin/AdminNotifications"));
 
 // Candidate Pages (Dashboard only - no sidebar)
 const CandidateDashboard = lazy(() => import("../app/candidate/Dashboard"));
@@ -452,6 +454,22 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute role="admin">
               <SupportTicketDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings-profile"
+          element={
+            <ProtectedRoute role="admin">
+              <SettingsProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notifications"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminNotifications />
             </ProtectedRoute>
           }
         />

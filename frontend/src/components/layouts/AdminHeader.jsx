@@ -60,10 +60,14 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
           </button>
 
           {/* Notifications */}
-          <button className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+          <Link
+            to="/admin/notifications"
+            className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+            title="Notifications"
+          >
             <Bell className="w-5 h-5" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
-          </button>
+          </Link>
 
           {/* Help */}
           <button className="hidden sm:flex p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
@@ -71,9 +75,13 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
           </button>
 
           {/* Settings */}
-          <button className="hidden sm:flex p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+          <Link
+            to="/admin/settings-profile"
+            className="hidden sm:flex p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+            title="Settings & Profile"
+          >
             <Settings className="w-5 h-5" />
-          </button>
+          </Link>
 
           {/* User profile */}
           <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-gray-200 ml-1">
@@ -94,11 +102,11 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
                 </div>
                 <div className="p-2">
                   <Link
-                    to="/admin/profile"
+                    to="/admin/settings-profile"
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     <Settings className="w-4 h-4 text-gray-400" />
-                    <span>Profile Settings</span>
+                    <span>Settings & Profile</span>
                   </Link>
                   <button
                     type="button"

@@ -115,7 +115,11 @@ const Education = () => {
     mutationFn: (data) => candidateService.saveEducation(applicationId, data),
     onSuccess: () => {
       toast.success("Education details saved");
-      navigate("/application/additional-info", { state: { applicationId } });
+      if (location.state?.returnToReview) {
+        navigate("/application/review", { state: { applicationId } });
+      } else {
+        navigate("/application/additional-info", { state: { applicationId } });
+      }
     },
     onError: (err) => toast.error(err.message || "Failed to save"),
   });

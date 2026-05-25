@@ -64,13 +64,19 @@ const decrypt = (encryptedText) => {
 };
 
 /**
- * Calculate application fee based on candidate category
+ * Calculate application fee based on candidate category.
+ * feeConfig: { general, scSt, obc, ews, pwd }
+ * Real-world: SC/ST/PwD get reduced/free, OBC/EWS pay general or reduced, General pays full.
  */
 const calculateFee = (feeConfig, category) => {
-  const cat = category?.toLowerCase();
-  if (cat === "sc" || cat === "st") return feeConfig.scSt || 0;
-  if (cat === "pwd") return feeConfig.pwd || 0;
-  return feeConfig.general || 0;
+  if (!feeConfig) return 0;
+  const cat = (category || "").toLowerCase();
+  if (cat === "sc" || cat === "st")
+    return feeConfig.scSt ?? feeConfig.scst ?? 0;
+  if (cat === "pwd") return feeConfig.pwd ?? 0;
+  if (cat === "obc") return feeConfig.obc ?? feeConfig.general ?? 0;
+  if (cat === "ews") return feeConfig.ews ?? feeConfig.general ?? 0;
+  return feeConfig.general ?? 0;
 };
 
 /**

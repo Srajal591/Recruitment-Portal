@@ -137,7 +137,7 @@ const Review = () => {
                     className="text-orange-600 border-orange-200"
                     onClick={() =>
                       navigate("/application/personal-details", {
-                        state: { applicationId },
+                        state: { applicationId, returnToReview: true },
                       })
                     }
                   >
@@ -193,7 +193,7 @@ const Review = () => {
                     className="text-orange-600 border-orange-200"
                     onClick={() =>
                       navigate("/application/education", {
-                        state: { applicationId },
+                        state: { applicationId, returnToReview: true },
                       })
                     }
                   >
@@ -263,7 +263,7 @@ const Review = () => {
                     className="text-orange-600 border-orange-200"
                     onClick={() =>
                       navigate("/application/additional-info", {
-                        state: { applicationId },
+                        state: { applicationId, returnToReview: true },
                       })
                     }
                   >
@@ -310,7 +310,7 @@ const Review = () => {
                     className="text-orange-600 border-orange-200"
                     onClick={() =>
                       navigate("/application/address", {
-                        state: { applicationId },
+                        state: { applicationId, returnToReview: true },
                       })
                     }
                   >
@@ -369,7 +369,7 @@ const Review = () => {
                     className="text-orange-600 border-orange-200"
                     onClick={() =>
                       navigate("/application/documents", {
-                        state: { applicationId },
+                        state: { applicationId, returnToReview: true },
                       })
                     }
                   >

@@ -13,12 +13,8 @@ const {
   emitBroadcast,
   SOCKET_EVENTS,
 } = require("../../shared/socket/index");
-const {
-  getPaginationParams,
-} = require("../../shared/utils/helpers");
-const {
-  saveAuditLog,
-} = require("../../shared/middlewares/auditLog");
+const { getPaginationParams } = require("../../shared/utils/helpers");
+const { saveAuditLog } = require("../../shared/middlewares/auditLog");
 
 const normalizePosts = (posts = []) =>
   posts
@@ -347,10 +343,24 @@ const updateJob = asyncHandler(async (req, res) => {
     req.body.totalPosts = totalPostVacancies;
   }
 
-  // Update job with provided fields
+  // Update job with provided fields — deep merge nested objects
   Object.keys(req.body).forEach((key) => {
     if (req.body[key] !== undefined) {
-      job[key] = req.body[key];
+      // For nested objects (applicationFee, paymentConfig, etc.), merge instead of replace
+      if (
+        key !== "posts" &&
+        typeof req.body[key] === "object" &&
+        !Array.isArray(req.body[key]) &&
+        job[key] &&
+        typeof job[key] === "object"
+      ) {
+        Object.keys(req.body[key]).forEach((subKey) => {
+          job[key][subKey] = req.body[key][subKey];
+        });
+        job.markModified(key);
+      } else {
+        job[key] = req.body[key];
+      }
     }
   });
 

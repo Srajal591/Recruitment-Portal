@@ -261,7 +261,11 @@ const Address = () => {
     mutationFn: (data) => candidateService.saveAddress(applicationId, data),
     onSuccess: () => {
       toast.success("Address saved");
-      navigate("/application/documents", { state: { applicationId } });
+      if (location.state?.returnToReview) {
+        navigate("/application/review", { state: { applicationId } });
+      } else {
+        navigate("/application/documents", { state: { applicationId } });
+      }
     },
     onError: (err) => toast.error(err.message || "Failed to save"),
   });

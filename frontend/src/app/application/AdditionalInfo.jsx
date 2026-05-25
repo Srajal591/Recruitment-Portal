@@ -90,7 +90,11 @@ const AdditionalInfo = () => {
       candidateService.saveAdditionalInfo(applicationId, data),
     onSuccess: () => {
       toast.success("Additional info saved");
-      navigate("/application/address", { state: { applicationId } });
+      if (location.state?.returnToReview) {
+        navigate("/application/review", { state: { applicationId } });
+      } else {
+        navigate("/application/address", { state: { applicationId } });
+      }
     },
     onError: (err) => toast.error(err.message || "Failed to save"),
   });

@@ -541,7 +541,7 @@ const updatePostSelection = asyncHandler(async (req, res) => {
 
   const totalFee = calculateFee(
     app.jobId.applicationFee || {},
-    candidate?.category,
+    app.personalDetails?.category || candidate?.category,
   );
   postsWithFee.forEach((post, index) => {
     post.preference = index + 1;

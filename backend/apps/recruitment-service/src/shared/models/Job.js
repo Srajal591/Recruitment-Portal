@@ -13,7 +13,7 @@ const salaryRangeSchema = new mongoose.Schema(
 );
 
 const applicationFeeSchema = new mongoose.Schema(
-  { general: Number, scSt: Number, pwd: Number },
+  { general: Number, obc: Number, scSt: Number, ews: Number, pwd: Number },
   { _id: false },
 );
 

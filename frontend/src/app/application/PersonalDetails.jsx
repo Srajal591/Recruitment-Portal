@@ -92,7 +92,12 @@ const PersonalDetails = () => {
       candidateService.savePersonalDetails(applicationId, data),
     onSuccess: () => {
       toast.success("Personal details saved");
-      navigate("/application/education", { state: { applicationId } });
+      // If editing from Review, go back to Review
+      if (location.state?.returnToReview) {
+        navigate("/application/review", { state: { applicationId } });
+      } else {
+        navigate("/application/education", { state: { applicationId } });
+      }
     },
     onError: (err) => toast.error(err.message || "Failed to save"),
   });

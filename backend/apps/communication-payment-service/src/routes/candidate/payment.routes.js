@@ -9,11 +9,26 @@ const {
   verifyPaymentSchema,
 } = require("../../shared/validations/payment.validation");
 
-// ── Webhook (no auth — raw body needed for signature verification) ──
+// ── Webhooks (no auth — raw body needed for signature verification) ──
 router.post(
   "/razorpay/webhook",
   express.raw({ type: "application/json" }),
   paymentController.razorpayWebhook,
+);
+router.post(
+  "/cashfree/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.cashfreeWebhook,
+);
+router.post(
+  "/paytm/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.paytmWebhook,
+);
+router.post(
+  "/phonepe/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.phonepeWebhook,
 );
 
 // ── Authenticated routes ──────────────────────────────────────

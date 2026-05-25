@@ -3,58 +3,100 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
-  ArrowLeft,
-  FileText,
-  Loader2,
-  User,
-  GraduationCap,
-  MapPin,
-  Upload,
-  CreditCard,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  Download,
-  MessageSquare,
-  AlertCircle,
+  ArrowLeft, FileText, Loader2, User, GraduationCap, MapPin,
+  Upload, CreditCard, CheckCircle, XCircle, Clock, Eye,
+  Download, AlertCircle, Info, ChevronRight,
 } from "lucide-react";
 import AdminLayout from "../../components/layouts/AdminLayout";
 import Button from "../../components/ui/Button";
-import { Card, CardContent, CardHeader } from "../../components/ui/Card";
-import Badge from "../../components/ui/Badge";
 import { adminService } from "../../services/admin.service";
 
-const STATUS_COLORS = {
-  draft: "bg-gray-100 text-gray-800",
-  submitted: "bg-blue-100 text-blue-800",
-  under_review: "bg-yellow-100 text-yellow-800",
-  verified: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
+const STATUS_CFG = {
+  draft:        { label: "Draft",        cls: "bg-gray-100 text-gray-700",    dot: "bg-gray-400"    },
+  submitted:    { label: "Submitted",    cls: "bg-blue-100 text-blue-800",    dot: "bg-blue-500"    },
+  under_review: { label: "Under Review", cls: "bg-amber-100 text-amber-800",  dot: "bg-amber-500"   },
+  verified:     { label: "Verified",     cls: "bg-emerald-100 text-emerald-800", dot: "bg-emerald-500" },
+  approved:     { label: "Approved",     cls: "bg-emerald-100 text-emerald-800", dot: "bg-emerald-500" },
+  rejected:     { label: "Rejected",     cls: "bg-red-100 text-red-800",      dot: "bg-red-500"     },
 };
 
-const PAYMENT_COLORS = {
-  paid: "bg-green-100 text-green-800",
-  success: "bg-green-100 text-green-800",
-  pending: "bg-yellow-100 text-yellow-800",
-  failed: "bg-red-100 text-red-800",
-  initiated: "bg-blue-100 text-blue-800",
+const PAY_CFG = {
+  paid:    "bg-emerald-100 text-emerald-800",
+  pending: "bg-amber-100 text-amber-800",
+  failed:  "bg-red-100 text-red-800",
 };
 
 const TABS = [
-  { id: "personal", label: "Personal Details", icon: User },
-  { id: "education", label: "Education", icon: GraduationCap },
-  { id: "address", label: "Address", icon: MapPin },
-  { id: "documents", label: "Documents", icon: Upload },
-  { id: "payment", label: "Payment", icon: CreditCard },
+  { id: "personal",   label: "Personal",   icon: User          },
+  { id: "education",  label: "Education",  icon: GraduationCap },
+  { id: "additional", label: "Additional", icon: Info          },
+  { id: "address",    label: "Address",    icon: MapPin        },
+  { id: "documents",  label: "Documents",  icon: Upload        },
+  { id: "payment",    label: "Payment",    icon: CreditCard    },
 ];
 
-const InfoRow = ({ label, value }) => (
-  <div className="py-2 border-b border-gray-100 last:border-0">
-    <span className="text-sm text-gray-500 block">{label}</span>
-    <span className="text-sm font-medium text-gray-900">{value || "—"}</span>
-  </div>
+const Row = ({ label, value }) =>
+  value !== undefined && value !== null && value !== "" ? (
+    <div className="py-2.5 border-b border-gray-100 last:border-0">
+      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+      <p className="text-sm font-medium text-gray-900">
+        {typeof value === "boolean" ? (value ? "Yes" : "No") : value}
+      </p>
+    </div>
+  ) : null;
+
+const Grid = ({ children }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">{children}</div>
 );
+
+const EduCard = ({ title, data }) => {
+  if (!data || Object.keys(data).length === 0) return null;
+  return (
+    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/60">
+      <h4 className="font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />
+        {title}
+      </h4>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {[
+          ["Board/University", data.board || data.university],
+          ["School/College",   data.school || data.college],
+          ["Year",             data.year],
+          ["Percentage",       data.percentage ? `${data.percentage}%` : null],
+          ["Stream/Degree",    data.stream || data.degree],
+          ["Roll Number",      data.rollNumber],
+        ].map(([l, v]) => v ? (
+          <div key={l}>
+            <p className="text-xs text-gray-500">{l}</p>
+            <p className="text-sm font-medium text-gray-800">{v}</p>
+          </div>
+        ) : null)}
+      </div>
+    </div>
+  );
+};
+
+const AddrCard = ({ title, data }) => {
+  if (!data || Object.keys(data).length === 0) return null;
+  return (
+    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/60">
+      <h4 className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-3">{title}</h4>
+      {[
+        ["Address Line 1", data.addressLine1],
+        ["Address Line 2", data.addressLine2],
+        ["District",       data.district],
+        ["State",          data.state],
+        ["Police Station", data.policeStation],
+        ["Pincode",        data.pincode],
+      ].map(([l, v]) => v ? (
+        <div key={l} className="py-1.5 border-b border-gray-100 last:border-0">
+          <p className="text-xs text-gray-500">{l}</p>
+          <p className="text-sm font-medium text-gray-800">{v}</p>
+        </div>
+      ) : null)}
+    </div>
+  );
+};
 
 const ApplicationDetails = () => {
   const { id } = useParams();
@@ -76,22 +118,20 @@ const ApplicationDetails = () => {
     mutationFn: ({ status, notes }) =>
       adminService.updateApplicationStatus(id, { status, notes }),
     onSuccess: (_, vars) => {
-      toast.success(
-        `Application ${vars.status === "verified" ? "approved" : vars.status === "rejected" ? "rejected" : "updated"}`,
-      );
+      toast.success(vars.status === "approved" ? "Application approved" : vars.status === "rejected" ? "Application rejected" : "Status updated");
       queryClient.invalidateQueries({ queryKey: ["admin-application", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-applications"] });
       setShowRejectModal(false);
       setReviewNote("");
     },
-    onError: (err) => toast.error(err.message || "Failed to update status"),
+    onError: (err) => toast.error(err.message || "Failed to update"),
   });
 
   if (isLoading)
     return (
       <AdminLayout title="Application Details">
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
         </div>
       </AdminLayout>
     );
@@ -99,625 +139,416 @@ const ApplicationDetails = () => {
   if (!application)
     return (
       <AdminLayout title="Application Details">
-        <div className="p-6">
-          <p className="text-gray-600">Application not found.</p>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/admin/applications")}
-            className="mt-4"
-          >
-            Back to Applications
+        <div className="p-6 flex flex-col items-center justify-center h-96 gap-4">
+          <FileText className="w-12 h-12 text-gray-300" />
+          <p className="text-gray-500">Application not found</p>
+          <Button variant="outline" onClick={() => navigate("/admin/applications")}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
         </div>
       </AdminLayout>
     );
 
-  const personal = application.personalDetails || {};
-  const education = application.educationDetails || [];
-  const address = application.addressDetails || application.address || {};
-  const documents = application.documents || {};
-  const payment = application.paymentDetails || {};
-  const canAct = ["submitted", "under_review"].includes(application.status);
+  // exact model fields
+  const personal   = application.personalDetails || {};
+  const education  = application.education || {};
+  const additional = application.additionalInfo || {};
+  const address    = application.address || {};
+  const documents  = Array.isArray(application.documents) ? application.documents : [];
+  const canAct     = ["submitted", "under_review"].includes(application.status);
+
+  const sCfg    = STATUS_CFG[application.status] || STATUS_CFG.draft;
+  const payCfg  = PAY_CFG[application.paymentStatus] || "bg-gray-100 text-gray-600";
+  const initials = (application.candidateId?.fullName || "?")
+    .split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
 
   return (
     <AdminLayout title="Application Details">
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="p-6 space-y-5 max-w-7xl mx-auto">
+
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <button
               onClick={() => navigate("/admin/applications")}
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-            </Button>
+            </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Application Details
-              </h1>
-              <p className="text-gray-500 text-sm">
-                ID:{" "}
-                <span className="font-mono text-orange-600">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900">Application Details</h1>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <span className="font-mono text-sm font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">
                   {application.applicationId || id}
                 </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {application.submittedAt
+                  ? `Submitted on ${new Date(application.submittedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}`
+                  : "Not yet submitted"}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge
-              className={
-                STATUS_COLORS[application.status] || "bg-gray-100 text-gray-800"
-              }
-            >
-              {application.status?.replace("_", " ").toUpperCase()}
-            </Badge>
-            <Badge
-              className={
-                PAYMENT_COLORS[application.paymentStatus] ||
-                "bg-gray-100 text-gray-800"
-              }
-            >
-              {application.paymentStatus?.toUpperCase() || "UNPAID"}
-            </Badge>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${sCfg.cls}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${sCfg.dot}`} />
+              {sCfg.label}
+            </span>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${payCfg}`}>
+              {application.paymentStatus || "Unpaid"}
+            </span>
           </div>
         </div>
 
-        {/* Summary Card */}
-        <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-medium mb-1">
-                  Candidate
-                </p>
-                <p className="font-semibold text-gray-900">
-                  {application.candidateId?.fullName || "—"}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {application.candidateId?.email || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-medium mb-1">
-                  Job Applied
-                </p>
-                <p className="font-semibold text-gray-900">
-                  {application.jobId?.title || "—"}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {application.jobId?.department || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-medium mb-1">
-                  Submitted On
-                </p>
-                <p className="font-semibold text-gray-900">
-                  {application.submittedAt
-                    ? new Date(application.submittedAt).toLocaleDateString(
-                        "en-IN",
-                        { day: "2-digit", month: "short", year: "numeric" },
-                      )
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-medium mb-1">
-                  Category
-                </p>
-                <p className="font-semibold text-gray-900">
-                  {personal.category || application.category || "—"}
-                </p>
-              </div>
+        {/* Summary Hero */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-5 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+              {initials}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Action Panel */}
-        {canAct && (
-          <Card className="border-l-4 border-l-orange-500">
-            <CardContent className="p-6">
-              <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-orange-600" />
-                Review Actions
-              </h3>
-              <div className="flex flex-wrap gap-3 items-start">
-                <div className="flex-1 min-w-[200px]">
-                  <textarea
-                    rows="2"
-                    placeholder="Add reviewer notes (optional)..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    value={reviewNote}
-                    onChange={(e) => setReviewNote(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    onClick={() =>
-                      updateStatus({
-                        status: "under_review",
-                        notes: reviewNote,
-                      })
-                    }
-                    disabled={
-                      isPending || application.status === "under_review"
-                    }
-                    variant="outline"
-                    className="text-yellow-700 border-yellow-300 hover:bg-yellow-50"
-                  >
-                    <Clock className="w-4 h-4 mr-2" />
-                    Mark Under Review
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      updateStatus({ status: "approved", notes: reviewNote })
-                    }
-                    disabled={isPending}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                    )}
-                    Approve
-                  </Button>
-                  <Button
-                    onClick={() => setShowRejectModal(true)}
-                    disabled={isPending}
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Reject
-                  </Button>
-                </div>
+            <div>
+              <p className="text-white font-bold text-lg leading-tight">
+                {application.candidateId?.fullName || <span className="opacity-60 italic font-normal text-base">Name not provided</span>}
+              </p>
+              <p className="text-orange-100 text-sm">{application.candidateId?.email || "—"}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
+            {[
+              { label: "Job Applied",  val: application.jobId?.title,   sub: application.jobId?.department },
+              { label: "Category",     val: personal.category || "—",   sub: null },
+              { label: "Mobile",       val: application.candidateId?.registeredMobile || personal.registeredMobile || "—", sub: null },
+              { label: "Fee",          val: application.totalFee ? `₹${Number(application.totalFee).toLocaleString("en-IN")}` : "—", sub: application.transactionId },
+            ].map(({ label, val, sub }) => (
+              <div key={label} className="px-5 py-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">{label}</p>
+                <p className="font-semibold text-gray-900 text-sm">{val || "—"}</p>
+                {sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{sub}</p>}
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Rejection banner */}
+        {application.rejectionReason && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-start gap-3">
+            <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-800">Rejection Reason</p>
+              <p className="text-sm text-red-700 mt-0.5">{application.rejectionReason}</p>
+            </div>
+          </div>
         )}
 
-        {/* Verification Notes (if rejected) */}
-        {application.verificationNotes && (
-          <Card className="border-l-4 border-l-red-400 bg-red-50">
-            <CardContent className="p-4">
-              <p className="text-sm font-medium text-red-800 mb-1">
-                Reviewer Notes:
-              </p>
-              <p className="text-sm text-red-700">
-                {application.verificationNotes}
-              </p>
-            </CardContent>
-          </Card>
+        {/* Review Actions */}
+        {canAct && (
+          <div className="bg-white rounded-2xl border-l-4 border-l-orange-500 border border-orange-200 shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertCircle className="w-5 h-5 text-orange-600" />
+              <h3 className="font-semibold text-gray-900">Review Actions</h3>
+            </div>
+            <div className="flex flex-wrap gap-3 items-start">
+              <textarea
+                rows="2"
+                placeholder="Add reviewer notes (optional)..."
+                className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                value={reviewNote}
+                onChange={(e) => setReviewNote(e.target.value)}
+              />
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  onClick={() => updateStatus({ status: "under_review", notes: reviewNote })}
+                  disabled={isPending || application.status === "under_review"}
+                  variant="outline"
+                  className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                >
+                  <Clock className="w-4 h-4 mr-1.5" /> Under Review
+                </Button>
+                <Button
+                  onClick={() => updateStatus({ status: "approved", notes: reviewNote })}
+                  disabled={isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1.5" />Approve</>}
+                </Button>
+                <Button
+                  onClick={() => setShowRejectModal(true)}
+                  disabled={isPending}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <XCircle className="w-4 h-4 mr-1.5" /> Reject
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Tabs + Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Tab Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+          {/* Sidebar */}
           <div className="lg:col-span-1">
-            <Card>
-              <CardContent className="p-2">
-                {TABS.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                        activeTab === tab.id
-                          ? "bg-orange-600 text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </CardContent>
-            </Card>
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-2 sticky top-24">
+              {TABS.map(({ id: tid, label, icon: Icon }) => (
+                <button
+                  key={tid}
+                  onClick={() => setActiveTab(tid)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all mb-0.5 last:mb-0 ${
+                    activeTab === tid
+                      ? "bg-orange-600 text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Tab Content */}
-          <div className="lg:col-span-3">
-            <Card>
-              <CardContent className="p-6">
-                {/* Personal Details */}
-                {activeTab === "personal" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <User className="w-5 h-5 text-orange-600" />
-                      Personal Information
-                    </h3>
-                    {Object.keys(personal).length === 0 ? (
-                      <p className="text-gray-500 text-sm">
-                        No personal details submitted yet.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                        {[
-                          ["Full Name", personal.fullName],
-                          ["Father's Name", personal.fatherName],
-                          ["Mother's Name", personal.motherName],
-                          [
-                            "Date of Birth",
-                            personal.dateOfBirth
-                              ? new Date(
-                                  personal.dateOfBirth,
-                                ).toLocaleDateString("en-IN")
-                              : null,
-                          ],
-                          ["Gender", personal.gender],
-                          ["Category", personal.category],
-                          ["Nationality", personal.nationality],
-                          ["Religion", personal.religion],
-                          ["Marital Status", personal.maritalStatus],
-                          [
-                            "Contact Number",
-                            personal.contactNumber || personal.phone,
-                          ],
-                          ["Alternate Phone", personal.alternatePhone],
-                          ["Email", personal.email],
-                          ["Aadhar Number", personal.aadharNumber],
-                          ["PAN Number", personal.panNumber],
-                          ["Disability", personal.disability ? "Yes" : "No"],
-                          [
-                            "Ex-Serviceman",
-                            personal.exServiceman ? "Yes" : "No",
-                          ],
-                        ].map(
-                          ([label, value]) =>
-                            value !== undefined &&
-                            value !== null && (
-                              <InfoRow
-                                key={label}
-                                label={label}
-                                value={value}
-                              />
-                            ),
-                        )}
-                      </div>
+          {/* Content Panel */}
+          <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 min-h-[420px]">
+
+            {/* Personal */}
+            {activeTab === "personal" && (
+              <div>
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <User className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Personal Information</h3>
+                </div>
+                {Object.keys(personal).length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-10">No personal details submitted yet.</p>
+                ) : (
+                  <Grid>
+                    <Row label="Full Name"       value={personal.fullName} />
+                    <Row label="Father's Name"   value={personal.fatherName} />
+                    <Row label="Mother's Name"   value={personal.motherName} />
+                    <Row label="Date of Birth"   value={personal.dateOfBirth ? new Date(personal.dateOfBirth).toLocaleDateString("en-IN") : null} />
+                    <Row label="Gender"          value={personal.gender} />
+                    <Row label="Category"        value={personal.category} />
+                    <Row label="Marital Status"  value={personal.maritalStatus} />
+                    <Row label="Religion"        value={personal.religion} />
+                    <Row label="Mobile"          value={personal.registeredMobile} />
+                    <Row label="Identification Mark" value={personal.identificationMark} />
+                    <Row label="Domicile of Bihar"   value={personal.isDomicileOfBihar} />
+                  </Grid>
+                )}
+              </div>
+            )}
+
+            {/* Education */}
+            {activeTab === "education" && (
+              <div>
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <GraduationCap className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Educational Qualifications</h3>
+                </div>
+                {Object.keys(education).length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-10">No education details submitted yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    <EduCard title="10th (Matriculation)" data={education.tenth} />
+                    <EduCard title="12th (Intermediate)"  data={education.twelfth} />
+                    <EduCard title="Graduation"           data={education.graduation} />
+                    {education.hasPostGraduation !== undefined && (
+                      <Row label="Has Post Graduation" value={education.hasPostGraduation} />
                     )}
                   </div>
                 )}
+              </div>
+            )}
 
-                {/* Education */}
-                {activeTab === "education" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <GraduationCap className="w-5 h-5 text-orange-600" />
-                      Educational Qualifications
-                    </h3>
-                    {education.length === 0 ? (
-                      <p className="text-gray-500 text-sm">
-                        No education details submitted yet.
+            {/* Additional Info */}
+            {activeTab === "additional" && (
+              <div>
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <Info className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Additional Information</h3>
+                </div>
+                {Object.keys(additional).length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-10">No additional info submitted yet.</p>
+                ) : (
+                  <Grid>
+                    <Row label="Govt Employee"         value={additional.isGovtEmployee} />
+                    <Row label="Department Name"       value={additional.departmentName} />
+                    <Row label="Years of Service"      value={additional.yearsOfService} />
+                    <Row label="Ex-Serviceman"         value={additional.isExServiceman} />
+                    <Row label="Person with Disability" value={additional.isPwD} />
+                    <Row label="Disability Type"       value={additional.disabilityType} />
+                    <Row label="Disability %"          value={additional.disabilityPercentage ? `${additional.disabilityPercentage}%` : null} />
+                    <Row label="Driving License"       value={additional.drivingLicense} />
+                    <Row label="Computer Certificate"  value={additional.computerCertificate} />
+                    <Row label="Subject Combination"   value={additional.subjectCombination} />
+                  </Grid>
+                )}
+              </div>
+            )}
+
+            {/* Address */}
+            {activeTab === "address" && (
+              <div>
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Address Details</h3>
+                </div>
+                {Object.keys(address).length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-10">No address details submitted yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <AddrCard title="Permanent Address"      data={address.permanent} />
+                    <AddrCard title="Correspondence Address" data={address.correspondence} />
+                    {address.sameAsPermanent && (
+                      <p className="text-xs text-gray-500 md:col-span-2">
+                        ✓ Correspondence address same as permanent
                       </p>
-                    ) : (
-                      <div className="space-y-4">
-                        {education.map((edu, i) => (
-                          <div
-                            key={i}
-                            className="p-4 border border-gray-200 rounded-lg bg-gray-50"
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="font-semibold text-gray-800">
-                                {edu.level ||
-                                  edu.qualification ||
-                                  `Education ${i + 1}`}
-                              </h4>
-                              {edu.percentage && (
-                                <Badge className="bg-orange-100 text-orange-800">
-                                  {edu.percentage}%
-                                </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Documents */}
+            {activeTab === "documents" && (
+              <div>
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <Upload className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Uploaded Documents</h3>
+                  <span className="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                    {documents.filter(d => d.cloudinaryUrl).length} / {documents.length} uploaded
+                  </span>
+                </div>
+                {documents.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-10">No documents uploaded yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {documents.map((doc) => {
+                      const statusCls = doc.status === "verified" ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        : doc.status === "rejected" ? "text-red-700 bg-red-50 border-red-200"
+                        : "text-amber-700 bg-amber-50 border-amber-200";
+                      return (
+                        <div key={doc._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                              <FileText className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm capitalize">
+                                {doc.type?.replace(/_/g, " ")}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusCls}`}>
+                                  {doc.status || "pending"}
+                                </span>
+                                {doc.sizeKB && <span className="text-xs text-gray-400">{doc.sizeKB} KB</span>}
+                              </div>
+                              {doc.rejectionReason && (
+                                <p className="text-xs text-red-600 mt-1">{doc.rejectionReason}</p>
                               )}
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                              {[
-                                [
-                                  "Board/University",
-                                  edu.board || edu.university,
-                                ],
-                                [
-                                  "Year of Passing",
-                                  edu.yearOfPassing || edu.year,
-                                ],
-                                ["Percentage/CGPA", edu.percentage || edu.cgpa],
-                                ["Subject/Stream", edu.subject || edu.stream],
-                                [
-                                  "Institution",
-                                  edu.institution || edu.school || edu.college,
-                                ],
-                                ["Grade", edu.grade],
-                              ].map(
-                                ([label, value]) =>
-                                  value && (
-                                    <div key={label}>
-                                      <p className="text-xs text-gray-500">
-                                        {label}
-                                      </p>
-                                      <p className="text-sm font-medium text-gray-800">
-                                        {value}
-                                      </p>
-                                    </div>
-                                  ),
-                              )}
-                            </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Address */}
-                {activeTab === "address" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <MapPin className="w-5 h-5 text-orange-600" />
-                      Address Details
-                    </h3>
-                    {Object.keys(address).length === 0 ? (
-                      <p className="text-gray-500 text-sm">
-                        No address details submitted yet.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Permanent Address */}
-                        {(address.permanent || address.permanentAddress) && (
-                          <div>
-                            <h4 className="font-medium text-gray-700 mb-3 text-sm uppercase tracking-wide">
-                              Permanent Address
-                            </h4>
-                            <div className="p-4 bg-gray-50 rounded-lg space-y-2">
-                              {Object.entries(
-                                address.permanent ||
-                                  address.permanentAddress ||
-                                  {},
-                              ).map(([k, v]) => (
-                                <InfoRow
-                                  key={k}
-                                  label={k.replace(/([A-Z])/g, " $1").trim()}
-                                  value={String(v)}
-                                />
-                              ))}
+                          {doc.cloudinaryUrl && (
+                            <div className="flex gap-2">
+                              <a href={doc.cloudinaryUrl} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                                  <Eye className="w-4 h-4 mr-1" /> View
+                                </Button>
+                              </a>
+                              <a href={doc.cloudinaryUrl} download>
+                                <Button variant="outline" size="sm">
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              </a>
                             </div>
-                          </div>
-                        )}
-                        {/* Current Address */}
-                        {(address.current || address.currentAddress) && (
-                          <div>
-                            <h4 className="font-medium text-gray-700 mb-3 text-sm uppercase tracking-wide">
-                              Current Address
-                            </h4>
-                            <div className="p-4 bg-gray-50 rounded-lg space-y-2">
-                              {Object.entries(
-                                address.current || address.currentAddress || {},
-                              ).map(([k, v]) => (
-                                <InfoRow
-                                  key={k}
-                                  label={k.replace(/([A-Z])/g, " $1").trim()}
-                                  value={String(v)}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {/* Flat address (no nested) */}
-                        {!address.permanent &&
-                          !address.current &&
-                          !address.permanentAddress &&
-                          !address.currentAddress && (
-                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                              {Object.entries(address).map(([k, v]) => (
-                                <InfoRow
-                                  key={k}
-                                  label={k.replace(/([A-Z])/g, " $1").trim()}
-                                  value={
-                                    typeof v === "object"
-                                      ? JSON.stringify(v)
-                                      : String(v)
-                                  }
-                                />
-                              ))}
-                            </div>
-                          )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Documents */}
-                {activeTab === "documents" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Upload className="w-5 h-5 text-orange-600" />
-                      Uploaded Documents
-                    </h3>
-                    {Object.keys(documents).length === 0 ? (
-                      <p className="text-gray-500 text-sm">
-                        No documents uploaded yet.
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {Object.entries(documents).map(([name, url]) => {
-                          if (!url) return null;
-                          const isImage =
-                            typeof url === "string" &&
-                            /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                          return (
-                            <div
-                              key={name}
-                              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                                  <FileText className="w-5 h-5 text-orange-600" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-900 capitalize">
-                                    {name.replace(/([A-Z])/g, " $1").trim()}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {isImage ? "Image" : "Document"}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                <a
-                                  href={url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                  >
-                                    <Eye className="w-4 h-4 mr-1" />
-                                    View
-                                  </Button>
-                                </a>
-                                <a href={url} download>
-                                  <Button variant="outline" size="sm">
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                </a>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Payment */}
-                {activeTab === "payment" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-orange-600" />
-                      Payment Information
-                    </h3>
-                    {Object.keys(payment).length === 0 ? (
-                      <p className="text-gray-500 text-sm">
-                        No payment information available.
-                      </p>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {[
-                            [
-                              "Amount",
-                              payment.amount
-                                ? `₹${Number(payment.amount).toLocaleString("en-IN")}`
-                                : null,
-                            ],
-                            ["Status", payment.status?.toUpperCase()],
-                            ["Gateway", payment.gateway],
-                            ["Transaction ID", payment.transactionId],
-                            ["Order ID", payment.orderId],
-                            [
-                              "Paid At",
-                              payment.paidAt
-                                ? new Date(payment.paidAt).toLocaleString(
-                                    "en-IN",
-                                  )
-                                : null,
-                            ],
-                          ].map(
-                            ([label, value]) =>
-                              value && (
-                                <div
-                                  key={label}
-                                  className="p-3 bg-gray-50 rounded-lg"
-                                >
-                                  <p className="text-xs text-gray-500 mb-1">
-                                    {label}
-                                  </p>
-                                  <p className="font-semibold text-gray-900 text-sm">
-                                    {value}
-                                  </p>
-                                </div>
-                              ),
                           )}
                         </div>
-                        {payment.status && (
-                          <div
-                            className={`p-4 rounded-lg flex items-center gap-3 ${
-                              ["paid", "success"].includes(payment.status)
-                                ? "bg-green-50 border border-green-200"
-                                : payment.status === "pending"
-                                  ? "bg-yellow-50 border border-yellow-200"
-                                  : "bg-red-50 border border-red-200"
-                            }`}
-                          >
-                            {["paid", "success"].includes(payment.status) ? (
-                              <CheckCircle className="w-5 h-5 text-green-600" />
-                            ) : payment.status === "pending" ? (
-                              <Clock className="w-5 h-5 text-yellow-600" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-600" />
-                            )}
-                            <span className="font-medium text-sm">
-                              Payment{" "}
-                              {payment.status === "success" ||
-                              payment.status === "paid"
-                                ? "Successful"
-                                : payment.status}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            )}
+
+            {/* Payment */}
+            {activeTab === "payment" && (
+              <div>
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <CreditCard className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Payment Information</h3>
+                </div>
+                {!application.totalFee && !application.transactionId ? (
+                  <p className="text-gray-400 text-sm text-center py-10">No payment information available.</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className={`p-4 rounded-xl flex items-center gap-3 border ${
+                      application.paymentStatus === "paid" ? "bg-emerald-50 border-emerald-200"
+                      : application.paymentStatus === "pending" ? "bg-amber-50 border-amber-200"
+                      : "bg-red-50 border-red-200"
+                    }`}>
+                      {application.paymentStatus === "paid"
+                        ? <CheckCircle className="w-5 h-5 text-emerald-600" />
+                        : application.paymentStatus === "pending"
+                        ? <Clock className="w-5 h-5 text-amber-600" />
+                        : <XCircle className="w-5 h-5 text-red-600" />}
+                      <span className="font-semibold text-sm">
+                        Payment {application.paymentStatus === "paid" ? "Successful" : application.paymentStatus || "Unknown"}
+                      </span>
+                      {application.totalFee > 0 && (
+                        <span className="ml-auto font-bold text-gray-900">
+                          ₹{Number(application.totalFee).toLocaleString("en-IN")}
+                        </span>
+                      )}
+                    </div>
+                    <Grid>
+                      <Row label="Payment Status"  value={application.paymentStatus} />
+                      <Row label="Total Fee"       value={application.totalFee ? `₹${Number(application.totalFee).toLocaleString("en-IN")}` : null} />
+                      <Row label="Transaction ID"  value={application.transactionId} />
+                    </Grid>
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
         </div>
       </div>
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Reject Application
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Please provide a reason for rejection. This will be visible to
-                the candidate.
-              </p>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Reject Application</h3>
+              <p className="text-sm text-gray-500 mt-1">Provide a reason — this will be visible to the candidate.</p>
             </div>
             <div className="p-6">
               <textarea
                 rows="4"
                 placeholder="Enter rejection reason (required)..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm resize-none"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
               />
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+            <div className="px-6 pb-6 flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setShowRejectModal(false)}>Cancel</Button>
               <Button
-                variant="outline"
-                onClick={() => setShowRejectModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() =>
-                  updateStatus({ status: "rejected", notes: rejectReason })
-                }
+                onClick={() => updateStatus({ status: "rejected", notes: rejectReason })}
                 disabled={isPending || !rejectReason.trim()}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
-                {isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  "Confirm Rejection"
-                )}
+                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Rejection"}
               </Button>
             </div>
           </div>

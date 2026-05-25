@@ -54,10 +54,37 @@ const razorpayWebhook = asyncHandler(async (req, res) => {
   res.status(StatusCodes.OK).json({ received: true, ...result });
 });
 
+// POST /api/candidate/payments/cashfree/webhook
+const cashfreeWebhook = asyncHandler(async (req, res) => {
+  const signature = req.headers["x-webhook-signature"] || req.headers["x-cashfree-signature"];
+  const timestamp = req.headers["x-webhook-timestamp"] || "";
+  const rawBody   = req.body?.toString() || "";
+  const result    = await paymentService.handleCashfreeWebhook(rawBody, signature, timestamp);
+  res.status(StatusCodes.OK).json({ received: true, ...result });
+});
+
+// POST /api/candidate/payments/paytm/webhook
+const paytmWebhook = asyncHandler(async (req, res) => {
+  const rawBody = req.body?.toString() || "";
+  const result  = await paymentService.handlePaytmWebhook(rawBody);
+  res.status(StatusCodes.OK).json({ received: true, ...result });
+});
+
+// POST /api/candidate/payments/phonepe/webhook
+const phonepeWebhook = asyncHandler(async (req, res) => {
+  const xVerify = req.headers["x-verify"] || "";
+  const rawBody = req.body?.toString() || "";
+  const result  = await paymentService.handlePhonePeWebhook(rawBody, xVerify);
+  res.status(StatusCodes.OK).json({ received: true, ...result });
+});
+
 module.exports = {
   initiatePayment,
   verifyPayment,
   getHistory,
   getByTransaction,
   razorpayWebhook,
+  cashfreeWebhook,
+  paytmWebhook,
+  phonepeWebhook,
 };

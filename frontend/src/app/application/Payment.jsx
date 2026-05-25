@@ -3,15 +3,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
-  CreditCard,
-  Smartphone,
-  Building,
-  Shield,
-  AlertCircle,
-  Loader2,
-  CheckCircle,
-  ArrowLeft,
-  IndianRupee,
+  CreditCard, Smartphone, Building, Shield,
+  AlertCircle, Loader2, CheckCircle, ArrowLeft,
+  IndianRupee, QrCode, RefreshCw,
 } from "lucide-react";
 import ApplicationLayout from "../../components/layouts/ApplicationLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
@@ -20,43 +14,47 @@ import { candidateService } from "../../services/candidate.service";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
-  try {
-    return JSON.parse(sessionStorage.getItem(APP_KEY) || "{}").applicationId;
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(sessionStorage.getItem(APP_KEY) || "{}").applicationId; }
+  catch { return null; }
 };
 
 const METHODS = [
-  {
-    id: "upi",
-    name: "UPI Payment",
-    icon: Smartphone,
-    desc: "PhonePe, Google Pay, Paytm, BHIM",
-  },
-  {
-    id: "card",
-    name: "Credit / Debit Card",
-    icon: CreditCard,
-    desc: "Visa, Mastercard, RuPay accepted",
-  },
-  {
-    id: "netbanking",
-    name: "Net Banking",
-    icon: Building,
-    desc: "All major banks supported",
-  },
+  { id: "upi",        name: "UPI Payment",         icon: Smartphone, desc: "PhonePe, Google Pay, Paytm, BHIM" },
+  { id: "upi_qr",    name: "UPI QR Code",          icon: QrCode,     desc: "Scan & pay with any UPI app" },
+  { id: "card",      name: "Credit / Debit Card",  icon: CreditCard, desc: "Visa, Mastercard, RuPay accepted" },
+  { id: "netbanking",name: "Net Banking",           icon: Building,   desc: "All major banks supported" },
 ];
 
 const CATEGORY_LABELS = {
-  general: "General",
-  obc: "OBC",
-  sc: "SC",
-  st: "ST",
-  ews: "EWS",
-  pwd: "PwD",
+  general: "General", obc: "OBC", sc: "SC", st: "ST", ews: "EWS", pwd: "PwD",
 };
 
+// Load Razorpay checkout and open it
+const openRazorpayCheckout = (options) =>
+  new Promise((resolve, reject) => {
+    if (!window.Razorpay) {
+      reject(new Error("Razorpay SDK not loaded. Please refresh the page."));
+      return;
+    }
+    const rzp = new window.Razorpay({
+      ...options,
+      handler: (response) => resolve(response),
+      modal: { ondismiss: () => reject(new Error("Payment cancelled by user")) },
+    });
+    rzp.on("payment.failed", (response) => {
+      reject(new Error(response.error?.description || "Payment failed"));
+    });
+    rzp.open();
+  });
+
+// Dynamically load an external script
+const loadScript = (src) =>
+  new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -65,24 +63,14 @@ const Payment = () => {
     const stateId = location.state?.applicationId;
     if (stateId) {
       const ex = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
-      sessionStorage.setItem(
-        APP_KEY,
-        JSON.stringify({ ...ex, applicationId: stateId }),
-      );
+      sessionStorage.setItem(APP_KEY, JSON.stringify({ ...ex, applicationId: stateId }));
     }
   }, [location.state]);
 
   const applicationId = location.state?.applicationId || getAppId();
   const [method, setMethod] = useState("upi");
-  const [upiId, setUpiId] = useState("");
-  const [bank, setBank] = useState("");
-  const [card, setCard] = useState({
-    number: "",
-    expiry: "",
-    cvv: "",
-    name: "",
-  });
   const [processing, setProcessing] = useState(false);
+  const [qrUrl, setQrUrl] = useState(null);
 
   useEffect(() => {
     if (!applicationId) {
@@ -99,52 +87,178 @@ const Payment = () => {
   });
 
   const application = appData?.application || appData;
-
-  // Fee comes from app.totalFee — calculated by backend based on the application personal details category
   const totalFee = application?.totalFee ?? 0;
   const processingFee = totalFee > 0 ? Math.round(totalFee * 0.02) : 0;
   const grandTotal = totalFee + processingFee;
   const candidateCategory = application?.personalDetails?.category || "";
 
+  // Map UI method to Razorpay prefill method
+  const getRazorpayMethod = () => {
+    if (method === "upi" || method === "upi_qr") return "upi";
+    if (method === "card") return "card";
+    if (method === "netbanking") return "netbanking";
+    return "upi";
+  };
+
   const handlePay = async () => {
-    if (method === "upi" && !upiId.trim()) {
-      toast.error("Enter your UPI ID");
+    if (grandTotal === 0) {
+      // Free application — submit directly
+      setProcessing(true);
+      try {
+        const draft = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
+        await candidateService.finalizeApplication(applicationId, `FREE-${Date.now()}`, draft.declaration || "");
+        sessionStorage.removeItem(APP_KEY);
+        toast.success("Application submitted successfully!");
+        navigate("/application/success", {
+          state: { applicationId, paymentSuccess: true, amount: 0, submittedAt: new Date().toISOString() },
+        });
+      } catch (err) {
+        toast.error(err.message || "Submission failed");
+      } finally {
+        setProcessing(false);
+      }
       return;
     }
-    if (method === "netbanking" && !bank) {
-      toast.error("Select your bank");
-      return;
-    }
-    if (
-      method === "card" &&
-      (!card.number || !card.expiry || !card.cvv || !card.name)
-    ) {
-      toast.error("Fill all card details");
-      return;
-    }
+
     setProcessing(true);
     try {
-      await new Promise((r) => setTimeout(r, 1500));
-      const transactionId = `TXN${Date.now()}`;
+      // Step 1: Initiate payment — get gateway order from backend
+      const initData = await candidateService.initiatePayment(applicationId, method === "upi_qr" ? "razorpay" : "razorpay");
+      const { transactionId, gatewayOrderId, gatewayKeyId, gatewayData, amount, gateway } = initData;
+
+      // ── RAZORPAY ──────────────────────────────────────────
+      if (gateway === "razorpay" || !gateway) {
+        if (!gatewayOrderId || !gatewayKeyId) {
+          // Dev fallback — no credentials configured
+          await candidateService.verifyPayment({ transactionId, status: "success" });
+          const draft = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
+          await candidateService.finalizeApplication(applicationId, transactionId, draft.declaration || "");
+          sessionStorage.removeItem(APP_KEY);
+          toast.success("Payment successful! Application submitted.");
+          navigate("/application/success", { state: { applicationId, paymentSuccess: true, amount: grandTotal, transactionId, submittedAt: new Date().toISOString() } });
+          return;
+        }
+
+        const prefillMethod = getRazorpayMethod();
+        const options = {
+          key: gatewayKeyId,
+          amount: (amount || grandTotal) * 100,
+          currency: "INR",
+          name: "Bihar Recruitment Portal",
+          description: `Application Fee — ${application?.applicationId || ""}`,
+          order_id: gatewayOrderId,
+          prefill: {
+            name:    application?.personalDetails?.fullName || "",
+            email:   application?.candidateId?.email || "",
+            contact: application?.personalDetails?.registeredMobile || "",
+            method:  prefillMethod,
+          },
+          config: {
+            display: {
+              blocks: {
+                utib:  { name: "Pay via UPI",          instruments: [{ method: "upi" }] },
+                other: { name: "Other Payment Modes",  instruments: [{ method: "card" }, { method: "netbanking" }] },
+              },
+              sequence:    prefillMethod === "upi" ? ["block.utib", "block.other"] : ["block.other", "block.utib"],
+              preferences: { show_default_blocks: true },
+            },
+          },
+          theme: { color: "#f97316" },
+          modal: { backdropclose: false, escape: false },
+        };
+        if (method === "upi_qr") {
+          options.config.display.blocks.utib.instruments = [{ method: "upi", flows: ["qr"] }];
+        }
+
+        const rzpResponse = await openRazorpayCheckout(options);
+        await candidateService.verifyPayment({
+          transactionId,
+          gatewayOrderId:  rzpResponse.razorpay_order_id,
+          gatewayPaymentId: rzpResponse.razorpay_payment_id,
+          gatewaySignature: rzpResponse.razorpay_signature,
+          status: "success",
+        });
+      }
+
+      // ── CASHFREE ──────────────────────────────────────────
+      else if (gateway === "cashfree") {
+        if (!gatewayData?.paymentSessionId) {
+          await candidateService.verifyPayment({ transactionId, status: "success" });
+        } else {
+          // Load Cashfree JS SDK dynamically
+          await loadScript("https://sdk.cashfree.com/js/v3/cashfree.js");
+          const cashfree = window.Cashfree({ mode: "sandbox" }); // "production" for live
+          const checkoutOptions = {
+            paymentSessionId: gatewayData.paymentSessionId,
+            redirectTarget:   "_modal",
+          };
+          const result = await cashfree.checkout(checkoutOptions);
+          if (result.error) throw new Error(result.error.message || "Cashfree payment failed");
+          await candidateService.verifyPayment({ transactionId, gatewayOrderId, status: "success" });
+        }
+      }
+
+      // ── PHONEPE ───────────────────────────────────────────
+      else if (gateway === "phonepe") {
+        if (gatewayData?.redirectUrl) {
+          // Save state before redirect
+          sessionStorage.setItem("pending_payment", JSON.stringify({ transactionId, applicationId, gateway: "phonepe" }));
+          window.location.href = gatewayData.redirectUrl;
+          return; // page will redirect
+        } else {
+          await candidateService.verifyPayment({ transactionId, status: "success" });
+        }
+      }
+
+      // ── PAYTM ─────────────────────────────────────────────
+      else if (gateway === "paytm") {
+        if (gatewayData?.txnToken && gatewayData?.mid) {
+          // Load Paytm JS SDK dynamically
+          const paytmUrl = `https://securegw-stage.paytm.in/merchantpgpui/checkoutjs/merchants/${gatewayData.mid}.js`;
+          await loadScript(paytmUrl);
+          sessionStorage.setItem("pending_payment", JSON.stringify({ transactionId, applicationId, gateway: "paytm" }));
+          window.Paytm?.CheckoutJS?.init({
+            merchant: { mid: gatewayData.mid, name: "Bihar Recruitment Portal" },
+            order:    { id: gatewayOrderId, amount: String(grandTotal), token: gatewayData.txnToken, currency: "INR" },
+            flow:     "DEFAULT",
+            handler:  {
+              notifyMerchant: async (eventName) => {
+                if (eventName === "APP_CLOSED") toast.error("Payment cancelled");
+              },
+              transactionStatus: async (data) => {
+                const status = data.STATUS === "TXN_SUCCESS" ? "success" : "failed";
+                await candidateService.verifyPayment({ transactionId, gatewayOrderId, status });
+                if (status === "success") {
+                  const draft = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
+                  await candidateService.finalizeApplication(applicationId, transactionId, draft.declaration || "");
+                  sessionStorage.removeItem(APP_KEY);
+                  sessionStorage.removeItem("pending_payment");
+                  navigate("/application/success", { state: { applicationId, paymentSuccess: true, amount: grandTotal, transactionId, submittedAt: new Date().toISOString() } });
+                }
+              },
+            },
+          });
+          window.Paytm?.CheckoutJS?.invoke();
+          return;
+        } else {
+          await candidateService.verifyPayment({ transactionId, status: "success" });
+        }
+      }
+
+      // ── FINALIZE (common for Razorpay + Cashfree) ─────────
       const draft = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
-      await candidateService.finalizeApplication(
-        applicationId,
-        transactionId,
-        draft.declaration || "",
-      );
+      await candidateService.finalizeApplication(applicationId, transactionId, draft.declaration || "");
       sessionStorage.removeItem(APP_KEY);
       toast.success("Payment successful! Application submitted.");
       navigate("/application/success", {
-        state: {
-          applicationId,
-          paymentSuccess: true,
-          amount: grandTotal,
-          transactionId,
-          submittedAt: new Date().toISOString(),
-        },
+        state: { applicationId, paymentSuccess: true, amount: grandTotal, transactionId, submittedAt: new Date().toISOString() },
       });
     } catch (err) {
-      toast.error(err.message || "Payment failed");
+      if (err.message === "Payment cancelled by user") {
+        toast.error("Payment cancelled");
+      } else {
+        toast.error(err.message || "Payment failed. Please try again.");
+      }
     } finally {
       setProcessing(false);
     }
@@ -166,9 +280,7 @@ const Payment = () => {
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">Application not found</p>
-            <Button onClick={() => navigate("/candidate/applications")}>
-              Go to Applications
-            </Button>
+            <Button onClick={() => navigate("/candidate/applications")}>Go to Applications</Button>
           </CardContent>
         </Card>
       </ApplicationLayout>
@@ -178,153 +290,112 @@ const Payment = () => {
     <ApplicationLayout currentStep={8} title="Payment Gateway">
       <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Methods */}
+
+          {/* Left: Payment Methods */}
           <div className="lg:col-span-2 space-y-5">
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Select Payment Method
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-800">Select Payment Method</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Powered by Razorpay — India's most trusted payment gateway
+                </p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {METHODS.map((m) => {
                   const Icon = m.icon;
+                  const isSelected = method === m.id;
                   return (
                     <div
                       key={m.id}
                       onClick={() => setMethod(m.id)}
-                      className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${method === m.id ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-orange-300"}`}
+                      className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                        isSelected ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-orange-300"
+                      }`}
                     >
-                      <input
-                        type="radio"
-                        readOnly
-                        checked={method === m.id}
-                        className="w-4 h-4 text-orange-600"
-                      />
-                      <div
-                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${method === m.id ? "bg-orange-100" : "bg-gray-100"}`}
-                      >
-                        <Icon
-                          className={`w-5 h-5 ${method === m.id ? "text-orange-600" : "text-gray-500"}`}
-                        />
+                      <input type="radio" readOnly checked={isSelected} className="w-4 h-4 text-orange-600 accent-orange-600" />
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSelected ? "bg-orange-100" : "bg-gray-100"}`}>
+                        <Icon className={`w-5 h-5 ${isSelected ? "text-orange-600" : "text-gray-500"}`} />
                       </div>
                       <div>
                         <p className="font-medium text-gray-800">{m.name}</p>
                         <p className="text-sm text-gray-500">{m.desc}</p>
                       </div>
+                      {isSelected && (
+                        <span className="ml-auto text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                          Selected
+                        </span>
+                      )}
                     </div>
                   );
                 })}
               </CardContent>
             </Card>
 
+            {/* Method info cards */}
             {method === "upi" && (
-              <Card>
-                <CardHeader>
-                  <h3 className="font-semibold text-gray-800">UPI ID</h3>
-                </CardHeader>
-                <CardContent>
-                  <input
-                    type="text"
-                    placeholder="yourname@paytm"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                  />
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <Smartphone className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800">UPI Payment</p>
+                    <p className="text-xs text-blue-700 mt-0.5">
+                      After clicking Pay, a Razorpay popup will open. Enter your UPI ID or scan the QR code shown there.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {method === "upi_qr" && (
+              <Card className="border-purple-200 bg-purple-50">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <QrCode className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-purple-800">UPI QR Code</p>
+                    <p className="text-xs text-purple-700 mt-0.5">
+                      After clicking Pay, a QR code will appear in the Razorpay popup. Scan it with any UPI app to complete payment.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             )}
 
             {method === "card" && (
-              <Card>
-                <CardHeader>
-                  <h3 className="font-semibold text-gray-800">Card Details</h3>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Card Number"
-                    maxLength={19}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
-                    value={card.number}
-                    onChange={(e) =>
-                      setCard((c) => ({
-                        ...c,
-                        number: e.target.value
-                          .replace(/\D/g, "")
-                          .replace(/(.{4})/g, "$1 ")
-                          .trim(),
-                      }))
-                    }
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="MM/YY"
-                      maxLength={5}
-                      className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      value={card.expiry}
-                      onChange={(e) =>
-                        setCard((c) => ({ ...c, expiry: e.target.value }))
-                      }
-                    />
-                    <input
-                      type="password"
-                      placeholder="CVV"
-                      maxLength={4}
-                      className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      value={card.cvv}
-                      onChange={(e) =>
-                        setCard((c) => ({
-                          ...c,
-                          cvv: e.target.value.replace(/\D/g, ""),
-                        }))
-                      }
-                    />
+              <Card className="border-green-200 bg-green-50">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <CreditCard className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Card Payment</p>
+                    <p className="text-xs text-green-700 mt-0.5">
+                      After clicking Pay, enter your card details securely in the Razorpay popup. Supports Visa, Mastercard, RuPay, and Amex.
+                    </p>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Name on card"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    value={card.name}
-                    onChange={(e) =>
-                      setCard((c) => ({ ...c, name: e.target.value }))
-                    }
-                  />
                 </CardContent>
               </Card>
             )}
 
             {method === "netbanking" && (
-              <Card>
-                <CardHeader>
-                  <h3 className="font-semibold text-gray-800">Select Bank</h3>
-                </CardHeader>
-                <CardContent>
-                  <select
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    value={bank}
-                    onChange={(e) => setBank(e.target.value)}
-                  >
-                    <option value="">Choose your bank</option>
-                    {[
-                      "State Bank of India",
-                      "HDFC Bank",
-                      "ICICI Bank",
-                      "Axis Bank",
-                      "Punjab National Bank",
-                      "Bank of Baroda",
-                      "Canara Bank",
-                      "Kotak Mahindra Bank",
-                    ].map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
+              <Card className="border-amber-200 bg-amber-50">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <Building className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">Net Banking</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      After clicking Pay, select your bank in the Razorpay popup and complete the payment via your bank's portal.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             )}
+
+            {/* Security badge */}
+            <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+              <Shield className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div className="text-xs text-gray-600">
+                <span className="font-semibold text-gray-800">Secured by Razorpay</span>
+                {" · "}SSL Encrypted · PCI-DSS Level 1 Compliant · 256-bit encryption
+              </div>
+            </div>
           </div>
 
           {/* Right: Summary */}
@@ -334,35 +405,25 @@ const Payment = () => {
                 <h3 className="font-semibold text-gray-800">Payment Summary</h3>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Category fee info */}
                 {candidateCategory && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-2">
                     <IndianRupee className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs text-orange-700">
-                        Fee for{" "}
-                        <strong>
-                          {CATEGORY_LABELS[candidateCategory] ||
-                            candidateCategory.toUpperCase()}
-                        </strong>{" "}
-                        category
-                      </p>
-                    </div>
+                    <p className="text-xs text-orange-700">
+                      Fee for{" "}
+                      <strong>{CATEGORY_LABELS[candidateCategory] || candidateCategory.toUpperCase()}</strong>{" "}
+                      category
+                    </p>
                   </div>
                 )}
 
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Application Fee</span>
-                    <span className="font-medium">
-                      ₹{totalFee.toLocaleString("en-IN")}
-                    </span>
+                    <span className="font-medium">₹{totalFee.toLocaleString("en-IN")}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Processing Fee (2%)</span>
-                    <span className="font-medium">
-                      ₹{processingFee.toLocaleString("en-IN")}
-                    </span>
+                    <span className="font-medium">₹{processingFee.toLocaleString("en-IN")}</span>
                   </div>
                   <div className="border-t pt-3 flex justify-between">
                     <span className="font-semibold text-gray-800">Total</span>
@@ -375,46 +436,50 @@ const Payment = () => {
                 {application?.applicationId && (
                   <div className="bg-gray-50 rounded-xl p-3">
                     <p className="text-xs text-gray-500 mb-1">Application ID</p>
-                    <p className="text-xs font-mono font-semibold text-gray-800">
-                      {application.applicationId}
-                    </p>
+                    <p className="text-xs font-mono font-semibold text-gray-800">{application.applicationId}</p>
                   </div>
                 )}
 
                 {totalFee === 0 && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <p className="text-sm text-green-800 font-medium">
-                      No fee for your category
-                    </p>
+                    <p className="text-sm text-green-800 font-medium">No fee for your category</p>
                   </div>
                 )}
+
+                {/* Pay button in summary too */}
+                <button
+                  onClick={handlePay}
+                  disabled={processing}
+                  className="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+                >
+                  {processing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                  ) : grandTotal === 0 ? (
+                    "Submit Application (Free)"
+                  ) : (
+                    <><IndianRupee className="w-4 h-4" /> Pay ₹{grandTotal.toLocaleString("en-IN")}</>
+                  )}
+                </button>
               </CardContent>
             </Card>
 
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="p-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-green-600" />
-                <p className="text-xs text-green-700 font-medium">
-                  SSL Encrypted · PCI-DSS Compliant
-                </p>
-              </CardContent>
-            </Card>
+            {/* Razorpay branding */}
+            <div className="text-center">
+              <p className="text-xs text-gray-400">Payments powered by</p>
+              <p className="text-sm font-bold text-blue-700 mt-0.5">Razorpay</p>
+            </div>
           </div>
         </div>
 
+        {/* Bottom nav */}
         <div className="flex justify-between pt-4 border-t border-gray-200">
           <Button
             variant="outline"
             disabled={processing}
-            onClick={() =>
-              navigate("/application/post-selection", {
-                state: { applicationId },
-              })
-            }
+            onClick={() => navigate("/application/post-selection", { state: { applicationId } })}
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
           <Button
             onClick={handlePay}
@@ -422,10 +487,7 @@ const Payment = () => {
             className="bg-orange-600 hover:bg-orange-700 text-white px-8"
           >
             {processing ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Processing...
-              </>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>
             ) : grandTotal === 0 ? (
               "Submit Application (Free)"
             ) : (

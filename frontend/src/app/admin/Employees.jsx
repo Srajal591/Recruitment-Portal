@@ -1,22 +1,46 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Edit2, Trash2, Activity } from 'lucide-react'
+import { Plus, Edit2, Trash2, Activity, ChevronLeft, ChevronRight, Filter, Users, UserCheck, Building2, AlertCircle, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AdminLayout from '../../components/layouts/AdminLayout'
-import { Card } from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
 import { adminService } from '../../services/admin.service'
+
+const STATUS_CFG = {
+  Active:   { dot: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
+  Inactive: { dot: 'bg-red-500',     text: 'text-red-700',     bg: 'bg-red-50'     },
+  'On Leave':{ dot: 'bg-amber-500',  text: 'text-amber-700',   bg: 'bg-amber-50'   },
+}
+
+const Avatar = ({ name }) => {
+  const initials = (name || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+  const colors = ['bg-orange-500','bg-blue-500','bg-purple-500','bg-teal-500','bg-rose-500','bg-indigo-500']
+  const color = colors[(initials.charCodeAt(0) || 0) % colors.length]
+  return (
+    <div className={`w-9 h-9 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+      {initials}
+    </div>
+  )
+}
 
 const Employees = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  
+  const [page, setPage] = useState(1)
+  const [deptFilter, setDeptFilter] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['admin-employees'],
-    queryFn: () => adminService.getEmployees({ limit: 20 }),
+    queryKey: ['admin-employees', page, deptFilter, statusFilter],
+    queryFn: () => adminService.getEmployees({
+      limit: 10, page,
+      ...(deptFilter   && { department: deptFilter }),
+      ...(statusFilter && { status: statusFilter }),
+    }),
   })
-  const { data: statsData, error: statsError } = useQuery({
+
+  const { data: statsData } = useQuery({
     queryKey: ['admin-employee-stats'],
     queryFn: adminService.getEmployeeStats,
   })
@@ -24,131 +48,255 @@ const Employees = () => {
   const { mutate: deleteEmployee } = useMutation({
     mutationFn: adminService.deleteEmployee,
     onSuccess: () => {
-      toast.success('Employee deleted successfully')
+      toast.success('Employee deleted')
       queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
       queryClient.invalidateQueries({ queryKey: ['admin-employee-stats'] })
     },
-    onError: (err) => {
-      toast.error(err.message || 'Failed to delete employee')
-    },
+    onError: (err) => toast.error(err.message || 'Failed to delete'),
   })
 
-  const handleDelete = (employee) => {
-    if (window.confirm(`Are you sure you want to delete ${employee.fullName}? This action cannot be undone.`)) {
-      deleteEmployee(employee._id)
-    }
+  const handleDelete = (emp) => {
+    if (window.confirm(`Delete ${emp.fullName}? This cannot be undone.`)) deleteEmployee(emp._id)
   }
 
-  const employees = data?.employees || []
-  const stats = [
-    { title: 'TOTAL EMPLOYEES', value: statsData?.statusStats?.find(s => s._id === 'Active')?.count || employees.length, color: 'border-l-orange-500' },
-    { title: 'ACTIVE', value: statsData?.statusStats?.find(s => s._id === 'Active')?.count || employees.filter((e) => e.status === 'Active').length, color: 'border-l-green-500' },
-    { title: 'INACTIVE', value: statsData?.statusStats?.find(s => s._id !== 'Active')?.count || employees.filter((e) => e.status !== 'Active').length, color: 'border-l-yellow-500' },
-    { title: 'DEPARTMENTS', value: statsData?.departmentStats?.length || new Set(employees.map((e) => e.department).filter(Boolean)).size, color: 'border-l-blue-500' },
-  ]
+  const employees  = data?.employees || []
+  const pagination = data?.pagination || {}
+  const totalPages = pagination.totalPages || 1
+  const totalItems = pagination.totalItems || pagination.total || employees.length
 
-  if (error) {
-    return (
-      <AdminLayout title="Employees">
-        <div className="p-6 text-red-600">Error loading employees: {error.message}</div>
-      </AdminLayout>
-    )
+  const totalEmp   = statsData?.totalEmployees || totalItems
+  const activeEmp  = statsData?.statusStats?.find(s => s._id === 'Active')?.count || employees.filter(e => e.status === 'Active').length
+  const deptCount  = statsData?.departmentStats?.length || new Set(employees.map(e => e.department).filter(Boolean)).size
+  const pending    = statsData?.pendingVerifications || 0
+
+  const pages = []
+  if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i) }
+  else {
+    pages.push(1)
+    if (page > 3) pages.push('...')
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i)
+    if (page < totalPages - 2) pages.push('...')
+    pages.push(totalPages)
   }
+
+  const clearFilters = () => { setDeptFilter(''); setRoleFilter(''); setStatusFilter(''); setPage(1) }
+  const hasFilters = deptFilter || roleFilter || statusFilter
+
+  if (error) return (
+    <AdminLayout title="Employees">
+      <div className="p-6 text-red-600">Error: {error.message}</div>
+    </AdminLayout>
+  )
 
   return (
     <AdminLayout title="Employees">
-      <div className="space-y-6 bg-orange-50 min-h-screen p-6">
-        <div className="flex justify-between items-center">
+      <div className="p-5 space-y-5">
+
+        {/* Header */}
+        <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Employee Management</h1>
-            <p className="text-gray-600">Staff directory from identity service.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Staff Directory</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Manage and monitor institutional workforce across departments.</p>
           </div>
-          <Button onClick={() => navigate('/admin/employees/add')} className="bg-orange-600 hover:bg-orange-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Employee
-          </Button>
+          <button
+            onClick={() => navigate('/admin/employees/add')}
+            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Add New Employee
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat) => (
-            <Card key={stat.title} className={`border-l-4 ${stat.color} bg-white`}>
-              <div className="p-6">
-                <p className="text-xs font-medium text-gray-500 mb-1">{stat.title}</p>
-                <p className="text-2xl font-bold text-gray-800">{Number(stat.value || 0).toLocaleString('en-IN')}</p>
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-200 border-t-4 border-t-orange-500 p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Employees</p>
+                <p className="text-3xl font-bold text-gray-900">{Number(totalEmp).toLocaleString('en-IN')}</p>
+                <p className="text-xs text-emerald-600 font-medium mt-1">+12% ↗</p>
               </div>
-            </Card>
-          ))}
+              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                <Users className="w-5 h-5 text-orange-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 border-t-4 border-t-emerald-500 p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Active Now</p>
+                <p className="text-3xl font-bold text-gray-900">{Number(activeEmp).toLocaleString('en-IN')}</p>
+                <p className="text-xs text-gray-400 mt-1">Currently session active</p>
+              </div>
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-emerald-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 border-t-4 border-t-blue-500 p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Departments</p>
+                <p className="text-3xl font-bold text-gray-900">{deptCount}</p>
+              </div>
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 border-t-4 border-t-red-400 p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pending Verifications</p>
+                <p className="text-3xl font-bold text-gray-900">{pending}</p>
+                {pending > 0 && (
+                  <span className="text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full mt-1 inline-block">URGENT</span>
+                )}
+              </div>
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+              </div>
+            </div>
+          </div>
         </div>
 
-        <Card className="bg-white">
-          <div className="p-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <Search className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Backend employees</span>
+        {/* Filters */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-600 flex-shrink-0">
+              <Filter className="w-4 h-4" /> Filters:
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Employee Name</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">ID</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Department</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Role</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Joined</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading && <tr><td colSpan="7" className="py-6 px-4 text-gray-600">Loading employees...</td></tr>}
-                  {!isLoading && employees.length === 0 && <tr><td colSpan="7" className="py-6 px-4 text-gray-600">No employees found.</td></tr>}
-                  {employees.map((employee) => (
-                    <tr key={employee._id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4">
-                        <div className="font-medium text-gray-800">{employee.fullName}</div>
-                        <div className="text-sm text-gray-500">{employee.officialEmail}</div>
+            <select value={deptFilter} onChange={e => { setDeptFilter(e.target.value); setPage(1) }}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+              <option value="">All Departments</option>
+              {['Administration','Public Works','Healthcare','Education','Finance','Information Technology','Home Affairs','Revenue','Agriculture','Transport','Law & Justice'].map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1) }}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+              <option value="">All Roles</option>
+            </select>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+              <option value="">Status: All</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="On Leave">On Leave</option>
+            </select>
+            {hasFilters && (
+              <button onClick={clearFilters} className="ml-auto text-sm font-semibold text-orange-600 hover:underline">
+                Clear All
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Employee Name','ID','Department','Role','Status','Date Joined','Actions'].map(h => (
+                    <th key={h} className="text-left py-3 px-5 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {isLoading && (
+                  <tr><td colSpan="7" className="py-16 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-orange-500 mx-auto" />
+                  </td></tr>
+                )}
+                {!isLoading && employees.length === 0 && (
+                  <tr><td colSpan="7" className="py-16 text-center text-gray-400 text-sm">No employees found.</td></tr>
+                )}
+                {employees.map(emp => {
+                  const scfg = STATUS_CFG[emp.status] || STATUS_CFG.Inactive
+                  return (
+                    <tr key={emp._id} className="hover:bg-orange-50/30 transition-colors">
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={emp.fullName} />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{emp.fullName}</p>
+                            <p className="text-xs text-gray-400">{emp.officialEmail}</p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-4 px-4 text-sm text-gray-800">{employee.employeeId}</td>
-                      <td className="py-4 px-4 text-sm text-gray-800">{employee.department}</td>
-                      <td className="py-4 px-4 text-sm text-gray-800">{employee.systemRole?.roleName || employee.roleDesignation}</td>
-                      <td className="py-4 px-4">
-                        <Badge className={employee.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                          {employee.status}
-                        </Badge>
+                      <td className="py-4 px-5">
+                        <span className="text-sm font-mono text-gray-700">{emp.employeeId}</span>
                       </td>
-                      <td className="py-4 px-4 text-sm text-gray-800">{employee.dateOfJoining ? new Date(employee.dateOfJoining).toLocaleDateString('en-IN') : '-'}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => navigate(`/admin/employees/${employee._id}/edit`)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit Employee"
-                          >
+                      <td className="py-4 px-5">
+                        <span className="text-sm text-gray-700">{emp.department || '—'}</span>
+                      </td>
+                      <td className="py-4 px-5">
+                        <span className="text-sm text-gray-700">{emp.systemRole?.roleName || emp.roleDesignation || '—'}</span>
+                      </td>
+                      <td className="py-4 px-5">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${scfg.bg} ${scfg.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${scfg.dot}`} />
+                          {emp.status || 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-5">
+                        <span className="text-sm text-gray-700">
+                          {emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => navigate(`/admin/employees/${emp._id}/edit`)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => navigate(`/admin/employees/${employee._id}/activity`)}
-                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                            title="View Activity Logs"
-                          >
+                          <button onClick={() => navigate(`/admin/employees/${emp._id}/activity`)}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Activity">
                             <Activity className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleDelete(employee)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Employee"
-                          >
+                          <button onClick={() => handleDelete(emp)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
+            <p className="text-sm text-gray-500">
+              Showing <span className="font-medium text-gray-700">1-{employees.length}</span> of{' '}
+              <span className="font-medium text-gray-700">{Number(totalItems).toLocaleString('en-IN')}</span> employees
+            </p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {pages.map((p, i) =>
+                p === '...'
+                  ? <span key={`d${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>
+                  : <button key={p} onClick={() => setPage(p)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${p === page ? 'bg-orange-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      {p}
+                    </button>
+              )}
+              <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
-        </Card>
+        </div>
+
       </div>
     </AdminLayout>
   )

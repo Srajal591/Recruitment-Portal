@@ -10,6 +10,9 @@ const COMMUNICATION_URL = process.env.VITE_COMMUNICATION_URL || 'http://localhos
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: ['recharts'],
+  },
   server: {
     proxy: {
       // ── Identity Service ──────────────────────────────────

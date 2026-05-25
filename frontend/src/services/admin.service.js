@@ -155,8 +155,8 @@ export const adminService = {
     const response = await apiClient.get("/admin/analytics/overview");
     return unwrapData(response);
   },
-  async getAnalyticsFunnel() {
-    const response = await apiClient.get("/admin/analytics/funnel");
+  async getAnalyticsFunnel(params = {}) {
+    const response = await apiClient.get("/admin/analytics/funnel", { params });
     return unwrapData(response);
   },
   async getTopJobs(params = {}) {

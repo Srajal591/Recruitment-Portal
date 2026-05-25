@@ -80,6 +80,7 @@ const ApplicationDetails = lazy(
   () => import("../app/admin/ApplicationDetails"),
 );
 const Analytics = lazy(() => import("../app/admin/Analytics"));
+const FunnelAnalysis = lazy(() => import("../app/admin/FunnelAnalysis"));
 const AdminSupport = lazy(() => import("../app/admin/Support"));
 const SupportKanban = lazy(() => import("../app/admin/SupportKanban"));
 const SupportTicketDetails = lazy(
@@ -358,6 +359,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute role="admin">
               <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/analytics/funnel"
+          element={
+            <ProtectedRoute role="admin">
+              <FunnelAnalysis />
             </ProtectedRoute>
           }
         />

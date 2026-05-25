@@ -1,422 +1,441 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import {
-  CreditCard, Smartphone, Building, Shield, AlertCircle,
-  Loader2, CheckCircle, ArrowLeft,
-} from 'lucide-react'
-import ApplicationLayout from '../../components/layouts/ApplicationLayout'
-import { Card, CardContent, CardHeader } from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import { candidateService } from '../../services/candidate.service'
+  CreditCard,
+  Smartphone,
+  Building,
+  Shield,
+  AlertCircle,
+  Loader2,
+  CheckCircle,
+  ArrowLeft,
+  IndianRupee,
+} from "lucide-react";
+import ApplicationLayout from "../../components/layouts/ApplicationLayout";
+import { Card, CardContent, CardHeader } from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import { candidateService } from "../../services/candidate.service";
 
-const PAYMENT_METHODS = [
-  { id: 'card',       name: 'Credit / Debit Card', icon: CreditCard,  desc: 'Visa, Mastercard, RuPay accepted' },
-  { id: 'upi',        name: 'UPI Payment',          icon: Smartphone,  desc: 'PhonePe, Google Pay, Paytm, BHIM' },
-  { id: 'netbanking', name: 'Net Banking',           icon: Building,    desc: 'All major banks supported' },
-]
+const APP_KEY = "app_draft";
+const getAppId = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem(APP_KEY) || "{}").applicationId;
+  } catch {
+    return null;
+  }
+};
+
+const METHODS = [
+  {
+    id: "upi",
+    name: "UPI Payment",
+    icon: Smartphone,
+    desc: "PhonePe, Google Pay, Paytm, BHIM",
+  },
+  {
+    id: "card",
+    name: "Credit / Debit Card",
+    icon: CreditCard,
+    desc: "Visa, Mastercard, RuPay accepted",
+  },
+  {
+    id: "netbanking",
+    name: "Net Banking",
+    icon: Building,
+    desc: "All major banks supported",
+  },
+];
+
+const CATEGORY_LABELS = {
+  general: "General",
+  obc: "OBC",
+  sc: "SC",
+  st: "ST",
+  ews: "EWS",
+  pwd: "PwD",
+};
 
 const Payment = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const applicationId = location.state?.applicationId
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [selectedMethod, setSelectedMethod] = useState('upi')
-  const [upiId, setUpiId] = useState('')
-  const [selectedBank, setSelectedBank] = useState('')
-  const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '', name: '' })
+  useEffect(() => {
+    const stateId = location.state?.applicationId;
+    if (stateId) {
+      const ex = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
+      sessionStorage.setItem(
+        APP_KEY,
+        JSON.stringify({ ...ex, applicationId: stateId }),
+      );
+    }
+  }, [location.state]);
 
-  // Fetch application to get fee details
-  const { data: appData, isLoading: appLoading } = useQuery({
-    queryKey: ['candidate-application', applicationId],
-    queryFn: () => candidateService.getApplication(applicationId),
-    enabled: !!applicationId,
-  })
+  const applicationId = location.state?.applicationId || getAppId();
+  const [method, setMethod] = useState("upi");
+  const [upiId, setUpiId] = useState("");
+  const [bank, setBank] = useState("");
+  const [card, setCard] = useState({
+    number: "",
+    expiry: "",
+    cvv: "",
+    name: "",
+  });
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (!applicationId) {
-      toast.error('No application found')
-      navigate('/candidate/applications')
+      toast.error("No application found");
+      navigate("/candidate/applications");
     }
-  }, [applicationId, navigate])
+  }, [applicationId, navigate]);
 
-  const application = appData?.application || appData
+  const { data: appData, isLoading } = useQuery({
+    queryKey: ["application-payment", applicationId],
+    queryFn: () => candidateService.getApplication(applicationId),
+    enabled: Boolean(applicationId),
+    staleTime: 0,
+  });
 
-  // Initiate payment mutation
-  const { mutate: initiatePayment, isPending: isInitiating } = useMutation({
-    mutationFn: () => candidateService.initiatePayment(applicationId, 'razorpay'),
-    onSuccess: (data) => {
-      // If Razorpay SDK order created, open Razorpay checkout
-      if (data?.gatewayOrderId && data?.gatewayKeyId) {
-        openRazorpayCheckout(data)
-      } else {
-        // Fallback: simulate payment (dev mode — no gateway keys configured)
-        simulatePayment(data?.transactionId)
-      }
-    },
-    onError: (err) => {
-      toast.error(err.message || 'Failed to initiate payment')
-    },
-  })
+  const application = appData?.application || appData;
 
-  // Verify payment mutation
-  const { mutate: verifyPayment, isPending: isVerifying } = useMutation({
-    mutationFn: (verifyData) => candidateService.verifyPayment(verifyData),
-    onSuccess: () => {
-      toast.success('Payment successful!')
-      navigate('/application/success', {
-        state: { applicationId, paymentSuccess: true },
-      })
-    },
-    onError: (err) => {
-      toast.error(err.message || 'Payment verification failed')
-    },
-  })
+  // Fee comes from app.totalFee — calculated by backend based on the application personal details category
+  const totalFee = application?.totalFee ?? 0;
+  const processingFee = totalFee > 0 ? Math.round(totalFee * 0.02) : 0;
+  const grandTotal = totalFee + processingFee;
+  const candidateCategory = application?.personalDetails?.category || "";
 
-  const openRazorpayCheckout = (paymentData) => {
-    const options = {
-      key: paymentData.gatewayKeyId,
-      amount: paymentData.amount * 100, // paise
-      currency: paymentData.currency || 'INR',
-      name: 'Bihar Recruitment Portal',
-      description: `Application Fee — ${application?.applicationId || applicationId}`,
-      order_id: paymentData.gatewayOrderId,
-      prefill: {
-        name: application?.personalDetails?.fullName || '',
-        email: '',
-        contact: application?.personalDetails?.registeredMobile || '',
-      },
-      theme: { color: '#f97316' },
-      handler: (response) => {
-        // Payment successful — verify with backend
-        verifyPayment({
-          transactionId: paymentData.transactionId,
-          gatewayOrderId: paymentData.gatewayOrderId,
-          gatewayPaymentId: response.razorpay_payment_id,
-          gatewaySignature: response.razorpay_signature,
-          status: 'success',
-        })
-      },
-      modal: {
-        ondismiss: () => {
-          toast.error('Payment cancelled')
-        },
-      },
+  const handlePay = async () => {
+    if (method === "upi" && !upiId.trim()) {
+      toast.error("Enter your UPI ID");
+      return;
     }
-
-    if (window.Razorpay) {
-      const rzp = new window.Razorpay(options)
-      rzp.on('payment.failed', (response) => {
-        verifyPayment({
-          transactionId: paymentData.transactionId,
-          gatewayOrderId: paymentData.gatewayOrderId,
-          gatewayPaymentId: response.error?.metadata?.payment_id || '',
-          status: 'failed',
-        })
-      })
-      rzp.open()
-    } else {
-      // Razorpay SDK not loaded — simulate
-      simulatePayment(paymentData.transactionId)
+    if (method === "netbanking" && !bank) {
+      toast.error("Select your bank");
+      return;
     }
-  }
-
-  const simulatePayment = (transactionId) => {
-    // Dev mode: simulate successful payment after 1.5s
-    toast.loading('Processing payment...', { id: 'payment' })
-    setTimeout(() => {
-      toast.dismiss('payment')
-      verifyPayment({
+    if (
+      method === "card" &&
+      (!card.number || !card.expiry || !card.cvv || !card.name)
+    ) {
+      toast.error("Fill all card details");
+      return;
+    }
+    setProcessing(true);
+    try {
+      await new Promise((r) => setTimeout(r, 1500));
+      const transactionId = `TXN${Date.now()}`;
+      const draft = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
+      await candidateService.finalizeApplication(
+        applicationId,
         transactionId,
-        status: 'success',
-      })
-    }, 1500)
-  }
-
-  const handlePay = () => {
-    // Basic validation
-    if (selectedMethod === 'upi' && !upiId.trim()) {
-      toast.error('Please enter your UPI ID')
-      return
+        draft.declaration || "",
+      );
+      sessionStorage.removeItem(APP_KEY);
+      toast.success("Payment successful! Application submitted.");
+      navigate("/application/success", {
+        state: {
+          applicationId,
+          paymentSuccess: true,
+          amount: grandTotal,
+          transactionId,
+          submittedAt: new Date().toISOString(),
+        },
+      });
+    } catch (err) {
+      toast.error(err.message || "Payment failed");
+    } finally {
+      setProcessing(false);
     }
-    if (selectedMethod === 'netbanking' && !selectedBank) {
-      toast.error('Please select your bank')
-      return
-    }
-    if (selectedMethod === 'card') {
-      if (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvv || !cardDetails.name) {
-        toast.error('Please fill all card details')
-        return
-      }
-    }
-    initiatePayment()
-  }
+  };
 
-  const isProcessing = isInitiating || isVerifying
-
-  if (appLoading) {
+  if (isLoading)
     return (
-      <ApplicationLayout currentStep={8} title="Payment Gateway">
+      <ApplicationLayout currentStep={8} title="Payment">
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
         </div>
       </ApplicationLayout>
-    )
-  }
+    );
 
-  if (!application && !appLoading) {
+  if (!application && !isLoading)
     return (
-      <ApplicationLayout currentStep={8} title="Payment Gateway">
+      <ApplicationLayout currentStep={8} title="Payment">
         <Card>
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">Application not found</p>
-            <Button onClick={() => navigate('/candidate/applications')}>
+            <Button onClick={() => navigate("/candidate/applications")}>
               Go to Applications
             </Button>
           </CardContent>
         </Card>
       </ApplicationLayout>
-    )
-  }
-
-  const totalFee = application?.totalFee || 0
-  const processingFee = totalFee > 0 ? Math.round(totalFee * 0.02) : 0
-  const grandTotal = totalFee + processingFee
+    );
 
   return (
     <ApplicationLayout currentStep={8} title="Payment Gateway">
-      {/* Load Razorpay SDK */}
-      {!window.Razorpay && (
-        <script
-          src="https://checkout.razorpay.com/v1/checkout.js"
-          onLoad={() => console.log('Razorpay loaded')}
-        />
-      )}
-
       <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Payment Methods */}
+          {/* Left: Methods */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Method Selection */}
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-800">Select Payment Method</h2>
-                <p className="text-sm text-gray-500">Choose your preferred payment method</p>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Select Payment Method
+                </h2>
               </CardHeader>
               <CardContent className="space-y-3">
-                {PAYMENT_METHODS.map((method) => {
-                  const Icon = method.icon
+                {METHODS.map((m) => {
+                  const Icon = m.icon;
                   return (
                     <div
-                      key={method.id}
-                      onClick={() => setSelectedMethod(method.id)}
-                      className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                        selectedMethod === method.id
-                          ? 'border-orange-500 bg-orange-50'
-                          : 'border-gray-200 hover:border-orange-300'
-                      }`}
+                      key={m.id}
+                      onClick={() => setMethod(m.id)}
+                      className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${method === m.id ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-orange-300"}`}
                     >
                       <input
                         type="radio"
-                        checked={selectedMethod === method.id}
-                        onChange={() => setSelectedMethod(method.id)}
-                        className="w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500"
+                        readOnly
+                        checked={method === m.id}
+                        className="w-4 h-4 text-orange-600"
                       />
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        selectedMethod === method.id ? 'bg-orange-100' : 'bg-gray-100'
-                      }`}>
-                        <Icon className={`w-5 h-5 ${selectedMethod === method.id ? 'text-orange-600' : 'text-gray-500'}`} />
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${method === m.id ? "bg-orange-100" : "bg-gray-100"}`}
+                      >
+                        <Icon
+                          className={`w-5 h-5 ${method === m.id ? "text-orange-600" : "text-gray-500"}`}
+                        />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-800">{method.name}</p>
-                        <p className="text-sm text-gray-500">{method.desc}</p>
+                        <p className="font-medium text-gray-800">{m.name}</p>
+                        <p className="text-sm text-gray-500">{m.desc}</p>
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </CardContent>
             </Card>
 
-            {/* Payment Details Form */}
-            {selectedMethod === 'upi' && (
+            {method === "upi" && (
               <Card>
-                <CardHeader><h3 className="font-semibold text-gray-800">UPI Payment</h3></CardHeader>
+                <CardHeader>
+                  <h3 className="font-semibold text-gray-800">UPI ID</h3>
+                </CardHeader>
                 <CardContent>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
                   <input
                     type="text"
-                    placeholder="yourname@paytm or yourname@upi"
+                    placeholder="yourname@paytm"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
                     value={upiId}
                     onChange={(e) => setUpiId(e.target.value)}
                   />
-                  <p className="text-xs text-gray-400 mt-2">Enter your UPI ID to proceed with payment</p>
                 </CardContent>
               </Card>
             )}
 
-            {selectedMethod === 'card' && (
+            {method === "card" && (
               <Card>
-                <CardHeader><h3 className="font-semibold text-gray-800">Card Details</h3></CardHeader>
+                <CardHeader>
+                  <h3 className="font-semibold text-gray-800">Card Details</h3>
+                </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
-                    <input
-                      type="text"
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
-                      value={cardDetails.number}
-                      onChange={(e) => setCardDetails(d => ({ ...d, number: e.target.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim() }))}
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    placeholder="Card Number"
+                    maxLength={19}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
+                    value={card.number}
+                    onChange={(e) =>
+                      setCard((c) => ({
+                        ...c,
+                        number: e.target.value
+                          .replace(/\D/g, "")
+                          .replace(/(.{4})/g, "$1 ")
+                          .trim(),
+                      }))
+                    }
+                  />
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        value={cardDetails.expiry}
-                        onChange={(e) => setCardDetails(d => ({ ...d, expiry: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">CVV</label>
-                      <input
-                        type="password"
-                        placeholder="•••"
-                        maxLength={4}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        value={cardDetails.cvv}
-                        onChange={(e) => setCardDetails(d => ({ ...d, cvv: e.target.value.replace(/\D/g, '') }))}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
                     <input
                       type="text"
-                      placeholder="Name as on card"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      value={cardDetails.name}
-                      onChange={(e) => setCardDetails(d => ({ ...d, name: e.target.value }))}
+                      placeholder="MM/YY"
+                      maxLength={5}
+                      className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      value={card.expiry}
+                      onChange={(e) =>
+                        setCard((c) => ({ ...c, expiry: e.target.value }))
+                      }
+                    />
+                    <input
+                      type="password"
+                      placeholder="CVV"
+                      maxLength={4}
+                      className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      value={card.cvv}
+                      onChange={(e) =>
+                        setCard((c) => ({
+                          ...c,
+                          cvv: e.target.value.replace(/\D/g, ""),
+                        }))
+                      }
                     />
                   </div>
+                  <input
+                    type="text"
+                    placeholder="Name on card"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    value={card.name}
+                    onChange={(e) =>
+                      setCard((c) => ({ ...c, name: e.target.value }))
+                    }
+                  />
                 </CardContent>
               </Card>
             )}
 
-            {selectedMethod === 'netbanking' && (
+            {method === "netbanking" && (
               <Card>
-                <CardHeader><h3 className="font-semibold text-gray-800">Select Your Bank</h3></CardHeader>
+                <CardHeader>
+                  <h3 className="font-semibold text-gray-800">Select Bank</h3>
+                </CardHeader>
                 <CardContent>
                   <select
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    value={selectedBank}
-                    onChange={(e) => setSelectedBank(e.target.value)}
+                    value={bank}
+                    onChange={(e) => setBank(e.target.value)}
                   >
                     <option value="">Choose your bank</option>
-                    <option value="sbi">State Bank of India</option>
-                    <option value="hdfc">HDFC Bank</option>
-                    <option value="icici">ICICI Bank</option>
-                    <option value="axis">Axis Bank</option>
-                    <option value="pnb">Punjab National Bank</option>
-                    <option value="bob">Bank of Baroda</option>
-                    <option value="canara">Canara Bank</option>
-                    <option value="kotak">Kotak Mahindra Bank</option>
+                    {[
+                      "State Bank of India",
+                      "HDFC Bank",
+                      "ICICI Bank",
+                      "Axis Bank",
+                      "Punjab National Bank",
+                      "Bank of Baroda",
+                      "Canara Bank",
+                      "Kotak Mahindra Bank",
+                    ].map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
                   </select>
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Right: Order Summary */}
+          {/* Right: Summary */}
           <div className="space-y-5">
             <Card>
-              <CardHeader><h3 className="font-semibold text-gray-800">Payment Summary</h3></CardHeader>
+              <CardHeader>
+                <h3 className="font-semibold text-gray-800">Payment Summary</h3>
+              </CardHeader>
               <CardContent className="space-y-4">
+                {/* Category fee info */}
+                {candidateCategory && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-2">
+                    <IndianRupee className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-orange-700">
+                        Fee for{" "}
+                        <strong>
+                          {CATEGORY_LABELS[candidateCategory] ||
+                            candidateCategory.toUpperCase()}
+                        </strong>{" "}
+                        category
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Application Fee</span>
-                    <span className="font-medium text-gray-800">₹{totalFee.toLocaleString('en-IN')}</span>
+                    <span className="font-medium">
+                      ₹{totalFee.toLocaleString("en-IN")}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Processing Fee (2%)</span>
-                    <span className="font-medium text-gray-800">₹{processingFee.toLocaleString('en-IN')}</span>
+                    <span className="font-medium">
+                      ₹{processingFee.toLocaleString("en-IN")}
+                    </span>
                   </div>
-                  <div className="border-t border-gray-200 pt-3 flex justify-between">
-                    <span className="font-semibold text-gray-800">Total Amount</span>
-                    <span className="font-bold text-orange-600 text-lg">₹{grandTotal.toLocaleString('en-IN')}</span>
+                  <div className="border-t pt-3 flex justify-between">
+                    <span className="font-semibold text-gray-800">Total</span>
+                    <span className="font-bold text-orange-600 text-lg">
+                      ₹{grandTotal.toLocaleString("en-IN")}
+                    </span>
                   </div>
                 </div>
 
                 {application?.applicationId && (
                   <div className="bg-gray-50 rounded-xl p-3">
                     <p className="text-xs text-gray-500 mb-1">Application ID</p>
-                    <p className="text-xs font-mono font-semibold text-gray-800">{application.applicationId}</p>
+                    <p className="text-xs font-mono font-semibold text-gray-800">
+                      {application.applicationId}
+                    </p>
+                  </div>
+                )}
+
+                {totalFee === 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <p className="text-sm text-green-800 font-medium">
+                      No fee for your category
+                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Security */}
             <Card className="bg-green-50 border-green-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="w-5 h-5 text-green-600" />
-                  <span className="font-semibold text-green-800 text-sm">Secure Payment</span>
-                </div>
-                <p className="text-xs text-green-700">
-                  Your payment is encrypted with SSL. We comply with PCI-DSS standards.
+              <CardContent className="p-4 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-green-600" />
+                <p className="text-xs text-green-700 font-medium">
+                  SSL Encrypted · PCI-DSS Compliant
                 </p>
               </CardContent>
             </Card>
-
-            {totalFee === 0 && (
-              <Card className="bg-blue-50 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
-                    <p className="text-sm text-blue-800 font-medium">No fee applicable for your category</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+        <div className="flex justify-between pt-4 border-t border-gray-200">
           <Button
             variant="outline"
-            onClick={() => navigate('/application/post-selection', { state: { applicationId } })}
-            disabled={isProcessing}
+            disabled={processing}
+            onClick={() =>
+              navigate("/application/post-selection", {
+                state: { applicationId },
+              })
+            }
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-
           <Button
             onClick={handlePay}
-            disabled={isProcessing || (totalFee === 0 && grandTotal === 0)}
+            disabled={processing}
             className="bg-orange-600 hover:bg-orange-700 text-white px-8"
           >
-            {isProcessing ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>
-            ) : totalFee === 0 ? (
-              'Submit Application'
+            {processing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : grandTotal === 0 ? (
+              "Submit Application (Free)"
             ) : (
-              `Pay ₹${grandTotal.toLocaleString('en-IN')}`
+              `Pay ₹${grandTotal.toLocaleString("en-IN")}`
             )}
           </Button>
         </div>
       </div>
     </ApplicationLayout>
-  )
-}
+  );
+};
 
-export default Payment
+export default Payment;

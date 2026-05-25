@@ -44,7 +44,9 @@ const createJobSchema = z.object({
   applicationFee: z
     .object({
       general: z.number().min(0).optional(),
+      obc: z.number().min(0).optional(),
       scSt: z.number().min(0).optional(),
+      ews: z.number().min(0).optional(),
       pwd: z.number().min(0).optional(),
     })
     .optional(),

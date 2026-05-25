@@ -218,7 +218,12 @@ const Documents = () => {
       );
       return;
     }
-    navigate("/application/review", { state: { applicationId } });
+    // If editing from Review, go back to Review
+    if (location.state?.returnToReview) {
+      navigate("/application/review", { state: { applicationId } });
+    } else {
+      navigate("/application/review", { state: { applicationId } });
+    }
   };
 
   const uploadedCount = Object.keys(uploadedDocs).length;
@@ -345,7 +350,13 @@ const Documents = () => {
                         size="sm"
                         variant="outline"
                         className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                        onClick={() => window.open(uploadedInfo.url, "_blank")}
+                        onClick={() => {
+                          // Open the actual uploaded file URL
+                          const url = uploadedInfo.url;
+                          if (url)
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          else toast.error("File URL not available");
+                        }}
                       >
                         <Eye className="w-3 h-3 mr-1" />
                         View

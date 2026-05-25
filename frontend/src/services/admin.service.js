@@ -242,6 +242,12 @@ export const adminService = {
   // ── Activity Logs ─────────────────────────────────────────
   async getActivityLogs(params = {}) {
     const response = await apiClient.get("/admin/activity-logs", { params });
-    return unwrapData(response);
+    // response is full body: { data: [...logs], meta: {...} }
+    return { logs: response?.data ?? [], meta: response?.meta ?? {} };
+  },
+  async getEmployeeActivityLogs(employeeId, params = {}) {
+    const response = await apiClient.get(`/admin/activity-logs/employee/${employeeId}`, { params });
+    // response.data = { logs, stats }
+    return { logs: response?.data?.logs ?? [], stats: response?.data?.stats ?? [], meta: response?.meta ?? {} };
   },
 };

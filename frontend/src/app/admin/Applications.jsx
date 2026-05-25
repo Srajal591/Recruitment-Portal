@@ -83,7 +83,7 @@ const Applications = () => {
     queryKey: ['admin-applications', status, search, page],
     queryFn: () => adminService.getApplications({
       status,
-      limit: 20,
+      limit: 10,
       page,
       ...(search && { search }),
     }),
@@ -533,26 +533,31 @@ const Applications = () => {
                 </span>{' '}
                 applications
               </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage(p => p - 1)}
-                  className="border-gray-300"
-                >
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-gray-300">
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-sm text-gray-700 px-3 py-1 bg-white border border-gray-200 rounded-lg">
-                  {page} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(p => p + 1)}
-                  className="border-gray-300"
-                >
+                {(() => {
+                  const pages = []
+                  if (totalPages <= 7) {
+                    for (let i = 1; i <= totalPages; i++) pages.push(i)
+                  } else {
+                    pages.push(1)
+                    if (page > 3) pages.push('...')
+                    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i)
+                    if (page < totalPages - 2) pages.push('...')
+                    pages.push(totalPages)
+                  }
+                  return pages.map((p, i) =>
+                    p === '...'
+                      ? <span key={`d${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>
+                      : <button key={p} onClick={() => setPage(p)}
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${p === page ? 'bg-orange-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                          {p}
+                        </button>
+                  )
+                })()}
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-gray-300">
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>

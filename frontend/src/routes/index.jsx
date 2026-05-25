@@ -81,6 +81,7 @@ const ApplicationDetails = lazy(
 );
 const Analytics = lazy(() => import("../app/admin/Analytics"));
 const FunnelAnalysis = lazy(() => import("../app/admin/FunnelAnalysis"));
+const EmployeeActivityLog = lazy(() => import("../app/admin/EmployeeActivityLog"));
 const AdminSupport = lazy(() => import("../app/admin/Support"));
 const SupportKanban = lazy(() => import("../app/admin/SupportKanban"));
 const SupportTicketDetails = lazy(

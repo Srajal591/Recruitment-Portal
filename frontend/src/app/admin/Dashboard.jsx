@@ -1,14 +1,28 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, BarChart3, Briefcase, CheckCircle, FileText, Plus, Users } from 'lucide-react'
+
+import {
+  AlertTriangle,
+  BarChart3,
+  Briefcase,
+  CheckCircle,
+  FileText,
+  Plus,
+  Users,
+  Activity,
+  BellRing,
+  Clock3,
+} from 'lucide-react'
+
 import AdminLayout from '../../components/layouts/AdminLayout'
-import { Card, CardContent, CardHeader } from '../../components/ui/Card'
+import { Card, CardContent } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import { dashboardService } from '../../services/dashboard.service'
 
 const Dashboard = () => {
   const navigate = useNavigate()
+
   const { data, isLoading } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: dashboardService.adminDashboard,
@@ -19,21 +33,47 @@ const Dashboard = () => {
   const recentApplications = data?.overview?.recentApplications || []
   const funnel = data?.funnel?.funnel || {}
   const topJobs = data?.topJobs || []
+
   const rawSupport = data?.support || {}
   const supportStatusStats = rawSupport.statusStats || []
-  const countSupportByStatus = (name) => supportStatusStats.find(s => s._id === name)?.count || 0
+
+  const countSupportByStatus = (name) =>
+    supportStatusStats.find((s) => s._id === name)?.count || 0
+
   const support = {
     open: countSupportByStatus('Open'),
     pending: countSupportByStatus('In Progress'),
     resolved: countSupportByStatus('Resolved'),
   }
-  const submitted = applicationsByStatus.find((item) => item._id === 'submitted')?.count || 0
+
+  const submitted =
+    applicationsByStatus.find((item) => item._id === 'submitted')?.count || 0
 
   const stats = [
-    { title: 'ACTIVE JOBS', value: overview.totalJobs || 0, icon: Briefcase, color: 'border-l-orange-500' },
-    { title: 'APPLICATIONS', value: overview.totalApplications || 0, icon: FileText, color: 'border-l-blue-500' },
-    { title: 'CANDIDATES', value: overview.totalCandidates || 0, icon: Users, color: 'border-l-green-500' },
-    { title: 'SUBMITTED', value: submitted, icon: CheckCircle, color: 'border-l-yellow-500' },
+    {
+      title: 'ACTIVE JOBS',
+      value: overview.totalJobs || 0,
+      icon: Briefcase,
+      color: 'from-orange-500 to-orange-600',
+    },
+    {
+      title: 'APPLICATIONS',
+      value: overview.totalApplications || 0,
+      icon: FileText,
+      color: 'from-blue-500 to-blue-600',
+    },
+    {
+      title: 'CANDIDATES',
+      value: overview.totalCandidates || 0,
+      icon: Users,
+      color: 'from-emerald-500 to-emerald-600',
+    },
+    {
+      title: 'SUBMITTED',
+      value: submitted,
+      icon: CheckCircle,
+      color: 'from-violet-500 to-violet-600',
+    },
   ]
 
   const funnelItems = [
@@ -47,142 +87,530 @@ const Dashboard = () => {
 
   return (
     <AdminLayout title="Dashboard Overview">
-      <div className="space-y-6 bg-orange-50 min-h-screen p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="min-h-screen bg-[#f7f4ee] px-4 py-4 md:px-5 md:py-4">
+
+        {/* HEADER */}
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-5">
+
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard Overview</h1>
-            <p className="text-gray-600">Live recruitment metrics from backend services.</p>
+            <p className="text-[10px] font-black text-orange-500 tracking-[0.22em] mb-1">
+              ADMIN CONTROL CENTER
+            </p>
+
+            <h1 className="text-3xl md:text-[42px] font-black tracking-tight text-[#1f2937] leading-none">
+              Recruitment Dashboard
+            </h1>
+
+            <p className="text-xs text-gray-500 mt-2">
+              Real-time recruitment analytics and monitoring system.
+            </p>
           </div>
-          <div className="flex gap-3">
-            <Button onClick={() => navigate('/admin/jobs/create')} className="bg-orange-600 hover:bg-orange-700 text-white">
+
+          <div className="flex items-center flex-wrap gap-3">
+
+            <Button
+              onClick={() => navigate('/admin/jobs/create')}
+              className="
+                bg-gradient-to-r from-orange-500 to-orange-600
+                hover:from-orange-600 hover:to-orange-700
+                shadow-lg shadow-orange-200
+                rounded-2xl px-4 py-2 text-sm
+                border-0 h-10
+              "
+            >
               <Plus className="w-4 h-4 mr-2" />
               Create Job
             </Button>
-            <Button asChild variant="outline">
-              <Link to="/admin/applications">View Applications</Link>
+
+            <Button
+              asChild
+              variant="outline"
+              className="
+                rounded-2xl bg-white/80
+                backdrop-blur-xl border-white/70
+                shadow-sm h-10 px-4 text-sm
+              "
+            >
+              <Link to="/admin/applications">
+                View Applications
+              </Link>
             </Button>
           </div>
         </div>
 
-        {isLoading && <Card><CardContent className="p-6">Loading dashboard...</CardContent></Card>}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat) => (
-            <Card key={stat.title} className={`border-l-4 ${stat.color} bg-white`}>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-800">{stat.value.toLocaleString('en-IN')}</p>
-                  </div>
-                  <stat.icon className="w-5 h-5 text-orange-500" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-gray-800">Candidate Conversion Funnel</h3>
-                <BarChart3 className="w-5 h-5 text-orange-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                {funnelItems.map(([label, value], index) => (
-                  <div key={label} className={`rounded-lg p-4 text-center ${index === funnelItems.length - 1 ? 'bg-gray-900 text-white' : 'bg-orange-50 text-gray-800'}`}>
-                    <div className="font-bold text-lg">{(value || 0).toLocaleString('en-IN')}</div>
-                    <div className="text-[10px] font-bold tracking-wide mt-1">{label}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-gray-800">Support Snapshot</h3>
-                <Badge variant="warning">LIVE</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-red-600">{support.open || 0}</div>
-                  <div className="text-xs text-gray-500">OPEN</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-yellow-600">{support.pending || 0}</div>
-                  <div className="text-xs text-gray-500">PENDING</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600">{support.resolved || 0}</div>
-                  <div className="text-xs text-gray-500">RESOLVED</div>
-                </div>
-              </div>
-              <Button asChild variant="outline" className="w-full mt-4">
-                <Link to="/admin/support">Open Support Center</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <h3 className="font-semibold text-gray-800">Top Job Performance</h3>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {topJobs.length === 0 && <p className="text-sm text-gray-600">No submitted applications yet.</p>}
-              {topJobs.map((job) => (
-                <div key={job._id || job.postCode} className="flex items-center justify-between p-3 rounded-lg border border-gray-100">
-                  <div>
-                    <h4 className="font-medium text-sm text-gray-800">{job.jobTitle}</h4>
-                    <p className="text-xs text-gray-500">{job.department} • {job.postCode}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg text-gray-800">{job.totalApplications || 0}</p>
-                    <p className="text-xs text-gray-500">APPLICANTS</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <h3 className="font-semibold text-gray-800">Recent Applications</h3>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {recentApplications.length === 0 && <p className="text-sm text-gray-600">No recent applications.</p>}
-              {recentApplications.map((application) => (
-                <div key={application._id} className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-orange-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm text-gray-800">{application.applicationId}</h4>
-                    <p className="text-xs text-gray-600">{application.jobId?.title || 'Job'} • {application.candidateId?.email || 'Candidate'}</p>
-                    <p className="text-xs text-gray-500 mt-1">{application.status}</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {!isLoading && !data?.overview && (
-          <Card className="border-l-4 border-l-yellow-500">
-            <CardContent className="p-4 flex gap-3 text-yellow-800">
-              <AlertTriangle className="w-5 h-5" />
-              Dashboard APIs did not return data. Confirm backend services are running and the logged-in role has analytics permissions.
+        {/* LOADING */}
+        {isLoading && (
+          <Card className="rounded-[22px] border-0 shadow-lg">
+            <CardContent className="p-4">
+              Loading dashboard...
             </CardContent>
           </Card>
         )}
+
+        {/* KPI */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+
+          {stats.map((stat) => (
+            <div
+              key={stat.title}
+              className="
+                relative overflow-hidden
+                rounded-[22px]
+                bg-white/90 backdrop-blur-xl
+                border border-white/60
+                shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+                hover:shadow-[0_10px_32px_rgba(0,0,0,0.07)]
+                transition-all duration-500 ease-out
+                hover:-translate-y-[3px]
+                p-4
+              "
+            >
+
+              <div className={`
+                absolute top-0 left-0 h-1 w-full
+                bg-gradient-to-r ${stat.color}
+              `} />
+
+              <div className="flex items-start justify-between">
+
+                <div>
+                  <p className="text-[10px] font-black tracking-[0.18em] text-gray-400 mb-2">
+                    {stat.title}
+                  </p>
+
+                  <h2 className="text-3xl font-black text-[#1f2937] tracking-tight">
+                    {stat.value.toLocaleString('en-IN')}
+                  </h2>
+
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+
+                    <p className="text-[10px] font-medium text-gray-500">
+                      Live updated
+                    </p>
+                  </div>
+                </div>
+
+                <div className="
+                  w-11 h-11 rounded-2xl
+                  bg-gradient-to-br from-orange-50 to-orange-100
+                  flex items-center justify-center
+                ">
+                  <stat.icon className="w-5 h-5 text-orange-600" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* MAIN GRID */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+          {/* LEFT */}
+          <div className="xl:col-span-2 space-y-5">
+
+            {/* FUNNEL */}
+            <div className="
+              rounded-[22px]
+              bg-white/90 backdrop-blur-xl
+              border border-white/70
+              shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+              p-5
+            ">
+
+              <div className="flex items-center justify-between mb-5">
+
+                <div>
+                  <h3 className="text-xl font-black text-[#1f2937]">
+                    Candidate Conversion Funnel
+                  </h3>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    Application stage performance
+                  </p>
+                </div>
+
+                <div className="
+                  w-10 h-10 rounded-2xl
+                  bg-orange-50
+                  flex items-center justify-center
+                ">
+                  <BarChart3 className="w-4 h-4 text-orange-500" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+
+                {funnelItems.map(([label, value], index) => (
+                  <div
+                    key={label}
+                    className={`
+                      rounded-2xl p-4 text-center transition-all duration-300
+                      ${
+                        index === funnelItems.length - 1
+                          ? 'bg-[#111827] text-white shadow-xl'
+                          : 'bg-[#fafafa] border border-gray-100 hover:border-orange-200'
+                      }
+                    `}
+                  >
+                    <h3 className="text-2xl font-black">
+                      {(value || 0).toLocaleString('en-IN')}
+                    </h3>
+
+                    <p className={`
+                      text-[10px] mt-2 font-black tracking-[0.12em]
+                      ${
+                        index === funnelItems.length - 1
+                          ? 'text-gray-300'
+                          : 'text-gray-500'
+                      }
+                    `}>
+                      {label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* TOP JOBS */}
+            <div className="
+              rounded-[22px]
+              bg-white/90 backdrop-blur-xl
+              border border-white/70
+              shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+              p-5
+            ">
+
+              <div className="flex items-center justify-between mb-5">
+
+                <div>
+                  <h3 className="text-xl font-black text-[#1f2937]">
+                    Top Job Performance
+                  </h3>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    Highest application receiving jobs
+                  </p>
+                </div>
+
+                <Badge variant="primary">
+                  LIVE DATA
+                </Badge>
+              </div>
+
+              <div className="space-y-3">
+
+                {topJobs.map((job, index) => (
+                  <div
+                    key={job._id || job.postCode}
+                    className="
+                      rounded-2xl border border-gray-100
+                      p-3 flex items-center justify-between
+                      hover:border-orange-200
+                      hover:bg-orange-50/30
+                      transition-all duration-300
+                    "
+                  >
+                    <div className="flex items-center gap-3">
+
+                      <div className="
+                        w-10 h-10 rounded-xl
+                        bg-gradient-to-br from-orange-100 to-orange-200
+                        flex items-center justify-center
+                        font-black text-sm text-orange-700
+                      ">
+                        #{index + 1}
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-sm text-[#1f2937]">
+                          {job.jobTitle}
+                        </h4>
+
+                        <p className="text-xs text-gray-500 mt-1">
+                          {job.department} • {job.postCode}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <h3 className="text-2xl font-black text-[#1f2937]">
+                        {job.totalApplications || 0}
+                      </h3>
+
+                      <p className="text-[10px] font-bold tracking-[0.12em] text-gray-400">
+                        APPLICATIONS
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* RECENT APPLICATIONS */}
+            <div className="
+              rounded-[22px]
+              bg-white/90 backdrop-blur-xl
+              border border-white/70
+              shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+              p-5
+            ">
+
+              <div className="flex items-center justify-between mb-5">
+
+                <div>
+                  <h3 className="text-xl font-black text-[#1f2937]">
+                    Recent Applications
+                  </h3>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    Latest candidate submissions
+                  </p>
+                </div>
+
+                <Badge variant="info">
+                  REAL-TIME
+                </Badge>
+              </div>
+
+              <div className="space-y-3">
+
+                {recentApplications.map((application) => (
+                  <div
+                    key={application._id}
+                    className="
+                      flex items-start gap-3
+                      p-3 rounded-2xl
+                      border border-gray-100
+                      hover:border-orange-200
+                      hover:bg-orange-50/30
+                      transition-all duration-300
+                    "
+                  >
+                    <div className="
+                      w-10 h-10 rounded-xl
+                      bg-gradient-to-br from-orange-100 to-orange-200
+                      flex items-center justify-center
+                      shrink-0
+                    ">
+                      <FileText className="w-4 h-4 text-orange-600" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm text-[#1f2937] truncate">
+                        {application.applicationId}
+                      </h4>
+
+                      <p className="text-xs text-gray-500 mt-1">
+                        {application.jobId?.title || 'Job'}
+                      </p>
+
+                      <p className="text-[10px] text-gray-400 mt-1 truncate">
+                        {application.candidateId?.email || 'Candidate'}
+                      </p>
+                    </div>
+
+                    <Badge
+                      variant={
+                        application.status === 'Approved'
+                          ? 'success'
+                          : application.status === 'Rejected'
+                          ? 'error'
+                          : 'warning'
+                      }
+                    >
+                      {application.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* RIGHT */}
+          <div className="space-y-5">
+
+            {/* SUPPORT */}
+            <div className="
+              rounded-[22px]
+              bg-[#111827]
+              text-white
+              p-5
+              shadow-[0_20px_60px_rgba(15,23,42,0.28)]
+            ">
+
+              <div className="flex items-center justify-between mb-5">
+
+                <div>
+                  <h3 className="text-xl font-black">
+                    Support Snapshot
+                  </h3>
+
+                  <p className="text-xs text-gray-400 mt-1">
+                    Ticket monitoring system
+                  </p>
+                </div>
+
+                <Badge className="bg-orange-500 text-white border-0">
+                  ACTIVE
+                </Badge>
+              </div>
+
+              <div className="space-y-3">
+
+                <div className="
+                  rounded-2xl bg-white/5 border border-white/10
+                  p-3 flex items-center justify-between
+                ">
+                  <div>
+                    <p className="text-xs text-gray-400">
+                      Open Tickets
+                    </p>
+
+                    <h3 className="text-2xl font-black mt-1">
+                      {support.open || 0}
+                    </h3>
+                  </div>
+
+                  <div className="
+                    w-10 h-10 rounded-xl bg-red-500/20
+                    flex items-center justify-center
+                  ">
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                  </div>
+                </div>
+
+                <div className="
+                  rounded-2xl bg-white/5 border border-white/10
+                  p-3 flex items-center justify-between
+                ">
+                  <div>
+                    <p className="text-xs text-gray-400">
+                      Pending
+                    </p>
+
+                    <h3 className="text-2xl font-black mt-1">
+                      {support.pending || 0}
+                    </h3>
+                  </div>
+
+                  <div className="
+                    w-10 h-10 rounded-xl bg-yellow-500/20
+                    flex items-center justify-center
+                  ">
+                    <Clock3 className="w-4 h-4 text-yellow-400" />
+                  </div>
+                </div>
+
+                <div className="
+                  rounded-2xl bg-white/5 border border-white/10
+                  p-3 flex items-center justify-between
+                ">
+                  <div>
+                    <p className="text-xs text-gray-400">
+                      Resolved
+                    </p>
+
+                    <h3 className="text-2xl font-black mt-1">
+                      {support.resolved || 0}
+                    </h3>
+                  </div>
+
+                  <div className="
+                    w-10 h-10 rounded-xl bg-emerald-500/20
+                    flex items-center justify-center
+                  ">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                asChild
+                className="
+                  w-full mt-5 rounded-2xl
+                  bg-white text-black hover:bg-gray-100
+                  h-10 text-sm
+                "
+              >
+                <Link to="/admin/support">
+                  Open Support Center
+                </Link>
+              </Button>
+            </div>
+
+            {/* ALERTS */}
+            <div className="
+              rounded-[22px]
+              bg-white/90 backdrop-blur-xl
+              border border-white/70
+              shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+              p-5
+            ">
+
+              <div className="flex items-center justify-between mb-5">
+
+                <div>
+                  <h3 className="text-xl font-black text-[#1f2937]">
+                    Critical Alerts
+                  </h3>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    System notifications
+                  </p>
+                </div>
+
+                <Badge variant="error">
+                  3 NEW
+                </Badge>
+              </div>
+
+              <div className="space-y-3">
+
+                <div className="
+                  rounded-2xl border border-red-100
+                  bg-red-50 p-3
+                ">
+                  <div className="flex gap-3">
+                    <BellRing className="w-4 h-4 text-red-500 mt-1" />
+
+                    <div>
+                      <h4 className="font-bold text-sm text-red-700">
+                        Payment Gateway Spike
+                      </h4>
+
+                      <p className="text-xs text-red-600 mt-1">
+                        High transaction latency detected.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="
+                  rounded-2xl border border-yellow-100
+                  bg-yellow-50 p-3
+                ">
+                  <div className="flex gap-3">
+                    <Activity className="w-4 h-4 text-yellow-600 mt-1" />
+
+                    <div>
+                      <h4 className="font-bold text-sm text-yellow-700">
+                        Document Buffer Full
+                      </h4>
+
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Upload queue nearing capacity.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
     </AdminLayout>
   )

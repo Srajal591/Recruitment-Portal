@@ -1,7 +1,18 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Plus, Eye, Edit, FolderOpen, Rocket, CheckCircle, Calendar, Trash2 } from 'lucide-react'
+
+import {
+  Plus,
+  Eye,
+  Edit,
+  FolderOpen,
+  Rocket,
+  CheckCircle,
+  Calendar,
+  Trash2,
+} from 'lucide-react'
+
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -16,6 +27,7 @@ const Projects = () => {
     queryKey: ['admin-projects'],
     queryFn: () => adminService.getProjects({ limit: 50 }),
   })
+
   const { data: statsData } = useQuery({
     queryKey: ['admin-project-stats'],
     queryFn: adminService.getProjectStats,
@@ -25,135 +37,350 @@ const Projects = () => {
     mutationFn: adminService.deleteProject,
     onSuccess: () => {
       toast.success('Project deleted')
-      queryClient.invalidateQueries({ queryKey: ['admin-projects'] })
-      queryClient.invalidateQueries({ queryKey: ['admin-project-stats'] })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin-projects'],
+      })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin-project-stats'],
+      })
     },
-    onError: (err) => toast.error(err.message || 'Failed to delete project'),
+
+    onError: (err) =>
+      toast.error(err.message || 'Failed to delete project'),
   })
 
   const handleDelete = (project) => {
-    if (window.confirm(`Delete project "${project.name}"? All associated jobs will be unlinked. This cannot be undone.`)) {
+    if (
+      window.confirm(
+        `Delete project "${project.name}"? This cannot be undone.`
+      )
+    ) {
       deleteProject(project._id)
     }
   }
 
   const projects = data?.projects || []
+
   const stats = [
-    { title: 'TOTAL PROJECTS', value: data?.pagination?.totalItems || projects.length, icon: FolderOpen, color: 'bg-blue-100 text-blue-600' },
-    { title: 'ACTIVE', value: statsData?.activeProjects || projects.filter((p) => p.status === 'Active').length, icon: Rocket, color: 'bg-green-100 text-green-600' },
-    { title: 'COMPLETED', value: projects.filter((p) => p.status === 'Completed').length, icon: CheckCircle, color: 'bg-purple-100 text-purple-600' },
-    { title: 'UPCOMING', value: projects.filter((p) => p.status === 'Upcoming').length, icon: Calendar, color: 'bg-orange-100 text-orange-600' },
+    {
+      title: 'TOTAL PROJECTS',
+      value:
+        data?.pagination?.totalItems || projects.length,
+      icon: FolderOpen,
+      color:
+        'from-blue-500 to-blue-600',
+      bg: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+    },
+    {
+      title: 'ACTIVE',
+      value:
+        statsData?.activeProjects ||
+        projects.filter((p) => p.status === 'Active').length,
+      icon: Rocket,
+      color:
+        'from-green-500 to-green-600',
+      bg: 'bg-green-50',
+      iconColor: 'text-green-600',
+    },
+    {
+      title: 'COMPLETED',
+      value:
+        projects.filter((p) => p.status === 'Completed').length,
+      icon: CheckCircle,
+      color:
+        'from-purple-500 to-purple-600',
+      bg: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+    },
+    {
+      title: 'UPCOMING',
+      value:
+        projects.filter((p) => p.status === 'Upcoming').length,
+      icon: Calendar,
+      color:
+        'from-orange-500 to-orange-600',
+      bg: 'bg-orange-50',
+      iconColor: 'text-orange-600',
+    },
   ]
 
   return (
     <AdminLayout title="Projects">
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="min-h-screen bg-[#f7f4ee] p-5 space-y-5">
+
+        {/* HEADER */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
-            <p className="text-gray-600">Manage recruitment projects and drives.</p>
+            <h1 className="text-3xl font-black text-[#1f2937]">
+              Projects
+            </h1>
+
+            <p className="text-sm text-gray-500 mt-1">
+              Oversee and manage recruitment cycles across Bihar departments.
+            </p>
           </div>
-          <Button onClick={() => navigate('/admin/projects/create')} className="bg-orange-600 hover:bg-orange-700 text-white">
+
+          <Button
+            onClick={() =>
+              navigate('/admin/projects/create')
+            }
+            className="
+              bg-orange-600 hover:bg-orange-700
+              text-white rounded-2xl
+              shadow-lg shadow-orange-200
+              px-5 h-11
+            "
+          >
             <Plus className="w-4 h-4 mr-2" />
             Create Project
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* STATS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
           {stats.map((stat) => (
-            <Card key={stat.title} className="bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-800">{Number(stat.value || 0).toLocaleString('en-IN')}</p>
-                  </div>
-                  <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-                    <stat.icon className="w-6 h-6" />
-                  </div>
+            <div
+              key={stat.title}
+              className="
+                relative overflow-hidden
+                rounded-[22px]
+                bg-white/90 backdrop-blur-xl
+                border border-white/60
+                shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+                hover:-translate-y-[2px]
+                transition-all duration-300
+                p-4
+              "
+            >
+
+              <div className={`
+                absolute top-0 left-0 w-full h-1
+                bg-gradient-to-r ${stat.color}
+              `} />
+
+              <div className="flex items-center justify-between">
+
+                <div>
+                  <p className="text-[10px] tracking-[0.18em] font-black text-gray-400 mb-2">
+                    {stat.title}
+                  </p>
+
+                  <h2 className="text-3xl font-black text-[#1f2937]">
+                    {Number(stat.value || 0).toLocaleString('en-IN')}
+                  </h2>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className={`
+                  w-12 h-12 rounded-2xl
+                  flex items-center justify-center
+                  ${stat.bg}
+                `}>
+                  <stat.icon
+                    className={`w-5 h-5 ${stat.iconColor}`}
+                  />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+        {/* TABLE */}
+        <div className="
+          rounded-[24px]
+          bg-white/90 backdrop-blur-xl
+          border border-white/70
+          shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+          overflow-hidden
+        ">
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full">
+
+              <thead className="bg-[#f8f8f8] border-b border-gray-100">
+
+                <tr>
+                  {[
+                    'Project Name',
+                    'State',
+                    'Department',
+                    'Status',
+                    'Start',
+                    'End',
+                    'Actions',
+                  ].map((head) => (
+                    <th
+                      key={head}
+                      className="
+                        text-left px-5 py-4
+                        text-[10px]
+                        font-black
+                        tracking-[0.15em]
+                        text-gray-400
+                        uppercase
+                      "
+                    >
+                      {head}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-gray-100">
+
+                {isLoading && (
                   <tr>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Project Name</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">State</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Department</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Start</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">End</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <td
+                      colSpan="7"
+                      className="p-6 text-sm text-gray-500"
+                    >
+                      Loading projects...
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {isLoading && <tr><td colSpan="7" className="p-6 text-gray-600">Loading projects...</td></tr>}
-                  {!isLoading && projects.length === 0 && (
-                    <tr><td colSpan="7" className="p-6 text-gray-600">No projects found. Create your first project.</td></tr>
-                  )}
-                  {projects.map((project) => (
-                    <tr key={project._id} className="hover:bg-orange-50 transition-colors">
-                      <td className="p-4">
-                        <div className="font-semibold text-gray-800">{project.name}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">{project.description || 'No description'}</div>
-                      </td>
-                      <td className="p-4 text-sm text-gray-700">{project.state}</td>
-                      <td className="p-4 text-sm text-gray-700">{project.department}</td>
-                      <td className="p-4">
-                        <Badge className={
-                          project.status === 'Active' ? 'bg-green-100 text-green-800' :
-                          project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-700'
-                        }>
-                          {project.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-sm text-gray-600">
-                        {project.startDate ? new Date(project.startDate).toLocaleDateString('en-IN') : '—'}
-                      </td>
-                      <td className="p-4 text-sm text-gray-600">
-                        {project.endDate ? new Date(project.endDate).toLocaleDateString('en-IN') : '—'}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => navigate(`/admin/projects/${project._id}`)}
-                            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="View Project"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/admin/projects/${project._id}`)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit Project"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(project)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Project"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                )}
+
+                {!isLoading &&
+                  projects.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan="7"
+                        className="p-6 text-sm text-gray-500"
+                      >
+                        No projects found.
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  )}
+
+                {projects.map((project) => (
+                  <tr
+                    key={project._id}
+                    className="
+                      hover:bg-orange-50/40
+                      transition-all duration-200
+                    "
+                  >
+
+                    <td className="px-5 py-5">
+
+                      <div className="font-bold text-[#1f2937]">
+                        {project.name}
+                      </div>
+
+                      <div className="text-xs text-gray-500 mt-1 max-w-[250px] truncate">
+                        {project.description ||
+                          'No description'}
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-5">
+                      <Badge className="bg-gray-100 text-gray-700">
+                        {project.state}
+                      </Badge>
+                    </td>
+
+                    <td className="px-5 py-5 text-sm text-gray-600">
+                      {project.department}
+                    </td>
+
+                    <td className="px-5 py-5">
+
+                      <Badge
+                        className={
+                          project.status === 'Active'
+                            ? 'bg-green-100 text-green-700'
+                            : project.status === 'Completed'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-orange-100 text-orange-700'
+                        }
+                      >
+                        {project.status}
+                      </Badge>
+                    </td>
+
+                    <td className="px-5 py-5 text-sm text-gray-500">
+                      {project.startDate
+                        ? new Date(
+                            project.startDate
+                          ).toLocaleDateString('en-IN')
+                        : '—'}
+                    </td>
+
+                    <td className="px-5 py-5 text-sm text-gray-500">
+                      {project.endDate
+                        ? new Date(
+                            project.endDate
+                          ).toLocaleDateString('en-IN')
+                        : '—'}
+                    </td>
+
+                    <td className="px-5 py-5">
+
+                      <div className="flex items-center gap-2">
+
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/admin/projects/${project._id}`
+                            )
+                          }
+                          className="
+                            w-9 h-9 rounded-xl
+                            flex items-center justify-center
+                            hover:bg-gray-100
+                            text-gray-500
+                            transition-all
+                          "
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/admin/projects/${project._id}`
+                            )
+                          }
+                          className="
+                            w-9 h-9 rounded-xl
+                            flex items-center justify-center
+                            hover:bg-blue-50
+                            text-blue-600
+                            transition-all
+                          "
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            handleDelete(project)
+                          }
+                          className="
+                            w-9 h-9 rounded-xl
+                            flex items-center justify-center
+                            hover:bg-red-50
+                            text-red-600
+                            transition-all
+                          "
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+
+            </table>
+          </div>
+        </div>
       </div>
     </AdminLayout>
   )

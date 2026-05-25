@@ -2,277 +2,839 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+
 import {
-  Plus, Eye, Edit, Briefcase, Users, CheckCircle, Clock,
-  FolderOpen, Trash2, Send, XCircle,
+  Plus,
+  Eye,
+  Edit,
+  Briefcase,
+  Users,
+  Clock,
+  FolderOpen,
+  Trash2,
+  Send,
+  XCircle,
+  Sparkles,
 } from 'lucide-react'
+
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { Card, CardContent } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
+
 import { jobService } from '../../services/job.service'
 import { adminService } from '../../services/admin.service'
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-700',
-  active: 'bg-green-100 text-green-800',
-  closed: 'bg-red-100 text-red-800',
-  published: 'bg-green-100 text-green-800',
+  active: 'bg-green-100 text-green-700',
+  closed: 'bg-red-100 text-red-700',
+  published: 'bg-green-100 text-green-700',
 }
 
 const Jobs = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [showProjectSelector, setShowProjectSelector] = useState(false)
+
+  const [showProjectSelector, setShowProjectSelector] =
+    useState(false)
 
   const { data: jobsData, isLoading } = useQuery({
     queryKey: ['admin-jobs'],
-    queryFn: () => jobService.getAdminJobs({ limit: 50 }),
+    queryFn: () =>
+      jobService.getAdminJobs({ limit: 50 }),
   })
+
   const { data: statsData } = useQuery({
     queryKey: ['admin-job-stats'],
     queryFn: jobService.getAdminJobStats,
   })
+
   const { data: projectsData } = useQuery({
     queryKey: ['admin-projects-for-job-create'],
-    queryFn: () => adminService.getProjects({ limit: 50 }),
+    queryFn: () =>
+      adminService.getProjects({ limit: 50 }),
   })
 
   const { mutate: publishJob } = useMutation({
     mutationFn: adminService.publishJob,
+
     onSuccess: () => {
       toast.success('Job published successfully')
-      queryClient.invalidateQueries({ queryKey: ['admin-jobs'] })
-      queryClient.invalidateQueries({ queryKey: ['admin-job-stats'] })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin-jobs'],
+      })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin-job-stats'],
+      })
     },
-    onError: (err) => toast.error(err.message || 'Failed to publish job'),
+
+    onError: (err) =>
+      toast.error(
+        err.message || 'Failed to publish job'
+      ),
   })
 
   const { mutate: closeJob } = useMutation({
     mutationFn: adminService.closeJob,
+
     onSuccess: () => {
       toast.success('Job closed')
-      queryClient.invalidateQueries({ queryKey: ['admin-jobs'] })
-      queryClient.invalidateQueries({ queryKey: ['admin-job-stats'] })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin-jobs'],
+      })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin-job-stats'],
+      })
     },
-    onError: (err) => toast.error(err.message || 'Failed to close job'),
+
+    onError: (err) =>
+      toast.error(
+        err.message || 'Failed to close job'
+      ),
   })
 
   const { mutate: deleteJob } = useMutation({
     mutationFn: adminService.deleteJob,
+
     onSuccess: () => {
       toast.success('Job deleted')
-      queryClient.invalidateQueries({ queryKey: ['admin-jobs'] })
-      queryClient.invalidateQueries({ queryKey: ['admin-job-stats'] })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin-jobs'],
+      })
+
+      queryClient.invalidateQueries({
+        queryKey: ['admin-job-stats'],
+      })
     },
-    onError: (err) => toast.error(err.message || 'Failed to delete job'),
+
+    onError: (err) =>
+      toast.error(
+        err.message || 'Failed to delete job'
+      ),
   })
 
   const handleDelete = (job) => {
-    if (window.confirm(`Delete "${job.title}"? This cannot be undone.`)) {
+    if (
+      window.confirm(
+        `Delete "${job.title}"? This cannot be undone.`
+      )
+    ) {
       deleteJob(job._id)
     }
   }
 
   const handlePublish = (job) => {
-    if (window.confirm(`Publish "${job.title}"? It will be visible to all candidates.`)) {
+    if (
+      window.confirm(
+        `Publish "${job.title}"?`
+      )
+    ) {
       publishJob(job._id)
     }
   }
 
   const handleClose = (job) => {
-    if (window.confirm(`Close "${job.title}"? No new applications will be accepted.`)) {
+    if (
+      window.confirm(
+        `Close "${job.title}"?`
+      )
+    ) {
       closeJob(job._id)
     }
   }
 
   const jobs = jobsData?.jobs || []
   const projects = projectsData?.projects || []
-  const statusStats = statsData?.statusStats || []
-  const countByStatus = (status) => statusStats.find((item) => item._id === status)?.count || 0
-  const totalApplicants = jobs.reduce((sum, job) => sum + (job.totalApplicants || 0), 0)
+
+  const statusStats =
+    statsData?.statusStats || []
+
+  const countByStatus = (status) =>
+    statusStats.find(
+      (item) => item._id === status
+    )?.count || 0
+
+  const totalApplicants = jobs.reduce(
+    (sum, job) =>
+      sum + (job.totalApplicants || 0),
+    0
+  )
 
   const stats = [
-    { title: 'TOTAL JOBS', value: jobsData?.pagination?.totalItems || jobs.length, icon: Briefcase, color: 'bg-blue-100 text-blue-600' },
-    { title: 'ACTIVE', value: countByStatus('active') || countByStatus('published'), icon: Clock, color: 'bg-green-100 text-green-600' },
-    { title: 'DRAFT', value: countByStatus('draft'), icon: Edit, color: 'bg-yellow-100 text-yellow-600' },
-    { title: 'TOTAL APPLICANTS', value: totalApplicants, icon: Users, color: 'bg-orange-100 text-orange-600' },
+    {
+      title: 'LIVE JOBS',
+      value:
+        countByStatus('active') ||
+        countByStatus('published'),
+      icon: Briefcase,
+      bg: 'bg-green-50',
+      color: 'text-green-600',
+      border:
+        'from-green-500 to-green-400',
+    },
+    {
+      title: 'DRAFTS',
+      value: countByStatus('draft'),
+      icon: Edit,
+      bg: 'bg-blue-50',
+      color: 'text-blue-600',
+      border:
+        'from-blue-500 to-blue-400',
+    },
+    {
+      title: 'CLOSED',
+      value: countByStatus('closed'),
+      icon: XCircle,
+      bg: 'bg-red-50',
+      color: 'text-red-600',
+      border:
+        'from-red-500 to-red-400',
+    },
+    {
+      title: 'APPLICANTS',
+      value: totalApplicants,
+      icon: Users,
+      bg: 'bg-orange-50',
+      color: 'text-orange-600',
+      border:
+        'from-orange-500 to-orange-400',
+    },
   ]
 
   const handleProjectSelect = (projectId) => {
     setShowProjectSelector(false)
-    navigate(`/admin/jobs/create/basic-info?project=${projectId}`)
+
+    navigate(
+      `/admin/jobs/create/basic-info?project=${projectId}`
+    )
   }
 
   return (
     <AdminLayout title="Jobs">
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
+
+      <div className="
+        min-h-screen
+        bg-[#f7f4ee]
+        p-5 space-y-5
+      ">
+
+        {/* HEADER */}
+        <div className="
+          flex flex-col lg:flex-row
+          lg:items-center
+          lg:justify-between
+          gap-4
+        ">
+
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Jobs</h1>
-            <p className="text-gray-600">Manage job postings from the recruitment service.</p>
+
+            <h1 className="
+              text-3xl font-black
+              text-[#1f2937]
+            ">
+              Jobs
+            </h1>
+
+            <p className="
+              text-sm text-gray-500 mt-1
+            ">
+              Manage recruitment cycles and
+              institutional vacancies across Bihar.
+            </p>
+
           </div>
-          <Button onClick={() => setShowProjectSelector(true)} className="bg-orange-600 hover:bg-orange-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
+
+          <Button
+            onClick={() =>
+              setShowProjectSelector(true)
+            }
+            className="
+              bg-orange-600
+              hover:bg-orange-700
+              text-white
+              rounded-2xl
+              shadow-lg shadow-orange-200
+              h-11 px-5
+            "
+          >
+            <Plus className="
+              w-4 h-4 mr-2
+            " />
+
             Create Job
           </Button>
+
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* STATS */}
+        <div className="
+          grid grid-cols-1
+          sm:grid-cols-2
+          xl:grid-cols-4
+          gap-4
+        ">
+
           {stats.map((stat) => (
-            <Card key={stat.title} className="bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-800">{Number(stat.value || 0).toLocaleString('en-IN')}</p>
-                  </div>
-                  <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-                    <stat.icon className="w-6 h-6" />
-                  </div>
+            <div
+              key={stat.title}
+              className="
+                relative overflow-hidden
+                rounded-[24px]
+                bg-white/90 backdrop-blur-xl
+                border border-white/70
+                shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+                p-5
+                hover:-translate-y-[2px]
+                transition-all duration-300
+              "
+            >
+
+              <div className={`
+                absolute top-0 left-0
+                w-full h-1
+                bg-gradient-to-r ${stat.border}
+              `} />
+
+              <div className="
+                flex items-center
+                justify-between
+              ">
+
+                <div>
+
+                  <p className="
+                    text-[10px]
+                    font-black
+                    tracking-[0.16em]
+                    text-gray-400 mb-2
+                  ">
+                    {stat.title}
+                  </p>
+
+                  <h2 className="
+                    text-3xl font-black
+                    text-[#1f2937]
+                  ">
+                    {Number(
+                      stat.value || 0
+                    ).toLocaleString('en-IN')}
+                  </h2>
+
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className={`
+                  w-12 h-12 rounded-2xl
+                  flex items-center justify-center
+                  ${stat.bg}
+                `}>
+                  <stat.icon className={`
+                    w-5 h-5 ${stat.color}
+                  `} />
+                </div>
+
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+        {/* TABLE */}
+        <div className="
+          rounded-[26px]
+          bg-white/90 backdrop-blur-xl
+          border border-white/70
+          shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+          overflow-hidden
+        ">
+
+          <div className="
+            overflow-x-auto
+          ">
+
+            <table className="w-full">
+
+              <thead className="
+                bg-[#fafafa]
+                border-b border-gray-100
+              ">
+
+                <tr>
+
+                  {[
+                    'Job Position',
+                    'Project',
+                    'Applicants',
+                    'Status',
+                    'Deadline',
+                    'Actions',
+                  ].map((head) => (
+                    <th
+                      key={head}
+                      className="
+                        text-left
+                        px-5 py-4
+                        text-[10px]
+                        font-black
+                        tracking-[0.15em]
+                        text-gray-400
+                        uppercase
+                      "
+                    >
+                      {head}
+                    </th>
+                  ))}
+
+                </tr>
+              </thead>
+
+              <tbody className="
+                divide-y divide-gray-100
+              ">
+
+                {isLoading && (
                   <tr>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Job Position</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Project</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Applicants</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Deadline</th>
-                    <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <td
+                      colSpan="6"
+                      className="
+                        p-6 text-sm text-gray-500
+                      "
+                    >
+                      Loading jobs...
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {isLoading && <tr><td colSpan="6" className="p-6 text-gray-600">Loading jobs...</td></tr>}
-                  {!isLoading && jobs.length === 0 && <tr><td colSpan="6" className="p-6 text-gray-600">No jobs found. Create your first job.</td></tr>}
-                  {jobs.map((job) => (
-                    <tr key={job._id} className="hover:bg-orange-50 transition-colors">
-                      <td className="p-4">
-                        <div className="font-medium text-gray-800">{job.title}</div>
-                        <div className="text-xs text-gray-500 font-mono">{job.postCode}</div>
-                      </td>
-                      <td className="p-4 text-sm text-gray-700">{job.projectId?.name || '—'}</td>
-                      <td className="p-4 text-sm font-semibold text-gray-800">{job.totalApplicants || 0}</td>
-                      <td className="p-4">
-                        <Badge className={STATUS_COLORS[job.status] || 'bg-gray-100 text-gray-700'}>
-                          {job.status?.toUpperCase()}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-sm text-gray-600">
-                        {job.applicationDeadline
-                          ? new Date(job.applicationDeadline).toLocaleDateString('en-IN')
-                          : '—'}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1">
-                          {/* View */}
-                          <button
-                            onClick={() => navigate(`/jobs/${job._id}`)}
-                            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="View Job"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                )}
 
-                          {/* Publish — only for draft */}
-                          {(job.status === 'draft' || job.status === 'Draft') && (
-                            <button
-                              onClick={() => handlePublish(job)}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Publish Job"
-                            >
-                              <Send className="w-4 h-4" />
-                            </button>
-                          )}
-
-                          {/* Close — only for active/published */}
-                          {(job.status === 'active' || job.status === 'published') && (
-                            <button
-                              onClick={() => handleClose(job)}
-                              className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                              title="Close Job"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          )}
-
-                          {/* Delete */}
-                          <button
-                            onClick={() => handleDelete(job)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Job"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                {!isLoading &&
+                  jobs.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan="6"
+                        className="
+                          p-6 text-sm text-gray-500
+                        "
+                      >
+                        No jobs found.
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  )}
 
-        {/* Project Selector Modal */}
+                {jobs.map((job) => (
+                  <tr
+                    key={job._id}
+                    className="
+                      hover:bg-orange-50/40
+                      transition-all duration-200
+                    "
+                  >
+
+                    {/* JOB */}
+                    <td className="
+                      px-5 py-5
+                    ">
+
+                      <div className="
+                        flex items-center gap-3
+                      ">
+
+                        <div className="
+                          w-11 h-11 rounded-2xl
+                          bg-orange-100
+                          flex items-center justify-center
+                          shrink-0
+                        ">
+                          <Briefcase className="
+                            w-5 h-5 text-orange-600
+                          " />
+                        </div>
+
+                        <div>
+
+                          <h3 className="
+                            font-bold
+                            text-[#1f2937]
+                          ">
+                            {job.title}
+                          </h3>
+
+                          <p className="
+                            text-xs text-gray-500
+                            font-mono mt-1
+                          ">
+                            {job.postCode}
+                          </p>
+
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* PROJECT */}
+                    <td className="
+                      px-5 py-5
+                    ">
+                      <p className="
+                        text-sm text-gray-600
+                        font-medium
+                      ">
+                        {job.projectId?.name ||
+                          '—'}
+                      </p>
+                    </td>
+
+                    {/* APPLICANTS */}
+                    <td className="
+                      px-5 py-5
+                    ">
+
+                      <div>
+                        <h3 className="
+                          font-black
+                          text-[#1f2937]
+                        ">
+                          {job.totalApplicants || 0}
+                        </h3>
+
+                        <p className="
+                          text-[10px]
+                          text-gray-400
+                          font-semibold
+                          tracking-[0.12em]
+                        ">
+                          APPLICANTS
+                        </p>
+                      </div>
+
+                    </td>
+
+                    {/* STATUS */}
+                    <td className="
+                      px-5 py-5
+                    ">
+                      <Badge
+                        className={
+                          STATUS_COLORS[
+                            job.status
+                          ] ||
+                          'bg-gray-100 text-gray-700'
+                        }
+                      >
+                        {job.status?.toUpperCase()}
+                      </Badge>
+                    </td>
+
+                    {/* DEADLINE */}
+                    <td className="
+                      px-5 py-5
+                    ">
+
+                      <div className="
+                        flex items-center gap-2
+                      ">
+
+                        <Clock className="
+                          w-4 h-4 text-gray-400
+                        " />
+
+                        <span className="
+                          text-sm text-gray-500
+                        ">
+                          {job.applicationDeadline
+                            ? new Date(
+                                job.applicationDeadline
+                              ).toLocaleDateString(
+                                'en-IN'
+                              )
+                            : '—'}
+                        </span>
+
+                      </div>
+                    </td>
+
+                    {/* ACTIONS */}
+                    <td className="
+                      px-5 py-5
+                    ">
+
+                      <div className="
+                        flex items-center gap-2
+                      ">
+
+                        {/* VIEW */}
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/jobs/${job._id}`
+                            )
+                          }
+                          className="
+                            w-9 h-9 rounded-xl
+                            hover:bg-gray-100
+                            text-gray-500
+                            flex items-center justify-center
+                            transition-all
+                          "
+                        >
+                          <Eye className="
+                            w-4 h-4
+                          " />
+                        </button>
+
+                        {/* PUBLISH */}
+                        {(job.status ===
+                          'draft' ||
+                          job.status ===
+                            'Draft') && (
+                          <button
+                            onClick={() =>
+                              handlePublish(job)
+                            }
+                            className="
+                              w-9 h-9 rounded-xl
+                              hover:bg-green-50
+                              text-green-600
+                              flex items-center justify-center
+                              transition-all
+                            "
+                          >
+                            <Send className="
+                              w-4 h-4
+                            " />
+                          </button>
+                        )}
+
+                        {/* CLOSE */}
+                        {(job.status ===
+                          'active' ||
+                          job.status ===
+                            'published') && (
+                          <button
+                            onClick={() =>
+                              handleClose(job)
+                            }
+                            className="
+                              w-9 h-9 rounded-xl
+                              hover:bg-yellow-50
+                              text-yellow-600
+                              flex items-center justify-center
+                              transition-all
+                            "
+                          >
+                            <XCircle className="
+                              w-4 h-4
+                            " />
+                          </button>
+                        )}
+
+                        {/* DELETE */}
+                        <button
+                          onClick={() =>
+                            handleDelete(job)
+                          }
+                          className="
+                            w-9 h-9 rounded-xl
+                            hover:bg-red-50
+                            text-red-600
+                            flex items-center justify-center
+                            transition-all
+                          "
+                        >
+                          <Trash2 className="
+                            w-4 h-4
+                          " />
+                        </button>
+
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+
+            </table>
+          </div>
+        </div>
+
+        {/* MODAL */}
         {showProjectSelector && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl">
-              <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <div className="
+            fixed inset-0
+            bg-black/50
+            flex items-center justify-center
+            z-50 p-4
+            backdrop-blur-sm
+          ">
+
+            <div className="
+              bg-white
+              rounded-[28px]
+              w-full max-w-2xl
+              shadow-2xl
+              overflow-hidden
+            ">
+
+              {/* HEADER */}
+              <div className="
+                p-6 border-b border-gray-100
+                flex items-center justify-between
+              ">
+
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Select Project</h3>
-                  <p className="text-sm text-gray-500 mt-1">Choose a project to associate this job with.</p>
+
+                  <h3 className="
+                    text-xl font-black
+                    text-[#1f2937]
+                  ">
+                    Select Project
+                  </h3>
+
+                  <p className="
+                    text-sm text-gray-500 mt-1
+                  ">
+                    Associate this job with a project.
+                  </p>
+
                 </div>
+
                 <button
-                  onClick={() => setShowProjectSelector(false)}
-                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg"
+                  onClick={() =>
+                    setShowProjectSelector(false)
+                  }
+                  className="
+                    w-10 h-10 rounded-xl
+                    hover:bg-gray-100
+                    flex items-center justify-center
+                  "
                 >
-                  <XCircle className="w-5 h-5" />
+                  <XCircle className="
+                    w-5 h-5 text-gray-500
+                  " />
                 </button>
+
               </div>
-              <div className="p-6 space-y-3 max-h-96 overflow-y-auto">
+
+              {/* BODY */}
+              <div className="
+                p-6 space-y-3
+                max-h-[450px]
+                overflow-y-auto
+              ">
+
                 {projects.length === 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600 mb-3">No projects available.</p>
+                  <div className="
+                    text-center py-10
+                  ">
+
+                    <div className="
+                      w-16 h-16 rounded-3xl
+                      bg-orange-100
+                      flex items-center justify-center
+                      mx-auto mb-4
+                    ">
+                      <Sparkles className="
+                        w-7 h-7 text-orange-600
+                      " />
+                    </div>
+
+                    <p className="
+                      text-gray-500 mb-5
+                    ">
+                      No projects available.
+                    </p>
+
                     <Button
-                      onClick={() => { setShowProjectSelector(false); navigate('/admin/projects/create') }}
-                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                      onClick={() => {
+                        setShowProjectSelector(
+                          false
+                        )
+
+                        navigate(
+                          '/admin/projects/create'
+                        )
+                      }}
+                      className="
+                        bg-orange-600
+                        hover:bg-orange-700
+                        text-white
+                      "
                     >
-                      Create a Project First
+                      Create Project
                     </Button>
+
                   </div>
                 )}
+
                 {projects.map((project) => (
                   <button
-                    type="button"
                     key={project._id}
-                    onClick={() => handleProjectSelect(project._id)}
-                    className="w-full text-left p-4 border border-gray-200 rounded-xl hover:border-orange-300 hover:bg-orange-50 transition-colors"
+                    onClick={() =>
+                      handleProjectSelect(
+                        project._id
+                      )
+                    }
+                    className="
+                      w-full text-left
+                      rounded-2xl
+                      border border-gray-100
+                      p-4
+                      hover:border-orange-200
+                      hover:bg-orange-50/40
+                      transition-all
+                    "
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FolderOpen className="w-5 h-5 text-orange-600" />
+
+                    <div className="
+                      flex items-center gap-4
+                    ">
+
+                      <div className="
+                        w-11 h-11 rounded-2xl
+                        bg-orange-100
+                        flex items-center justify-center
+                      ">
+                        <FolderOpen className="
+                          w-5 h-5 text-orange-600
+                        " />
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-800">{project.name}</h4>
-                        <p className="text-sm text-gray-500">{project.department} • {project.state}</p>
+
+                      <div className="
+                        flex-1
+                      ">
+
+                        <h4 className="
+                          font-bold text-[#1f2937]
+                        ">
+                          {project.name}
+                        </h4>
+
+                        <p className="
+                          text-sm text-gray-500 mt-1
+                        ">
+                          {project.department}
+                          {' • '}
+                          {project.state}
+                        </p>
+
                       </div>
-                      <Badge className={project.status === 'Active' ? 'bg-green-100 text-green-800 ml-auto' : 'bg-gray-100 text-gray-700 ml-auto'}>
+
+                      <Badge
+                        className={
+                          project.status ===
+                          'Active'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }
+                      >
                         {project.status}
                       </Badge>
+
                     </div>
                   </button>
                 ))}
+
               </div>
             </div>
           </div>
@@ -281,5 +843,4 @@ const Jobs = () => {
     </AdminLayout>
   )
 }
-
 export default Jobs

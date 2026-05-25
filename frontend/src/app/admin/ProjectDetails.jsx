@@ -1,8 +1,28 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Eye, Edit, BarChart3, HeadphonesIcon, FileText, Loader2 } from 'lucide-react'
+
+import {
+  Plus,
+  Eye,
+  Edit,
+  BarChart3,
+  HeadphonesIcon,
+  FileText,
+  Loader2,
+  Briefcase,
+  Users,
+  IndianRupee,
+  CheckCircle2,
+  ArrowRight,
+} from 'lucide-react'
+
 import AdminLayout from '../../components/layouts/AdminLayout'
-import { Card, CardContent, CardHeader } from '../../components/ui/Card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+} from '../../components/ui/Card'
+
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import { adminService } from '../../services/admin.service'
@@ -18,125 +38,531 @@ const ProjectDetails = () => {
 
   const project = data?.project || data
 
-  if (isLoading) return (
-    <AdminLayout title="Project Details">
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
-      </div>
-    </AdminLayout>
-  )
+  if (isLoading) {
+    return (
+      <AdminLayout title="Project Details">
+        <div className="
+          min-h-screen
+          flex items-center justify-center
+          bg-[#f7f4ee]
+        ">
+          <Loader2 className="
+            w-8 h-8 animate-spin text-orange-600
+          " />
+        </div>
+      </AdminLayout>
+    )
+  }
 
-  if (!project) return (
-    <AdminLayout title="Project Details">
-      <div className="p-6">
-        <p className="text-gray-600">Project not found.</p>
-        <Button variant="outline" onClick={() => navigate('/admin/projects')} className="mt-4">Back to Projects</Button>
-      </div>
-    </AdminLayout>
-  )
+  if (!project) {
+    return (
+      <AdminLayout title="Project Details">
+        <div className="p-6">
+          <p className="text-gray-600">
+            Project not found.
+          </p>
+
+          <Button
+            variant="outline"
+            onClick={() =>
+              navigate('/admin/projects')
+            }
+            className="mt-4"
+          >
+            Back to Projects
+          </Button>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   const jobs = project.jobs || []
 
   const statCards = [
-    { title: 'TOTAL JOBS', value: project.totalJobs || jobs.length, color: 'text-blue-600' },
-    { title: 'TOTAL APPLICANTS', value: (project.totalApplicants || 0).toLocaleString('en-IN'), color: 'text-green-600' },
-    { title: 'PAID APPLICANTS', value: (project.paidApplicants || 0).toLocaleString('en-IN'), color: 'text-orange-600' },
-    { title: 'REVENUE', value: `₹${(project.totalRevenue || 0).toLocaleString('en-IN')}`, color: 'text-purple-600' },
+    {
+      title: 'TOTAL JOBS',
+      value:
+        project.totalJobs || jobs.length,
+      icon: Briefcase,
+      bg: 'bg-orange-50',
+      color: 'text-orange-600',
+    },
+    {
+      title: 'TOTAL APPLICANTS',
+      value: (
+        project.totalApplicants || 0
+      ).toLocaleString('en-IN'),
+      icon: Users,
+      bg: 'bg-green-50',
+      color: 'text-green-600',
+    },
+    {
+      title: 'PAID APPLICANTS',
+      value: (
+        project.paidApplicants || 0
+      ).toLocaleString('en-IN'),
+      icon: CheckCircle2,
+      bg: 'bg-blue-50',
+      color: 'text-blue-600',
+    },
+    {
+      title: 'REVENUE',
+      value: `₹${(
+        project.totalRevenue || 0
+      ).toLocaleString('en-IN')}`,
+      icon: IndianRupee,
+      bg: 'bg-purple-50',
+      color: 'text-purple-600',
+    },
   ]
 
   const quickActions = [
-    { title: 'CREATE JOB', icon: Plus, color: 'bg-orange-100 text-orange-600', action: () => navigate(`/admin/jobs/create?project=${id}`) },
-    { title: 'VIEW APPS', icon: Eye, color: 'bg-blue-100 text-blue-600', action: () => navigate('/admin/applications') },
-    { title: 'ANALYTICS', icon: BarChart3, color: 'bg-green-100 text-green-600', action: () => navigate('/admin/analytics') },
-    { title: 'SUPPORT', icon: HeadphonesIcon, color: 'bg-purple-100 text-purple-600', action: () => navigate('/admin/support') },
+    {
+      title: 'CREATE JOB',
+      icon: Plus,
+      color:
+        'bg-orange-100 text-orange-600',
+      action: () =>
+        navigate(
+          `/admin/jobs/create?project=${id}`
+        ),
+    },
+    {
+      title: 'VIEW APPS',
+      icon: Eye,
+      color:
+        'bg-blue-100 text-blue-600',
+      action: () =>
+        navigate('/admin/applications'),
+    },
+    {
+      title: 'ANALYTICS',
+      icon: BarChart3,
+      color:
+        'bg-green-100 text-green-600',
+      action: () =>
+        navigate('/admin/analytics'),
+    },
+    {
+      title: 'SUPPORT',
+      icon: HeadphonesIcon,
+      color:
+        'bg-purple-100 text-purple-600',
+      action: () =>
+        navigate('/admin/support'),
+    },
   ]
 
   return (
     <AdminLayout title="Project Details">
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Badge className={project.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                {project.status?.toUpperCase()}
-              </Badge>
-              {project.startDate && project.endDate && (
-                <span className="text-sm text-gray-500">
-                  {new Date(project.startDate).toLocaleDateString('en-IN')} – {new Date(project.endDate).toLocaleDateString('en-IN')}
-                </span>
+
+      <div className="
+        min-h-screen
+        bg-[#f7f4ee]
+        p-5 space-y-5
+      ">
+
+        {/* HERO */}
+        <div className="
+          rounded-[26px]
+          bg-white/90 backdrop-blur-xl
+          border border-white/70
+          shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+          p-6 relative overflow-hidden
+        ">
+
+          <div className="
+            absolute top-0 left-0
+            w-full h-1
+            bg-gradient-to-r
+            from-orange-500
+            via-orange-400
+            to-orange-500
+          " />
+
+          <div className="
+            flex flex-col xl:flex-row
+            xl:items-start
+            xl:justify-between
+            gap-5
+          ">
+
+            <div>
+
+              <div className="
+                flex flex-wrap items-center
+                gap-3 mb-3
+              ">
+
+                <Badge
+                  className={
+                    project.status === 'Active'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }
+                >
+                  {project.status}
+                </Badge>
+
+                {project.startDate &&
+                  project.endDate && (
+                    <p className="
+                      text-sm text-gray-500
+                    ">
+                      Duration:
+                      {' '}
+                      {new Date(
+                        project.startDate
+                      ).toLocaleDateString('en-IN')}
+                      {' '}
+                      –
+                      {' '}
+                      {new Date(
+                        project.endDate
+                      ).toLocaleDateString('en-IN')}
+                    </p>
+                  )}
+              </div>
+
+              <h1 className="
+                text-3xl font-black
+                text-[#1f2937]
+              ">
+                {project.name}
+              </h1>
+
+              <p className="
+                text-sm text-gray-500 mt-2
+              ">
+                State:
+                {' '}
+                {project.state}
+                {' '}
+                |
+                {' '}
+                Department:
+                {' '}
+                {project.department}
+              </p>
+
+              {project.description && (
+                <p className="
+                  text-sm text-gray-500
+                  mt-3 max-w-3xl
+                ">
+                  {project.description}
+                </p>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">{project.name}</h1>
-            <p className="text-gray-600">{project.state} | {project.department}</p>
-            {project.description && <p className="text-gray-500 text-sm mt-1">{project.description}</p>}
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigate('/admin/projects')}>Back</Button>
-            <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-              <Edit className="w-4 h-4 mr-2" />Edit Project
-            </Button>
+
+            <div className="
+              flex items-center gap-3
+            ">
+
+              <Button
+                variant="outline"
+                onClick={() =>
+                  navigate('/admin/projects')
+                }
+                className="
+                  rounded-2xl
+                  h-11 px-5
+                "
+              >
+                Back
+              </Button>
+
+              <Button
+                className="
+                  bg-orange-600
+                  hover:bg-orange-700
+                  text-white
+                  rounded-2xl
+                  h-11 px-5
+                  shadow-lg shadow-orange-200
+                "
+              >
+                <Edit className="
+                  w-4 h-4 mr-2
+                " />
+                Edit Project
+              </Button>
+
+            </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* STATS */}
+        <div className="
+          grid grid-cols-1
+          sm:grid-cols-2
+          xl:grid-cols-4
+          gap-4
+        ">
+
           {statCards.map((s) => (
-            <Card key={s.title} className="bg-white">
-              <CardContent className="p-6">
-                <p className="text-xs font-medium text-gray-500 mb-1">{s.title}</p>
-                <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              </CardContent>
-            </Card>
+            <div
+              key={s.title}
+              className="
+                rounded-[22px]
+                bg-white/90 backdrop-blur-xl
+                border border-white/70
+                shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+                p-5
+              "
+            >
+
+              <div className="
+                flex items-center
+                justify-between
+              ">
+
+                <div>
+                  <p className="
+                    text-[10px]
+                    font-black
+                    tracking-[0.16em]
+                    text-gray-400 mb-2
+                  ">
+                    {s.title}
+                  </p>
+
+                  <h2 className="
+                    text-3xl font-black
+                    text-[#1f2937]
+                  ">
+                    {s.value}
+                  </h2>
+                </div>
+
+                <div className={`
+                  w-12 h-12 rounded-2xl
+                  flex items-center justify-center
+                  ${s.bg}
+                `}>
+                  <s.icon
+                    className={`
+                      w-5 h-5 ${s.color}
+                    `}
+                  />
+                </div>
+
+              </div>
+            </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Jobs List */}
-          <div className="lg:col-span-2">
-            <Card>
+        {/* MAIN GRID */}
+        <div className="
+          grid grid-cols-1
+          xl:grid-cols-3
+          gap-5
+        ">
+
+          {/* LEFT */}
+          <div className="
+            xl:col-span-2
+          ">
+
+            <Card className="
+              rounded-[24px]
+              bg-white/90 backdrop-blur-xl
+              border border-white/70
+              shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+            ">
+
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-gray-800">Job Positions ({jobs.length})</h3>
-                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white"
-                    onClick={() => navigate(`/admin/jobs/create?project=${id}`)}>
-                    <Plus className="w-4 h-4 mr-1" />Add Job
+                <div className="
+                  flex items-center
+                  justify-between
+                ">
+
+                  <div>
+                    <h3 className="
+                      text-lg font-black
+                      text-[#1f2937]
+                    ">
+                      Active Job Positions
+                    </h3>
+
+                    <p className="
+                      text-xs text-gray-500 mt-1
+                    ">
+                      {jobs.length}
+                      {' '}
+                      active openings
+                    </p>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    className="
+                      bg-orange-600
+                      hover:bg-orange-700
+                      text-white
+                      rounded-xl
+                    "
+                    onClick={() =>
+                      navigate(
+                        `/admin/jobs/create?project=${id}`
+                      )
+                    }
+                  >
+                    <Plus className="
+                      w-4 h-4 mr-1
+                    " />
+                    Add Job
                   </Button>
+
                 </div>
               </CardHeader>
+
               <CardContent className="p-0">
+
                 {jobs.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">
-                    <p className="text-sm">No jobs created yet.</p>
-                    <Button size="sm" className="mt-3 bg-orange-600 hover:bg-orange-700 text-white"
-                      onClick={() => navigate(`/admin/jobs/create?project=${id}`)}>
+                  <div className="
+                    p-10 text-center
+                  ">
+
+                    <div className="
+                      w-16 h-16 rounded-3xl
+                      bg-orange-100
+                      flex items-center justify-center
+                      mx-auto mb-4
+                    ">
+                      <FileText className="
+                        w-7 h-7 text-orange-600
+                      " />
+                    </div>
+
+                    <h3 className="
+                      text-lg font-bold
+                      text-[#1f2937]
+                    ">
+                      No Jobs Added
+                    </h3>
+
+                    <p className="
+                      text-sm text-gray-500 mt-1
+                    ">
+                      Create the first job
+                      under this project.
+                    </p>
+
+                    <Button
+                      className="
+                        mt-5 bg-orange-600
+                        hover:bg-orange-700
+                        text-white rounded-2xl
+                      "
+                      onClick={() =>
+                        navigate(
+                          `/admin/jobs/create?project=${id}`
+                        )
+                      }
+                    >
                       Create First Job
                     </Button>
+
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-100">
+                  <div className="
+                    divide-y divide-gray-100
+                  ">
+
                     {jobs.map((job) => (
-                      <div key={job._id} className="flex items-center justify-between p-4 hover:bg-gray-50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center">
-                            <FileText className="w-4 h-4 text-orange-600" />
+                      <div
+                        key={job._id}
+                        className="
+                          flex items-center
+                          justify-between
+                          p-5
+                          hover:bg-orange-50/30
+                          transition-all
+                        "
+                      >
+
+                        <div className="
+                          flex items-center gap-4
+                        ">
+
+                          <div className="
+                            w-11 h-11 rounded-2xl
+                            bg-orange-100
+                            flex items-center justify-center
+                          ">
+                            <FileText className="
+                              w-5 h-5 text-orange-600
+                            " />
                           </div>
+
                           <div>
-                            <p className="font-medium text-gray-800 text-sm">{job.title}</p>
-                            <p className="text-xs text-gray-500">{job.postCode}</p>
+
+                            <h4 className="
+                              font-bold text-[#1f2937]
+                            ">
+                              {job.title}
+                            </h4>
+
+                            <p className="
+                              text-xs text-gray-500 mt-1
+                            ">
+                              {job.postCode}
+                            </p>
+
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="font-semibold text-gray-800 text-sm">{job.totalApplicants || 0}</p>
-                            <p className="text-xs text-gray-500">applicants</p>
+
+                        <div className="
+                          flex items-center gap-4
+                        ">
+
+                          <div className="
+                            text-right
+                          ">
+                            <h4 className="
+                              font-black text-[#1f2937]
+                            ">
+                              {job.totalApplicants || 0}
+                            </h4>
+
+                            <p className="
+                              text-[10px]
+                              text-gray-400
+                              font-semibold
+                            ">
+                              APPLICANTS
+                            </p>
                           </div>
-                          <Badge className={job.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+
+                          <Badge
+                            className={
+                              job.status === 'active'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }
+                          >
                             {job.status}
                           </Badge>
-                          <Button variant="ghost" size="sm" onClick={() => navigate(`/jobs/${job._id}`)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
+
+                          <button
+                            onClick={() =>
+                              navigate(
+                                `/jobs/${job._id}`
+                              )
+                            }
+                            className="
+                              w-10 h-10 rounded-xl
+                              hover:bg-gray-100
+                              flex items-center justify-center
+                              text-gray-500
+                            "
+                          >
+                            <ArrowRight className="
+                              w-4 h-4
+                            " />
+                          </button>
+
                         </div>
                       </div>
                     ))}
@@ -146,58 +572,126 @@ const ProjectDetails = () => {
             </Card>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader><h3 className="font-semibold text-gray-800">Quick Actions</h3></CardHeader>
+          {/* RIGHT */}
+          <div className="space-y-5">
+
+            {/* QUICK ACTIONS */}
+            <Card className="
+              rounded-[24px]
+              bg-white/90 backdrop-blur-xl
+              border border-white/70
+              shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+            ">
+
+              <CardHeader>
+                <h3 className="
+                  text-lg font-black
+                  text-[#1f2937]
+                ">
+                  Quick Actions
+                </h3>
+              </CardHeader>
+
               <CardContent>
-                <div className="grid grid-cols-2 gap-3">
+
+                <div className="
+                  grid grid-cols-2 gap-3
+                ">
+
                   {quickActions.map((action) => (
-                    <button key={action.title} onClick={action.action}
-                      className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center">
-                      <div className={`w-8 h-8 ${action.color} rounded-lg flex items-center justify-center mx-auto mb-2`}>
-                        <action.icon className="w-4 h-4" />
+                    <button
+                      key={action.title}
+                      onClick={action.action}
+                      className="
+                        rounded-2xl
+                        border border-gray-100
+                        p-4 text-center
+                        hover:bg-orange-50/40
+                        hover:border-orange-200
+                        transition-all
+                      "
+                    >
+
+                      <div className={`
+                        w-10 h-10 rounded-xl
+                        flex items-center justify-center
+                        mx-auto mb-3
+                        ${action.color}
+                      `}>
+                        <action.icon className="
+                          w-5 h-5
+                        " />
                       </div>
-                      <div className="text-xs font-medium text-gray-700">{action.title}</div>
+
+                      <p className="
+                        text-xs font-bold
+                        text-[#1f2937]
+                      ">
+                        {action.title}
+                      </p>
+
                     </button>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader><h3 className="font-semibold text-gray-800">Project Info</h3></CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">State</span>
-                  <span className="font-medium text-gray-800">{project.state}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Department</span>
-                  <span className="font-medium text-gray-800">{project.department}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Status</span>
-                  <span className="font-medium text-gray-800">{project.status}</span>
-                </div>
-                {project.startDate && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Start</span>
-                    <span className="font-medium text-gray-800">{new Date(project.startDate).toLocaleDateString('en-IN')}</span>
+            {/* PROJECT INFO */}
+            <Card className="
+              rounded-[24px]
+              bg-white/90 backdrop-blur-xl
+              border border-white/70
+              shadow-[0_6px_24px_rgba(0,0,0,0.04)]
+            ">
+
+              <CardHeader>
+                <h3 className="
+                  text-lg font-black
+                  text-[#1f2937]
+                ">
+                  Project Information
+                </h3>
+              </CardHeader>
+
+              <CardContent className="
+                space-y-4 text-sm
+              ">
+
+                {[
+                  ['State', project.state],
+                  ['Department', project.department],
+                  ['Status', project.status],
+                  [
+                    'Created By',
+                    project.createdBy?.fullName || '—',
+                  ],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="
+                      flex items-center
+                      justify-between
+                    "
+                  >
+
+                    <span className="
+                      text-gray-500
+                    ">
+                      {label}
+                    </span>
+
+                    <span className="
+                      font-semibold text-[#1f2937]
+                    ">
+                      {value}
+                    </span>
+
                   </div>
-                )}
-                {project.endDate && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">End</span>
-                    <span className="font-medium text-gray-800">{new Date(project.endDate).toLocaleDateString('en-IN')}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Created by</span>
-                  <span className="font-medium text-gray-800">{project.createdBy?.fullName || '—'}</span>
-                </div>
+                ))}
+
               </CardContent>
             </Card>
+
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import {
@@ -7,11 +8,14 @@ import {
   Briefcase,
   CheckCircle,
   FileText,
+  FolderOpen,
   Plus,
   Users,
   Activity,
   BellRing,
   Clock3,
+  Sparkles,
+  XCircle,
 } from 'lucide-react'
 
 import AdminLayout from '../../components/layouts/AdminLayout'
@@ -19,13 +23,21 @@ import { Card, CardContent } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import { dashboardService } from '../../services/dashboard.service'
+import { adminService } from '../../services/admin.service'
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const [showProjectSelector, setShowProjectSelector] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: dashboardService.adminDashboard,
+  })
+
+  const { data: projectsData } = useQuery({
+    queryKey: ['admin-projects-for-job-create'],
+    queryFn: () => adminService.getProjects({ limit: 50 }),
+    enabled: showProjectSelector,
   })
 
   const overview = data?.overview?.overview || {}
@@ -85,6 +97,13 @@ const Dashboard = () => {
     ['SUBMITTED', funnel.submitted],
   ]
 
+  const projects = projectsData?.projects || []
+
+  const handleProjectSelect = (projectId) => {
+    setShowProjectSelector(false)
+    navigate(`/admin/jobs/create/basic-info?project=${projectId}`)
+  }
+
   return (
     <AdminLayout title="Dashboard Overview">
       <div className="min-h-screen bg-[#f7f4ee] px-4 py-4 md:px-5 md:py-4">
@@ -109,7 +128,7 @@ const Dashboard = () => {
           <div className="flex items-center flex-wrap gap-3">
 
             <Button
-              onClick={() => navigate('/admin/jobs/create')}
+              onClick={() => setShowProjectSelector(true)}
               className="
                 bg-gradient-to-r from-orange-500 to-orange-600
                 hover:from-orange-600 hover:to-orange-700
@@ -612,6 +631,66 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* PROJECT SELECTOR MODAL */}
+      {showProjectSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[28px] w-full max-w-2xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-[#1f2937]">Select Project</h3>
+                <p className="text-sm text-gray-500 mt-1">Associate this job with a project.</p>
+              </div>
+              <button
+                onClick={() => setShowProjectSelector(false)}
+                className="w-10 h-10 rounded-xl hover:bg-gray-100 flex items-center justify-center"
+              >
+                <XCircle className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            {/* Body */}
+            <div className="p-6 space-y-3 max-h-[450px] overflow-y-auto">
+              {projects.length === 0 && (
+                <div className="text-center py-10">
+                  <div className="w-16 h-16 rounded-3xl bg-orange-100 flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="w-7 h-7 text-orange-600" />
+                  </div>
+                  <p className="text-gray-500 mb-5">No projects available.</p>
+                  <Button
+                    onClick={() => { setShowProjectSelector(false); navigate('/admin/projects/create') }}
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    Create Project
+                  </Button>
+                </div>
+              )}
+              {projects.map((project) => (
+                <button
+                  key={project._id}
+                  onClick={() => handleProjectSelect(project._id)}
+                  className="w-full text-left rounded-2xl border border-gray-100 p-4 hover:border-orange-200 hover:bg-orange-50/40 transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-2xl bg-orange-100 flex items-center justify-center">
+                      <FolderOpen className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-[#1f2937]">{project.name}</h4>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {project.department}{' • '}{project.state}
+                      </p>
+                    </div>
+                    <Badge className={project.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                      {project.status}
+                    </Badge>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   )
 }

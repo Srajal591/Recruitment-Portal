@@ -46,6 +46,15 @@ const COLUMNS = [
   },
 ];
 
+const COLUMN_ORDER = COLUMNS.map((c) => c.id);
+
+// Only allow moving to a status that comes after the current one
+const getForwardColumns = (currentColId) => {
+  const idx = COLUMN_ORDER.indexOf(currentColId);
+  if (idx === -1) return [];
+  return COLUMNS.slice(idx + 1);
+};
+
 const SupportKanban = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -220,20 +229,23 @@ const SupportKanban = () => {
                           <span>{formatDate(ticket.createdAt)}</span>
                         </div>
 
-                        {/* Quick status change */}
+                        {/* Quick status change — forward only */}
                         <div className="mt-3 pt-3 border-t border-gray-100 flex gap-1 flex-wrap">
-                          {COLUMNS.filter((c) => c.id !== col.id).map((c) => (
+                          {getForwardColumns(col.id).map((c) => (
                             <button
                               key={c.id}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 updateTicket({ id: ticket._id, status: c.id });
                               }}
-                              className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                              className="text-xs px-2 py-1 rounded bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 transition-colors"
                             >
                               → {c.label}
                             </button>
                           ))}
+                          {getForwardColumns(col.id).length === 0 && (
+                            <span className="text-xs text-gray-400 italic">Closed</span>
+                          )}
                         </div>
                       </div>
                     ))}

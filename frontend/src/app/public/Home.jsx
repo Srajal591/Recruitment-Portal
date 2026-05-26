@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 import {
   Search,
@@ -9,7 +10,6 @@ import {
   CircleHelp,
   Phone,
   ChevronDown,
-  Calendar,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,17 @@ import { useQuery } from "@tanstack/react-query";
 import PublicLayout from "../../components/layouts/PublicLayout";
 import heroBg from "../../assets/herobg.jpg";
 import { jobService } from "../../services/job.service";
+import { getStoredUser } from "../../services/auth.service";
+
+// Reusable fade-up variant for scroll sections
+const fadeUp = {
+  hidden: { opacity: 0, y: 32 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut", delay: i * 0.1 },
+  }),
+};
 
 const Home = () => {
   const navigate = useNavigate();
@@ -28,33 +39,21 @@ const Home = () => {
     category: "",
   });
 
+  const [openFaq, setOpenFaq] = useState(null);
+
   const handleEligibilityCheck = () => {
-    navigate("/eligible-jobs", {
-      state: eligibilityForm,
-    });
+    navigate("/eligible-jobs", { state: eligibilityForm });
   };
 
-  const fallbackFeaturedJobs = [
-    {
-      id: 1,
-      title: "Assistant Section Officer (ASO)",
-      department: "Bihar State Secretariat",
-      category: "ACTIVE",
-      vacancies: 45,
-      lastDate: "Nov 30, 2024",
-      applyFee: "₹750",
-    },
-
-    {
-      id: 2,
-      title: "Junior Engineer (Mechanical)",
-      department: "Public Works Department",
-      category: "CLOSING SOON",
-      vacancies: 120,
-      lastDate: "Dec 15, 2024",
-      applyFee: "₹500",
-    },
-  ];
+  // Apply Now — redirect to login if not logged in as candidate
+  const handleApplyNow = (jobId) => {
+    const user = getStoredUser();
+    if (user && user.role === "candidate") {
+      navigate(`/candidate/jobs/${jobId}`);
+    } else {
+      navigate("/auth/candidate-login", { state: { jobId, redirectTo: `/candidate/jobs/${jobId}` } });
+    }
+  };
 
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ["public-featured-jobs"],
@@ -101,27 +100,47 @@ const Home = () => {
               {/* LEFT */}
 
               <div className="max-w-[560px]">
-                <h1 className="text-[28px] sm:text-[42px] lg:text-[52px] leading-[0.95] tracking-[-1.5px] font-black text-white">
+                <motion.h1
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: "easeOut" }}
+                  className="text-[28px] sm:text-[42px] lg:text-[52px] leading-[0.95] tracking-[-1.5px] font-black text-white"
+                >
                   Your Career in Public Service
                   <br />
                   Starts Here.
-                </h1>
+                </motion.h1>
 
-                <p className="mt-5 text-[13px] sm:text-[15px] leading-7 text-white/80 max-w-[500px]">
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: "easeOut", delay: 0.15 }}
+                  className="mt-5 text-[13px] sm:text-[15px] leading-7 text-white/80 max-w-[500px]"
+                >
                   Transparent, accessible, and reliable government job
                   opportunities for every qualified citizen. Find your role
                   today.
-                </p>
+                </motion.p>
 
-                <div className="mt-7 inline-flex items-center gap-2 text-orange-300 text-[12px] font-bold">
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.3 }}
+                  className="mt-7 inline-flex items-center gap-2 text-orange-300 text-[12px] font-bold"
+                >
                   <ShieldCheck className="w-4 h-4" />
                   Official Government Employment Gateway
-                </div>
+                </motion.div>
               </div>
 
               {/* FILTER CARD */}
 
-              <div className="bg-[#f8f5f0] rounded-[6px] border border-[#d8d0c6] shadow-[0_25px_50px_rgba(0,0,0,0.35)] overflow-hidden">
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+                className="bg-[#f8f5f0] rounded-[6px] border border-[#d8d0c6] shadow-[0_25px_50px_rgba(0,0,0,0.35)] overflow-hidden"
+              >
                 <div className="px-6 pt-6">
                   <h3 className="text-[20px] tracking-[-0.5px] font-black text-[#1f1d1b]">
                     Smart Eligibility Filter
@@ -224,7 +243,7 @@ const Home = () => {
                     Check Eligible Jobs
                   </button>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </section>
@@ -264,8 +283,8 @@ const Home = () => {
                   title: "New User?",
                   desc: "Create your profile and apply to multiple openings.",
                   action: "Register Now",
+                  onClick: () => navigate("/auth/candidate-register"),
                 },
-
                 {
                   icon: LogIn,
                   color: "text-[#19a452]",
@@ -273,8 +292,8 @@ const Home = () => {
                   title: "Already Applied?",
                   desc: "Check status, download admit cards, and results.",
                   action: "Login Here",
+                  onClick: () => navigate("/auth/candidate-login"),
                 },
-
                 {
                   icon: CircleHelp,
                   color: "text-[#9257ff]",
@@ -282,30 +301,30 @@ const Home = () => {
                   title: "Need Help?",
                   desc: "Get recruitment assistance and support resources.",
                   action: "Get Help",
+                  onClick: () => navigate("/contact"),
                 },
               ].map((card, index) => (
-                <div
+                <motion.div
                   key={index}
-                  className="bg-white rounded-[8px] border border-[#e0d7cd] p-7 text-center"
+                  custom={index}
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.2 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  onClick={card.onClick}
+                  className="bg-white rounded-[8px] border border-[#e0d7cd] p-7 text-center cursor-pointer"
                 >
-                  <div
-                    className={`w-14 h-14 rounded-full ${card.bg} flex items-center justify-center mx-auto`}
-                  >
+                  <div className={`w-14 h-14 rounded-full ${card.bg} flex items-center justify-center mx-auto`}>
                     <card.icon className={`w-7 h-7 ${card.color}`} />
                   </div>
-
-                  <h3 className="mt-5 text-[20px] tracking-[-0.5px] font-black text-[#1f1d1b]">
-                    {card.title}
-                  </h3>
-
-                  <p className="mt-3 text-[#6d6761] text-[14px] leading-7">
-                    {card.desc}
-                  </p>
-
-                  <button className="mt-5 text-[#e46a1d] text-[12px] uppercase tracking-[0.12em] font-black">
+                  <h3 className="mt-5 text-[20px] tracking-[-0.5px] font-black text-[#1f1d1b]">{card.title}</h3>
+                  <p className="mt-3 text-[#6d6761] text-[14px] leading-7">{card.desc}</p>
+                  <button className="mt-5 text-[#e46a1d] text-[12px] uppercase tracking-[0.12em] font-black flex items-center gap-1.5 mx-auto">
                     {card.action}
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -317,7 +336,13 @@ const Home = () => {
           <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* HEADER */}
 
-            <div className="flex items-center justify-between mb-8">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="flex items-center justify-between mb-8"
+            >
               <div>
                 <h2 className="text-[28px] font-black tracking-[-1px] text-[#1f1d1b]">
                   Featured Opportunities
@@ -328,11 +353,14 @@ const Home = () => {
                 </p>
               </div>
 
-              <button className="hidden sm:flex items-center gap-2 text-[#e46a1d] text-[12px] uppercase tracking-[0.12em] font-black">
+              <button
+                onClick={() => navigate("/jobs")}
+                className="hidden sm:flex items-center gap-2 text-[#e46a1d] text-[12px] uppercase tracking-[0.12em] font-black hover:gap-3 transition-all"
+              >
                 View All Openings
                 <ArrowRight className="w-4 h-4" />
               </button>
-            </div>
+            </motion.div>
 
             {/* CARDS */}
 
@@ -349,9 +377,15 @@ const Home = () => {
                 </div>
               )}
 
-              {featuredJobs.map((job) => (
-                <div
+              {featuredJobs.map((job, index) => (
+                <motion.div
                   key={job._id}
+                  custom={index}
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.15 }}
+                  whileHover={{ y: -3, transition: { duration: 0.2 } }}
                   className="bg-white rounded-[8px] border border-[#e0d7cd] p-6"
                 >
                   {/* TOP */}
@@ -431,19 +465,13 @@ const Home = () => {
                     </button>
 
                     <button
-                      onClick={() =>
-                        navigate("/auth/candidate-login", {
-                          state: {
-                            jobId: job._id,
-                          },
-                        })
-                      }
+                      onClick={() => handleApplyNow(job._id)}
                       className="flex-1 h-[46px] bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[4px] uppercase tracking-[0.12em] text-[11px] font-black transition-all"
                     >
                       Apply Now
                     </button>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -453,7 +481,13 @@ const Home = () => {
 
         <section className="pb-14">
           <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-[#e46a1d] rounded-[8px] px-7 py-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 text-white">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="bg-[#e46a1d] rounded-[8px] px-7 py-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 text-white"
+            >
               <div className="flex items-center gap-5">
                 <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center">
                   <Phone className="w-7 h-7" />
@@ -479,7 +513,7 @@ const Home = () => {
                   1800-123-4567
                 </h3>
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -487,7 +521,13 @@ const Home = () => {
 
         <section className="pb-20">
           <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-white rounded-[8px] border border-[#e0d7cd] overflow-hidden">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
+              className="bg-white rounded-[8px] border border-[#e0d7cd] overflow-hidden"
+            >
               {/* HEADER */}
 
               <div className="px-7 py-6 border-b border-[#ebe2d8]">
@@ -499,20 +539,46 @@ const Home = () => {
               {/* ITEMS */}
 
               {[
-                "How do I verify my eligibility for multiple posts?",
-                "Can I edit my application after submission?",
-                "What documents are mandatory for registration?",
+                {
+                  q: "How do I verify my eligibility for multiple posts?",
+                  a: "Use the Smart Eligibility Filter on this page to enter your qualification, age, and category. The system will show all matching job openings you are eligible to apply for.",
+                },
+                {
+                  q: "Can I edit my application after submission?",
+                  a: "Once submitted, applications cannot be edited. Please review all details carefully before final submission. You can save a draft and return to complete it before the deadline.",
+                },
+                {
+                  q: "What documents are mandatory for registration?",
+                  a: "You will need a valid photo ID (Aadhaar/PAN), educational certificates, caste certificate (if applicable), passport-size photograph, and signature scan. Specific posts may require additional documents.",
+                },
               ].map((item, index) => (
-                <button
-                  key={index}
-                  className="w-full px-7 py-5 border-b border-[#ebe2d8] last:border-0 flex items-center justify-between hover:bg-[#faf7f2] transition-all text-left"
-                >
-                  <span className="text-[#2a2724] text-[14px]">{item}</span>
-
-                  <ChevronDown className="w-5 h-5 text-[#8a8179]" />
-                </button>
+                <div key={index} className="border-b border-[#ebe2d8] last:border-0">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                    className="w-full px-7 py-5 flex items-center justify-between hover:bg-[#faf7f2] transition-all text-left"
+                  >
+                    <span className="text-[#2a2724] text-[14px] font-medium">{item.q}</span>
+                    <motion.span
+                      animate={{ rotate: openFaq === index ? 180 : 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="flex-shrink-0 ml-4"
+                    >
+                      <ChevronDown className="w-5 h-5 text-[#8a8179]" />
+                    </motion.span>
+                  </button>
+                  <motion.div
+                    initial={false}
+                    animate={{ height: openFaq === index ? "auto" : 0, opacity: openFaq === index ? 1 : 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <p className="px-7 pb-5 text-[#6d6761] text-[14px] leading-7">
+                      {item.a}
+                    </p>
+                  </motion.div>
+                </div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
       </div>

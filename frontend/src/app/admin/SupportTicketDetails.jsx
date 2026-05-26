@@ -44,6 +44,13 @@ const STATUS_COLORS = {
 
 const STATUS_FLOW = ["Open", "In Progress", "Resolved", "Closed"];
 
+// Returns only statuses that are ahead of the current one
+const getAllowedNextStatuses = (currentStatus) => {
+  const idx = STATUS_FLOW.indexOf(currentStatus);
+  if (idx === -1) return STATUS_FLOW; // unknown status — show all
+  return STATUS_FLOW.slice(idx + 1);
+};
+
 const SupportTicketDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -361,34 +368,45 @@ const SupportTicketDetails = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
-                  <div className="space-y-2">
-                    {STATUS_FLOW.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => handleStatusChange(s)}
-                        disabled={isUpdating || ticket.status === s}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                          ticket.status === s
-                            ? "bg-orange-600 text-white border-orange-600"
-                            : "border-gray-200 text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {s === "Open" && (
-                          <AlertCircle className="w-4 h-4 inline mr-2 text-red-500" />
-                        )}
-                        {s === "In Progress" && (
-                          <Clock className="w-4 h-4 inline mr-2 text-yellow-500" />
-                        )}
-                        {s === "Resolved" && (
-                          <CheckCircle className="w-4 h-4 inline mr-2 text-green-500" />
-                        )}
-                        {s === "Closed" && (
-                          <XCircle className="w-4 h-4 inline mr-2 text-gray-500" />
-                        )}
-                        {s}
-                      </button>
-                    ))}
+                  {/* Current status badge */}
+                  <div className="mb-3 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 flex items-center gap-2">
+                    {ticket.status === "Open" && <AlertCircle className="w-4 h-4 text-red-500" />}
+                    {(ticket.status === "In Progress" || ticket.status === "in_progress") && <Clock className="w-4 h-4 text-yellow-500" />}
+                    {(ticket.status === "Resolved" || ticket.status === "resolved") && <CheckCircle className="w-4 h-4 text-green-500" />}
+                    {(ticket.status === "Closed" || ticket.status === "closed") && <XCircle className="w-4 h-4 text-gray-500" />}
+                    <span className="text-sm font-semibold text-orange-700">
+                      Current: {ticket.status?.replace("_", " ")}
+                    </span>
                   </div>
+                  {/* Only forward transitions */}
+                  {(() => {
+                    const normalised = STATUS_FLOW.find(
+                      (s) => s.toLowerCase().replace(" ", "_") === (ticket.status || "").toLowerCase().replace(" ", "_") || s === ticket.status
+                    ) || ticket.status;
+                    const allowed = getAllowedNextStatuses(normalised);
+                    if (allowed.length === 0) {
+                      return (
+                        <p className="text-xs text-gray-400 italic">This ticket is closed and cannot be advanced further.</p>
+                      );
+                    }
+                    return (
+                      <div className="space-y-2">
+                        {allowed.map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => handleStatusChange(s)}
+                            disabled={isUpdating}
+                            className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors border border-gray-200 text-gray-700 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700"
+                          >
+                            {s === "In Progress" && <Clock className="w-4 h-4 inline mr-2 text-yellow-500" />}
+                            {s === "Resolved" && <CheckCircle className="w-4 h-4 inline mr-2 text-green-500" />}
+                            {s === "Closed" && <XCircle className="w-4 h-4 inline mr-2 text-gray-500" />}
+                            Move to {s}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div>

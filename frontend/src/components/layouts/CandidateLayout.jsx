@@ -69,64 +69,90 @@ const CandidateLayout = ({ children, title = 'Candidate Portal' }) => {
     <div className="min-h-screen bg-orange-50">
 
       {/* ── Top Header ── */}
-      <header className={`sticky top-0 z-30 bg-white border-b border-orange-200 px-4 py-3.5 transition-shadow duration-200 ${scrolled ? 'shadow-md' : ''}`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-3 group">
+      <header className={`sticky top-0 z-30 bg-white border-b border-gray-100 transition-all duration-200 ${scrolled ? 'shadow-[0_2px_16px_rgba(0,0,0,0.08)]' : ''}`}>
+        <div className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 h-14 flex items-center justify-between gap-4">
+
+          {/* ── Brand ── */}
+          <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
             <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
-              className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center shadow-sm"
+              whileHover={{ scale: 1.06, rotate: -3 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-md shadow-orange-200"
             >
-              <span className="text-white font-bold">RP</span>
+              <span className="text-white font-black text-xs tracking-tight">RP</span>
             </motion.div>
-            <div>
-              <div className="font-bold text-gray-800 group-hover:text-orange-600 transition-colors">Recruitment Portal</div>
-              <div className="text-xs text-gray-500">Candidate Portal</div>
+            <div className="hidden sm:block">
+              <div className="text-sm font-black text-gray-900 leading-tight tracking-tight group-hover:text-orange-600 transition-colors">
+                Recruitment Portal
+              </div>
+              <div className="text-[10px] font-semibold text-orange-500 uppercase tracking-widest leading-tight">
+                Candidate Portal
+              </div>
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          {/* ── Right side ── */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+
+            {/* Notification bell */}
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.93 }}>
               <Link
                 to="/candidate/notifications"
-                className="relative p-2 rounded-lg hover:bg-orange-50 transition-colors"
+                className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gray-50 hover:bg-orange-50 border border-gray-200 hover:border-orange-200 transition-all duration-150"
               >
-                <Bell className="w-5 h-5 text-gray-600" />
+                <Bell className="w-4 h-4 text-gray-500" />
                 <AnimatePresence>
                   {unreadCount > 0 && (
                     <motion.span
-                      initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                      className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
+                      key="badge"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                      className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-[5px] bg-orange-500 text-white text-[10px] font-black rounded-full flex items-center justify-center leading-none ring-2 ring-white tabular-nums"
                     >
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                      {unreadCount > 99 ? '99+' : unreadCount}
                     </motion.span>
                   )}
                 </AnimatePresence>
               </Link>
             </motion.div>
 
-            <span className="hidden sm:inline text-sm text-gray-600 font-medium">
-              {user?.fullName || user?.email || 'Candidate'}
-            </span>
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-5 bg-gray-200 mx-1" />
 
+            {/* User chip */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => setShowLogout(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-all"
+              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-xl border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-150 group"
             >
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
+              {/* Avatar */}
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <span className="text-white font-black text-[11px] leading-none">
+                  {(user?.fullName || user?.email || 'C')
+                    .split(' ')
+                    .map(n => n[0])
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase()}
+                </span>
+              </div>
+              <span className="hidden sm:inline text-sm font-semibold text-gray-700 group-hover:text-orange-700 transition-colors max-w-[120px] truncate">
+                {user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Candidate'}
+              </span>
+              <LogOut className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500 transition-colors flex-shrink-0" />
             </motion.button>
           </div>
         </div>
       </header>
 
       {/* ── Body ── */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-5 px-4 sm:px-6 py-5">
+      <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 px-3 sm:px-4 lg:px-6 py-5">
 
         {/* ── Sidebar ── */}
-        <aside className="h-fit sticky top-[69px]">
+        <aside className="h-fit sticky top-[57px]">
           {/* Header strip */}
           <div className="bg-[#0f172a] rounded-t-xl px-4 py-4 flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">

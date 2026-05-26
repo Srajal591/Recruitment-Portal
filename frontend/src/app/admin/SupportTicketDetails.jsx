@@ -225,6 +225,7 @@ const SupportTicketDetails = () => {
                   ) : (
                     replies.map((msg, i) => {
                       const isAgent =
+                        msg.sentByModel === "Employee" ||
                         msg.senderType === "Employee" ||
                         msg.senderType === "agent" ||
                         msg.isAdmin;
@@ -244,7 +245,8 @@ const SupportTicketDetails = () => {
                               <span
                                 className={`text-xs font-semibold ${isAgent ? "text-orange-100" : "text-gray-600"}`}
                               >
-                                {msg.senderName ||
+                                {msg.sentByName ||
+                                  msg.senderName ||
                                   msg.sender ||
                                   (isAgent ? "Support Team" : "Candidate")}
                               </span>

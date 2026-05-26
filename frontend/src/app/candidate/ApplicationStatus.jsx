@@ -38,6 +38,10 @@ import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
+import {
+  getRouteForApplicationStep,
+  persistApplicationDraft,
+} from "../../utils/applicationFlow";
 
 // ── Status config ─────────────────────────────────────────────
 
@@ -272,32 +276,11 @@ const ApplicationStatus = () => {
 
   // If draft — redirect to form
   if (app.status === "draft") {
-    const STEP_ROUTES = {
-      1: "/application/personal-details",
-      2: "/application/education",
-      3: "/application/additional-info",
-      4: "/application/address",
-      5: "/application/documents",
-      6: "/application/review",
-      7: "/application/post-selection",
-      8: "/application/payment",
-    };
-    const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
-    sessionStorage.setItem(
-      "app_draft",
-      JSON.stringify({
-        ...draft,
-        applicationId: app._id,
-        jobId: app.jobId?._id,
-      }),
-    );
-    navigate(
-      STEP_ROUTES[app.currentStep || 1] || "/application/personal-details",
-      {
-        state: { applicationId: app._id, jobId: app.jobId?._id },
-        replace: true,
-      },
-    );
+    persistApplicationDraft({ applicationId: app._id, jobId: app.jobId?._id });
+    navigate(getRouteForApplicationStep(app, app.currentStep || 1), {
+      state: { applicationId: app._id, jobId: app.jobId?._id },
+      replace: true,
+    });
     return null;
   }
 
@@ -307,6 +290,13 @@ const ApplicationStatus = () => {
   const education = app.education || {};
   const address = app.address || {};
   const documents = app.documents || [];
+  const formResponses = app.formResponses || {};
+  const fieldLabelMap = {};
+  (app.jobId?.formSections || []).forEach((section) => {
+    (section.fields || []).forEach((field) => {
+      fieldLabelMap[String(field._id)] = field.label;
+    });
+  });
   const fee = app.totalFee || 0;
 
   return (
@@ -405,6 +395,37 @@ const ApplicationStatus = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Personal details */}
+            {Object.keys(formResponses).length > 0 && (
+              <Card>
+                <CardHeader>
+                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-orange-600" />
+                    Application Form
+                  </h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                    {Object.entries(formResponses).map(([fieldId, value]) => (
+                      <Row
+                        key={fieldId}
+                        label={fieldLabelMap[fieldId] || fieldId}
+                        value={
+                          typeof value === "boolean"
+                            ? value
+                              ? "Yes"
+                              : "No"
+                            : Array.isArray(value)
+                              ? value.join(", ")
+                              : String(value)
+                        }
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Personal details */}
             {Object.keys(personal).length > 0 && (

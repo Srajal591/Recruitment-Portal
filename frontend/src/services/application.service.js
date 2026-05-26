@@ -55,6 +55,15 @@ export const applicationService = {
     return unwrapData(response);
   },
 
+  // Candidate - Save dynamic form responses (Custom fields from job)
+  async saveDynamicFormResponses(id, data) {
+    const response = await apiClient.put(
+      `/candidate/applications/${id}/form-responses`,
+      { formResponses: data },
+    );
+    return unwrapData(response);
+  },
+
   // Candidate - Upload document (Step 5)
   async uploadDocument(id, type, file) {
     const formData = new FormData();
@@ -96,6 +105,12 @@ export const applicationService = {
   // Admin - Get application stats
   async getAdminApplicationStats() {
     const response = await apiClient.get("/admin/applications/stats");
+    return unwrapData(response);
+  },
+
+  // Get job details (including formSections for candidates)
+  async getJobDetails(jobId) {
+    const response = await apiClient.get(`/jobs/${jobId}`);
     return unwrapData(response);
   },
 };

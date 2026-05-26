@@ -38,6 +38,55 @@ const emitStepSaved = (candidateId, applicationId, currentStep, extra = {}) => {
   } catch (_) {}
 };
 
+const slugify = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const assertApplicationCompleteForJob = (app) => {
+  const job = app.jobId;
+  const responses =
+    app.formResponses instanceof Map
+      ? Object.fromEntries(app.formResponses)
+      : app.formResponses || {};
+
+  (job.formSections || []).forEach((section) => {
+    (section.fields || []).forEach((field) => {
+      if (field.type === "file") return;
+      const value = responses[String(field._id)];
+      const empty =
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        (typeof value === "string" && value.trim() === "");
+      if (field.required && empty) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} is required`);
+      }
+    });
+  });
+
+  const requiredDocs = (job.documentRequirements || [])
+    .filter((doc) => doc.required !== false)
+    .map((doc) => slugify(doc.name));
+  const uploadedDocs = new Set(
+    (app.documents || [])
+      .filter((doc) => ["uploaded", "verified"].includes(doc.status))
+      .map((doc) => doc.type),
+  );
+  const missingDoc = requiredDocs.find((type) => !uploadedDocs.has(type));
+  if (missingDoc) {
+    const doc = (job.documentRequirements || []).find(
+      (item) => slugify(item.name) === missingDoc,
+    );
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `${doc?.name || "Required document"} is required`,
+    );
+  }
+};
+
 // ── Controllers ───────────────────────────────────────────────
 
 /**
@@ -108,7 +157,7 @@ const createApplication = asyncHandler(async (req, res) => {
 
   await application.populate(
     "jobId",
-    "title department postCode applicationDeadline",
+    "title department postCode applicationDeadline formSections documentRequirements posts applicationFee paymentConfig",
   );
 
   try {
@@ -164,7 +213,7 @@ const getMyApplications = asyncHandler(async (req, res) => {
     Application.find(filter)
       .populate(
         "jobId",
-        "title department postCode applicationDeadline examDate",
+        "title department postCode applicationDeadline examDate formSections documentRequirements posts applicationFee paymentConfig",
       )
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -334,6 +383,147 @@ const updateAddress = asyncHandler(async (req, res) => {
 
 /**
  * @swagger
+ * /api/candidate/applications/{id}/form-responses:
+ *   put:
+ *     tags: [Candidate - Applications]
+ *     summary: Save Dynamic Form Responses (Custom Fields from Job)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               formResponses:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Form responses saved
+ *       400:
+ *         description: Invalid field submission
+ *       404:
+ *         description: Application or job not found
+ */
+const updateFormResponses = asyncHandler(async (req, res) => {
+  const app = await getOwnDraftApplication(req.params.id, req.user.id);
+  
+  // Fetch the job to get formSections for validation
+  const job = await Job.findById(app.jobId);
+  if (!job) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Job not found");
+  }
+
+  const { formResponses } = req.body;
+  if (!formResponses || typeof formResponses !== "object") {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Invalid formResponses format"
+    );
+  }
+
+  // Validate that submitted fields exist in job's formSections and satisfy
+  // the admin's required/type/option constraints.
+  const allowedFieldIds = new Set();
+  const fieldMap = new Map();
+  (job.formSections || []).forEach((section) => {
+    (section.fields || []).forEach((field) => {
+      const id = String(field._id);
+      allowedFieldIds.add(id);
+      fieldMap.set(id, field);
+    });
+  });
+
+  // Check that all submitted fields are allowed (security check)
+  for (const fieldId of Object.keys(formResponses)) {
+    if (!allowedFieldIds.has(fieldId)) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `Field ${fieldId} is not allowed for this job`
+      );
+    }
+  }
+
+  for (const [fieldId, field] of fieldMap.entries()) {
+    if (field.type === "file") continue;
+    const value = formResponses[fieldId];
+    const empty =
+      value === undefined ||
+      value === null ||
+      value === "" ||
+      (typeof value === "string" && value.trim() === "");
+
+    if (field.required && empty) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `${field.label} is required`,
+      );
+    }
+
+    if (empty) continue;
+
+    if (["select", "radio"].includes(field.type)) {
+      const options = field.options || [];
+      if (!options.includes(value)) {
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          `${field.label} has an invalid selected option`,
+        );
+      }
+    }
+
+    if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} must be a valid email`);
+    }
+
+    if (field.type === "tel" && !/^[6-9]\d{9}$/.test(String(value).replace(/\D/g, ""))) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} must be a valid mobile number`);
+    }
+
+    if (field.type === "number") {
+      const num = Number(value);
+      if (Number.isNaN(num)) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} must be a number`);
+      }
+      if (field.validation?.min !== undefined && num < field.validation.min) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, field.validation.message || `${field.label} is below minimum`);
+      }
+      if (field.validation?.max !== undefined && num > field.validation.max) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, field.validation.message || `${field.label} is above maximum`);
+      }
+    }
+
+    if (field.validation?.pattern) {
+      try {
+        const regex = new RegExp(field.validation.pattern);
+        if (!regex.test(String(value))) {
+          throw new ApiError(StatusCodes.BAD_REQUEST, field.validation.message || `${field.label} is invalid`);
+        }
+      } catch (err) {
+        if (err instanceof ApiError) throw err;
+      }
+    }
+  }
+
+  // Update formResponses in application
+  app.formResponses = new Map(Object.entries(formResponses));
+  app.currentStep = Math.max(app.currentStep, 6);
+  app.lastSavedAt = new Date();
+  await app.save();
+
+  emitStepSaved(req.user.id, app._id, app.currentStep);
+
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Form responses saved", {
+      _id: app._id,
+      currentStep: app.currentStep,
+    }),
+  );
+});
+
+/**
+ * @swagger
  * /api/candidate/applications/{id}/documents/{type}:
  *   post:
  *     tags: [Candidate - Applications]
@@ -379,12 +569,32 @@ const uploadDocument = asyncHandler(async (req, res) => {
     );
   }
   const docType = req.params.type;
+  await app.populate("jobId");
+
+  const requirements = app.jobId?.documentRequirements || [];
+  const requirementMap = new Map(
+    requirements.map((doc) => [slugify(doc.name), doc]),
+  );
+  const selectedRequirement = requirementMap.get(docType);
+  if (requirements.length > 0 && !selectedRequirement) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "This document is not required for this job",
+    );
+  }
 
   if (!req.file)
     throw new ApiError(StatusCodes.BAD_REQUEST, "No file uploaded");
 
-  // Validate size
-  validateFileSize(req.file.size, docType);
+  const maxSizeKB = selectedRequirement?.maxSizeKB;
+  if (maxSizeKB && req.file.size > maxSizeKB * 1024) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `File too large. Max size for ${selectedRequirement.name}: ${maxSizeKB}KB`,
+    );
+  } else {
+    validateFileSize(req.file.size, docType);
+  }
 
   // Delete old document from Cloudinary if exists
   const existingDoc = app.documents.find((d) => d.type === docType);
@@ -401,6 +611,7 @@ const uploadDocument = asyncHandler(async (req, res) => {
   // Update or add document entry
   const docData = {
     type: docType,
+    name: selectedRequirement?.name || docType.replace(/_/g, " "),
     cloudinaryUrl: result.secure_url,
     cloudinaryPublicId: result.public_id,
     originalName: req.file.originalname,
@@ -422,12 +633,15 @@ const uploadDocument = asyncHandler(async (req, res) => {
   const uploadedTypes = app.documents
     .filter((d) => d.status === "uploaded")
     .map((d) => d.type);
-  const requiredTypes = [
-    "passport_photo",
-    "signature",
-    "tenth_certificate",
-    "twelfth_certificate",
-  ];
+  const requiredTypes =
+    requirements.length > 0
+      ? requirements.filter((doc) => doc.required !== false).map((doc) => slugify(doc.name))
+      : [
+          "passport_photo",
+          "signature",
+          "tenth_certificate",
+          "twelfth_certificate",
+        ];
   const allRequired = requiredTypes.every((t) => uploadedTypes.includes(t));
   if (allRequired) app.documentStatus = "pending";
 
@@ -593,7 +807,7 @@ const submitApplication = asyncHandler(async (req, res) => {
   const app = await Application.findOne({
     _id: req.params.id,
     candidateId: req.user.id,
-  }).populate("jobId", "title department");
+  }).populate("jobId");
 
   if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
 
@@ -675,7 +889,7 @@ const finalizeApplication = asyncHandler(async (req, res) => {
   const app = await Application.findOne({
     _id: req.params.id,
     candidateId: req.user.id,
-  }).populate("jobId", "title department");
+  }).populate("jobId");
 
   if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
 
@@ -690,6 +904,8 @@ const finalizeApplication = asyncHandler(async (req, res) => {
       }),
     );
   }
+
+  assertApplicationCompleteForJob(app);
 
   // Mark payment as simulated/paid and finalize
   app.paymentStatus = "paid";
@@ -777,6 +993,7 @@ module.exports = {
   updateEducation,
   updateAdditionalInfo,
   updateAddress,
+  updateFormResponses,
   uploadDocument,
   updatePostSelection,
   submitApplication,

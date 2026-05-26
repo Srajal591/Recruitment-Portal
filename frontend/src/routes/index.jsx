@@ -30,6 +30,9 @@ const PersonalDetails = lazy(
 const Education = lazy(() => import("../app/application/Education"));
 const AdditionalInfo = lazy(() => import("../app/application/AdditionalInfo"));
 const Address = lazy(() => import("../app/application/Address"));
+const DynamicFormFields = lazy(
+  () => import("../app/application/DynamicFormFields"),
+);
 const ApplicationDocuments = lazy(() => import("../app/application/Documents"));
 const Review = lazy(() => import("../app/application/Review"));
 const PostSelection = lazy(() => import("../app/application/PostSelection"));
@@ -156,6 +159,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute role="candidate">
               <Address />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/application/form-responses"
+          element={
+            <ProtectedRoute role="candidate">
+              <DynamicFormFields />
             </ProtectedRoute>
           }
         />

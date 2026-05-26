@@ -6,7 +6,14 @@ const ApiError = require("../utils/ApiError");
 const ALLOWED_TYPES = {
   passport_photo: ["image/jpeg", "image/jpg"],
   signature: ["image/jpeg", "image/jpg", "image/png"],
-  default: ["image/jpeg", "image/jpg", "image/png", "application/pdf"],
+  default: [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
 };
 
 // ── Max sizes in bytes ────────────────────────────────────────
@@ -35,7 +42,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 500 * 1024 }, // hard cap at 500KB
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 // ── Upload buffer to Cloudinary ───────────────────────────────

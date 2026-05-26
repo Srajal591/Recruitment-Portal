@@ -7,6 +7,7 @@ import ApplicationLayout from "../../components/layouts/ApplicationLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { candidateService } from "../../services/candidate.service";
+import { buildApplicationSteps } from "../../utils/applicationFlow";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
@@ -49,6 +50,14 @@ const Review = () => {
   const [declaration, setDeclaration] = useState(DECLARATION_TEXT);
   const [accepted, setAccepted] = useState(false);
 
+  const [jobId, setJobId] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(APP_KEY) || "{}").jobId;
+    } catch {
+      return null;
+    }
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: ["application-review", applicationId],
     queryFn: () => candidateService.getApplication(applicationId),
@@ -56,7 +65,33 @@ const Review = () => {
     staleTime: 0,
   });
 
+  useEffect(() => {
+    if (data && !jobId) {
+      const app = data?.application || data;
+      const resolvedJobId = app?.jobId?._id || app?.jobId;
+      if (resolvedJobId) {
+        setJobId(resolvedJobId);
+        const existing = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
+        sessionStorage.setItem(
+          APP_KEY,
+          JSON.stringify({ ...existing, jobId: resolvedJobId }),
+        );
+      }
+    }
+  }, [data, jobId]);
+
+  const { data: jobData } = useQuery({
+    queryKey: ["job-details-review", jobId],
+    queryFn: () => candidateService.getJobDetails(jobId),
+    enabled: Boolean(jobId),
+  });
+
   const app = data?.application || data;
+  const job = app?.jobId || jobData?.job || jobData;
+  const steps = buildApplicationSteps(job, app);
+  const reviewStep = steps.find((step) => step.type === "review")?.id || 1;
+  const previousStep = steps.find((step) => step.id === reviewStep - 1);
+  const nextStep = steps.find((step) => step.id === reviewStep + 1);
 
   // Review just navigates forward — no API call needed here.
   // Declaration is saved during finalize (after payment).
@@ -77,14 +112,14 @@ const Review = () => {
       JSON.stringify({ ...existing, declaration }),
     );
 
-    navigate("/application/post-selection", {
+    navigate(nextStep?.path || "/application/success", {
       state: { applicationId },
     });
   };
 
   if (!applicationId)
     return (
-      <ApplicationLayout currentStep={6} title="Review">
+      <ApplicationLayout currentStep={reviewStep} title="Review">
         <div className="p-6 text-center text-gray-500">
           No application found.{" "}
           <button
@@ -102,9 +137,19 @@ const Review = () => {
   const additional = app?.additionalInfo || {};
   const address = app?.address || {};
   const documents = app?.documents || [];
+  const formResponses = app?.formResponses || {};
+
+  // Create field label map from job's formSections
+  const fieldLabelMap = {};
+  const jobForLabels = jobData?.job || jobData || app?.jobId;
+  (jobForLabels?.formSections || []).forEach((section) => {
+    (section.fields || []).forEach((field) => {
+      fieldLabelMap[String(field._id)] = field.label;
+    });
+  });
 
   return (
-    <ApplicationLayout currentStep={6} title="Review your Application">
+    <ApplicationLayout currentStep={reviewStep} title="Review your Application">
       <div className="space-y-6">
         <Card className="shadow-sm">
           <CardHeader>
@@ -354,6 +399,44 @@ const Review = () => {
               </div>
             )}
 
+            {/* Dynamic Form Responses */}
+            {Object.keys(formResponses).length > 0 && (
+              <div className="border-l-4 border-indigo-400 pl-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    Custom Fields
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-orange-600 border-orange-200"
+                    onClick={() =>
+                      navigate("/application/form-responses?section=0", {
+                        state: { applicationId, returnToReview: true },
+                      })
+                    }
+                  >
+                    Edit
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(formResponses).map(([fieldId, value]) => (
+                    <Row
+                      key={fieldId}
+                      label={fieldLabelMap[fieldId] || fieldId}
+                      value={
+                        typeof value === "boolean"
+                          ? value
+                            ? "Yes"
+                            : "No"
+                          : String(value)
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Documents */}
             {documents.length > 0 && (
               <div className="border-l-4 border-green-400 pl-6">
@@ -428,7 +511,9 @@ const Review = () => {
           <Button
             variant="outline"
             onClick={() =>
-              navigate("/application/documents", { state: { applicationId } })
+              navigate(previousStep?.path || "/application/form-responses", {
+                state: { applicationId },
+              })
             }
           >
             ← Back
@@ -438,7 +523,7 @@ const Review = () => {
             disabled={!accepted || !applicationId}
             className="px-6 bg-orange-600 hover:bg-orange-700"
           >
-            Continue to Post Selection →
+            Continue →
           </Button>
         </div>
       </div>

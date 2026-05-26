@@ -51,6 +51,8 @@ const Downloads = lazy(() => import("../app/public/Downloads"));
 const FAQ = lazy(() => import("../app/public/FAQ"));
 const Contact = lazy(() => import("../app/public/Contact"));
 const HowToApply = lazy(() => import("../app/public/HowToApply"));
+const HelpCenter = lazy(() => import("../app/public/HelpCenter"));
+const TechnicalSupport = lazy(() => import("../app/public/TechnicalSupport"));
 const AuthDebug = lazy(() => import("../app/test/AuthDebug"));
 
 // Admin Pages
@@ -84,7 +86,9 @@ const ApplicationDetails = lazy(
 );
 const Analytics = lazy(() => import("../app/admin/Analytics"));
 const FunnelAnalysis = lazy(() => import("../app/admin/FunnelAnalysis"));
-const EmployeeActivityLog = lazy(() => import("../app/admin/EmployeeActivityLog"));
+const EmployeeActivityLog = lazy(
+  () => import("../app/admin/EmployeeActivityLog"),
+);
 const AdminSupport = lazy(() => import("../app/admin/Support"));
 const SupportKanban = lazy(() => import("../app/admin/SupportKanban"));
 const SupportTicketDetails = lazy(
@@ -93,7 +97,9 @@ const SupportTicketDetails = lazy(
 const Employees = lazy(() => import("../app/admin/Employees"));
 const Roles = lazy(() => import("../app/admin/Roles"));
 const SettingsProfile = lazy(() => import("../app/admin/SettingsProfile"));
-const AdminNotifications = lazy(() => import("../app/admin/AdminNotifications"));
+const AdminNotifications = lazy(
+  () => import("../app/admin/AdminNotifications"),
+);
 
 // Candidate Pages (Dashboard only - no sidebar)
 const CandidateDashboard = lazy(() => import("../app/candidate/Dashboard"));
@@ -223,6 +229,8 @@ const AppRoutes = () => {
         <Route path="/faq" element={<FAQ />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/how-to-apply" element={<HowToApply />} />
+        <Route path="/help-center" element={<HelpCenter />} />
+        <Route path="/technical-support" element={<TechnicalSupport />} />
         <Route path="/auth-debug" element={<AuthDebug />} />
 
         {/* Admin Routes */}

@@ -208,12 +208,31 @@ const getJobStats = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Search jobs with filters (for homepage search)
+ * @desc    Search / eligibility-filter jobs
  * @route   GET /api/jobs/search
  * @access  Public
+ *
+ * Query params:
+ *   q            – free-text search (title / dept / description)
+ *   department   – department name (partial match)
+ *   category     – job category enum
+ *   qualification – "10th" | "12th" | "Graduation" | "Post Graduation"
+ *   age          – candidate age (number); jobs whose ageLimit.min <= age <= ageLimit.max
+ *   candidateCategory – "general" | "obc" | "sc" | "st" | "ews" | "pwd"
+ *   page         – page number (default 1)
+ *   limit        – results per page (default 20)
  */
 const searchJobs = asyncHandler(async (req, res) => {
-  const { q, department, category, qualification, experience } = req.query;
+  const {
+    q,
+    department,
+    category,
+    qualification,
+    age,
+    candidateCategory,
+    page = 1,
+    limit = 20,
+  } = req.query;
 
   const filter = {
     status: "active",
@@ -225,38 +244,207 @@ const searchJobs = asyncHandler(async (req, res) => {
       { title: new RegExp(q, "i") },
       { description: new RegExp(q, "i") },
       { department: new RegExp(q, "i") },
+      { postCode: new RegExp(q, "i") },
     ];
   }
 
   if (department) filter.department = new RegExp(department, "i");
   if (category) filter.category = category;
 
-  // Filter by education qualification
+  // ── Qualification hierarchy filter ────────────────────────
+  // Map the candidate's highest qualification to a set of degree keywords
+  // that would appear in job.education.essential[].degree.
+  // A job is eligible if its minimum required degree is <= candidate's level.
+  // We implement this by building an $or across all degree levels the candidate
+  // meets OR by including jobs that have no education requirement set.
   if (qualification) {
-    filter["education.essential.degree"] = new RegExp(qualification, "i");
-  }
+    const qualLower = qualification.toLowerCase();
+    // Degree keywords per level (cumulative — higher includes lower)
+    const degreeKeywords = {
+      "10th": ["10th", "matriculation", "sslc", "class x", "class 10"],
+      "12th": [
+        "10th",
+        "matriculation",
+        "sslc",
+        "class x",
+        "class 10",
+        "12th",
+        "intermediate",
+        "hsc",
+        "class xii",
+        "class 12",
+        "higher secondary",
+      ],
+      graduation: [
+        "10th",
+        "matriculation",
+        "sslc",
+        "class x",
+        "class 10",
+        "12th",
+        "intermediate",
+        "hsc",
+        "class xii",
+        "class 12",
+        "higher secondary",
+        "graduation",
+        "graduate",
+        "bachelor",
+        "b.tech",
+        "b.e",
+        "b.sc",
+        "b.com",
+        "b.a",
+        "b.ed",
+        "llb",
+        "mbbs",
+        "degree",
+      ],
+      "post graduation": [
+        "10th",
+        "matriculation",
+        "sslc",
+        "class x",
+        "class 10",
+        "12th",
+        "intermediate",
+        "hsc",
+        "class xii",
+        "class 12",
+        "higher secondary",
+        "graduation",
+        "graduate",
+        "bachelor",
+        "b.tech",
+        "b.e",
+        "b.sc",
+        "b.com",
+        "b.a",
+        "b.ed",
+        "llb",
+        "mbbs",
+        "degree",
+        "post graduation",
+        "postgraduate",
+        "master",
+        "m.tech",
+        "m.sc",
+        "m.com",
+        "m.a",
+        "mba",
+        "phd",
+        "doctorate",
+      ],
+    };
 
-  // Filter by experience requirement
-  if (experience) {
-    if (experience === "fresher") {
-      filter["experience.required"] = false;
-    } else {
-      filter["experience.required"] = true;
-      filter["experience.years"] = { $lte: parseInt(experience) };
+    const keywords = degreeKeywords[qualLower] || [];
+    if (keywords.length > 0) {
+      // Jobs whose essential degree matches any of the candidate's eligible keywords
+      // OR jobs that have no essential education requirement at all
+      filter.$and = filter.$and || [];
+      filter.$and.push({
+        $or: [
+          { "education.essential": { $size: 0 } },
+          { "education.essential": { $exists: false } },
+          {
+            "education.essential.degree": {
+              $in: keywords.map((k) => new RegExp(k, "i")),
+            },
+          },
+        ],
+      });
     }
   }
 
-  const jobs = await Job.find(filter)
-    .populate("projectId", "name state")
-    .select(
-      "title postCode department category totalPosts applicationDeadline workLocation",
-    )
-    .sort({ applicationDeadline: 1 })
-    .limit(20);
+  // ── Age filter ────────────────────────────────────────────
+  // Include jobs where candidate age falls within ageLimit range
+  // (accounting for category relaxation if candidateCategory provided)
+  if (age && !isNaN(Number(age))) {
+    const ageNum = Number(age);
+    const catLower = (candidateCategory || "").toLowerCase();
 
-  res
-    .status(StatusCodes.OK)
-    .json(new ApiResponse(StatusCodes.OK, "Jobs found", { jobs }));
+    // Relaxation amounts by category (defaults)
+    const relaxationMap = {
+      sc: 5,
+      st: 5,
+      obc: 3,
+      pwd: 10,
+      ews: 0,
+      general: 0,
+    };
+    const relaxation = relaxationMap[catLower] || 0;
+
+    filter.$and = filter.$and || [];
+    filter.$and.push({
+      $or: [
+        // No age limit set — always eligible
+        { "ageLimit.min": { $exists: false } },
+        { "ageLimit.max": { $exists: false } },
+        {
+          $and: [
+            { "ageLimit.min": { $lte: ageNum } },
+            // max + relaxation >= candidate age
+            {
+              $expr: {
+                $gte: [{ $add: ["$ageLimit.max", relaxation] }, ageNum],
+              },
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [jobs, total] = await Promise.all([
+    Job.find(filter)
+      .populate("projectId", "name state")
+      .select(
+        "title postCode department category totalPosts applicationDeadline " +
+          "workLocation applicationFee ageLimit education salaryRange publishedAt",
+      )
+      .sort({ applicationDeadline: 1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    Job.countDocuments(filter),
+  ]);
+
+  // Attach daysLeft and compute fee for the requested category
+  const jobsWithMeta = jobs.map((job) => {
+    const obj = job.toObject();
+    obj.daysLeft = obj.applicationDeadline
+      ? Math.ceil(
+          (new Date(obj.applicationDeadline) - new Date()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : null;
+
+    // Compute applicable fee for the candidate's category
+    const fee = obj.applicationFee || {};
+    const catLower = (candidateCategory || "general").toLowerCase();
+    let applicableFee = fee.general || 0;
+    if (catLower === "sc" || catLower === "st")
+      applicableFee = fee.scSt ?? fee.scst ?? 0;
+    else if (catLower === "obc") applicableFee = fee.obc ?? fee.general ?? 0;
+    else if (catLower === "ews") applicableFee = fee.ews ?? fee.general ?? 0;
+    else if (catLower === "pwd") applicableFee = fee.pwd ?? 0;
+    obj.applicableFee = applicableFee;
+
+    return obj;
+  });
+
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Jobs found", {
+      jobs: jobsWithMeta,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(total / Number(limit)),
+        totalItems: total,
+        itemsPerPage: Number(limit),
+      },
+    }),
+  );
 });
 
 /**
@@ -267,13 +455,11 @@ const searchJobs = asyncHandler(async (req, res) => {
 const getDepartments = asyncHandler(async (req, res) => {
   const departments = await Job.distinct("department", { status: "active" });
 
-  res
-    .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(StatusCodes.OK, "Departments fetched", {
-        departments: departments.sort(),
-      }),
-    );
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Departments fetched", {
+      departments: departments.sort(),
+    }),
+  );
 });
 
 /**
@@ -284,13 +470,11 @@ const getDepartments = asyncHandler(async (req, res) => {
 const getCategories = asyncHandler(async (req, res) => {
   const categories = await Job.distinct("category", { status: "active" });
 
-  res
-    .status(StatusCodes.OK)
-    .json(
-      new ApiResponse(StatusCodes.OK, "Categories fetched", {
-        categories: categories.sort(),
-      }),
-    );
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Categories fetched", {
+      categories: categories.sort(),
+    }),
+  );
 });
 
 module.exports = {

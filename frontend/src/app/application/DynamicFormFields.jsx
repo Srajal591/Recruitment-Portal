@@ -13,12 +13,17 @@ import {
   persistApplicationDraft,
   readApplicationDraft,
 } from "../../utils/applicationFlow";
-import { INDIA_STATE_CITIES, INDIA_STATES } from "../../constants/indiaLocations";
+import {
+  INDIA_STATE_CITIES,
+  INDIA_STATES,
+} from "../../constants/indiaLocations";
 
 const fieldKey = (field) => String(field._id || field.id);
 
-const isStateField = (field) => /(^|\s)(state|state\/ut)(\s|$)/i.test(field.label || "");
-const isCityField = (field) => /(^|\s)(city|district)(\s|$)/i.test(field.label || "");
+const isStateField = (field) =>
+  /(^|\s)(state|state\/ut)(\s|$)/i.test(field.label || "");
+const isCityField = (field) =>
+  /(^|\s)(city|district)(\s|$)/i.test(field.label || "");
 
 const normaliseValue = (field, value) => {
   if (field.type === "number") return value === "" ? "" : Number(value);
@@ -28,7 +33,9 @@ const normaliseValue = (field, value) => {
 
 const getSelectedStateForField = (section, field, formData) => {
   const fields = section.fields || [];
-  const currentIndex = fields.findIndex((item) => fieldKey(item) === fieldKey(field));
+  const currentIndex = fields.findIndex(
+    (item) => fieldKey(item) === fieldKey(field),
+  );
   const previousStateField = fields
     .slice(0, Math.max(0, currentIndex))
     .reverse()
@@ -51,14 +58,29 @@ const validateValue = (field, value) => {
   if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
     return "Enter a valid email address";
   }
-  if (field.type === "tel" && !/^[6-9]\d{9}$/.test(String(value).replace(/\D/g, ""))) {
+  if (
+    field.type === "tel" &&
+    !/^[6-9]\d{9}$/.test(String(value).replace(/\D/g, ""))
+  ) {
     return "Enter a valid 10 digit mobile number";
   }
-  if (field.validation?.min !== undefined && Number(value) < field.validation.min) {
-    return field.validation.message || `${label} must be at least ${field.validation.min}`;
+  if (
+    field.validation?.min !== undefined &&
+    Number(value) < field.validation.min
+  ) {
+    return (
+      field.validation.message ||
+      `${label} must be at least ${field.validation.min}`
+    );
   }
-  if (field.validation?.max !== undefined && Number(value) > field.validation.max) {
-    return field.validation.message || `${label} must be at most ${field.validation.max}`;
+  if (
+    field.validation?.max !== undefined &&
+    Number(value) > field.validation.max
+  ) {
+    return (
+      field.validation.message ||
+      `${label} must be at most ${field.validation.max}`
+    );
   }
   if (field.validation?.pattern) {
     try {
@@ -107,7 +129,11 @@ const DynamicFormFields = () => {
   );
   const currentSection = formSections[sectionIndex];
   const steps = useMemo(() => buildApplicationSteps(job, app), [job, app]);
-  const currentStep = steps.find((step) => step.type === "form" && step.sectionIndex === sectionIndex)?.id || 1;
+  const currentStep =
+    steps.find(
+      (step) =>
+        step.type === "form-section" && step.sectionIndex === sectionIndex,
+    )?.id || 1;
   const nextStep = steps.find((step) => step.id === currentStep + 1);
   const previousStep = steps.find((step) => step.id === currentStep - 1);
 
@@ -124,18 +150,24 @@ const DynamicFormFields = () => {
 
   useEffect(() => {
     if (!isLoading && app && formSections.length === 0) {
-      navigate("/application/documents", { state: { applicationId }, replace: true });
+      navigate("/application/documents", {
+        state: { applicationId },
+        replace: true,
+      });
     }
   }, [isLoading, app, formSections.length, navigate, applicationId]);
 
   const { mutate: saveDynamicForm, isPending } = useMutation({
-    mutationFn: (data) => candidateService.saveDynamicFormResponses(applicationId, data),
+    mutationFn: (data) =>
+      candidateService.saveDynamicFormResponses(applicationId, data),
     onSuccess: () => {
       toast.success("Form responses saved");
       if (location.state?.returnToReview) {
         navigate("/application/review", { state: { applicationId } });
       } else if (nextStep) {
-        navigate(nextStep.path, { state: { applicationId, jobId: app?.jobId?._id || app?.jobId } });
+        navigate(nextStep.path, {
+          state: { applicationId, jobId: app?.jobId?._id || app?.jobId },
+        });
       }
     },
     onError: (err) => toast.error(err.message || "Failed to save"),
@@ -149,7 +181,8 @@ const DynamicFormFields = () => {
         (section.fields || []).filter(isCityField).forEach((cityField) => {
           const cityKey = fieldKey(cityField);
           const cities = INDIA_STATE_CITIES[value] || [];
-          if (updated[cityKey] && !cities.includes(updated[cityKey])) updated[cityKey] = "";
+          if (updated[cityKey] && !cities.includes(updated[cityKey]))
+            updated[cityKey] = "";
         });
       }
       return updated;
@@ -187,7 +220,9 @@ const DynamicFormFields = () => {
       <ApplicationLayout currentStep={currentStep}>
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-          <span className="ml-3 text-gray-600">Loading application form...</span>
+          <span className="ml-3 text-gray-600">
+            Loading application form...
+          </span>
         </div>
       </ApplicationLayout>
     );
@@ -200,7 +235,9 @@ const DynamicFormFields = () => {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <h1 className="text-xl font-semibold text-gray-800">{currentSection.title}</h1>
+            <h1 className="text-xl font-semibold text-gray-800">
+              {currentSection.title}
+            </h1>
             <p className="text-gray-600 text-sm">
               Fill only the information requested for this job.
             </p>
@@ -212,7 +249,13 @@ const DynamicFormFields = () => {
                   key={fieldKey(field)}
                   className={field.type === "textarea" ? "md:col-span-2" : ""}
                 >
-                  {renderField(currentSection, field, formData, errors, handleFieldChange)}
+                  {renderField(
+                    currentSection,
+                    field,
+                    formData,
+                    errors,
+                    handleFieldChange,
+                  )}
                 </div>
               ))}
             </form>
@@ -220,11 +263,20 @@ const DynamicFormFields = () => {
         </Card>
 
         <div className="flex justify-between items-center">
-          <Button variant="outline" onClick={handleBack} disabled={isPending} className="gap-2">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={isPending}
+            className="gap-2"
+          >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          <Button onClick={handleNext} disabled={isPending} className="gap-2 bg-orange-600 hover:bg-orange-700">
+          <Button
+            onClick={handleNext}
+            disabled={isPending}
+            className="gap-2 bg-orange-600 hover:bg-orange-700"
+          >
             {isPending ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -261,10 +313,16 @@ const renderField = (section, field, formData, errors, onChange) => {
     return (
       <>
         {label}
-        <select value={value} onChange={(e) => onChange(section, field, e.target.value)} className={inputClass}>
+        <select
+          value={value}
+          onChange={(e) => onChange(section, field, e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select State</option>
           {INDIA_STATES.map((state) => (
-            <option key={state} value={state}>{state}</option>
+            <option key={state} value={state}>
+              {state}
+            </option>
           ))}
         </select>
         {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
@@ -284,9 +342,13 @@ const renderField = (section, field, formData, errors, onChange) => {
           className={inputClass}
           disabled={!selectedState}
         >
-          <option value="">{selectedState ? "Select City" : "Select state first"}</option>
+          <option value="">
+            {selectedState ? "Select City" : "Select state first"}
+          </option>
           {cities.map((city) => (
-            <option key={city} value={city}>{city}</option>
+            <option key={city} value={city}>
+              {city}
+            </option>
           ))}
         </select>
         {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
@@ -299,7 +361,13 @@ const renderField = (section, field, formData, errors, onChange) => {
       return (
         <>
           {label}
-          <textarea value={value} onChange={(e) => onChange(section, field, e.target.value)} placeholder={field.placeholder} rows={4} className={inputClass} />
+          <textarea
+            value={value}
+            onChange={(e) => onChange(section, field, e.target.value)}
+            placeholder={field.placeholder}
+            rows={4}
+            className={inputClass}
+          />
           {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
         </>
       );
@@ -307,9 +375,17 @@ const renderField = (section, field, formData, errors, onChange) => {
       return (
         <>
           {label}
-          <select value={value} onChange={(e) => onChange(section, field, e.target.value)} className={inputClass}>
+          <select
+            value={value}
+            onChange={(e) => onChange(section, field, e.target.value)}
+            className={inputClass}
+          >
             <option value="">Select {field.label}</option>
-            {(field.options || []).map((option) => <option key={option} value={option}>{option}</option>)}
+            {(field.options || []).map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
           </select>
           {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
         </>
@@ -320,8 +396,18 @@ const renderField = (section, field, formData, errors, onChange) => {
           {label}
           <div className="space-y-2">
             {(field.options || []).map((option) => (
-              <label key={option} className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="radio" name={key} value={option} checked={value === option} onChange={(e) => onChange(section, field, e.target.value)} className="w-4 h-4 text-orange-500" />
+              <label
+                key={option}
+                className="flex items-center gap-2 text-sm text-gray-700"
+              >
+                <input
+                  type="radio"
+                  name={key}
+                  value={option}
+                  checked={value === option}
+                  onChange={(e) => onChange(section, field, e.target.value)}
+                  className="w-4 h-4 text-orange-500"
+                />
                 {option}
               </label>
             ))}
@@ -334,7 +420,12 @@ const renderField = (section, field, formData, errors, onChange) => {
         <>
           {label}
           <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(section, field, e.target.checked)} className="w-4 h-4 text-orange-500 rounded" />
+            <input
+              type="checkbox"
+              checked={Boolean(value)}
+              onChange={(e) => onChange(section, field, e.target.checked)}
+              className="w-4 h-4 text-orange-500 rounded"
+            />
             {field.placeholder || "Yes"}
           </label>
           {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
@@ -345,7 +436,8 @@ const renderField = (section, field, formData, errors, onChange) => {
         <>
           {label}
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            This file should be configured under job document requirements so it can be uploaded and verified securely.
+            This file should be configured under job document requirements so it
+            can be uploaded and verified securely.
           </div>
           {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
         </>
@@ -354,7 +446,13 @@ const renderField = (section, field, formData, errors, onChange) => {
       return (
         <>
           {label}
-          <input type={field.type || "text"} value={value} onChange={(e) => onChange(section, field, e.target.value)} placeholder={field.placeholder} className={inputClass} />
+          <input
+            type={field.type || "text"}
+            value={value}
+            onChange={(e) => onChange(section, field, e.target.value)}
+            placeholder={field.placeholder}
+            className={inputClass}
+          />
           {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
         </>
       );

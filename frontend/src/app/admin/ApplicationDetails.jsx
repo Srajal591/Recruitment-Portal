@@ -3,33 +3,76 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
-  ArrowLeft, FileText, Loader2, User, GraduationCap, MapPin,
-  Upload, CreditCard, CheckCircle, XCircle, Clock, Eye,
-  Download, AlertCircle, Info, ChevronRight,
+  ArrowLeft,
+  FileText,
+  Loader2,
+  User,
+  GraduationCap,
+  MapPin,
+  Upload,
+  CreditCard,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  Download,
+  AlertCircle,
+  Info,
+  ChevronRight,
+  ListChecks,
 } from "lucide-react";
 import AdminLayout from "../../components/layouts/AdminLayout";
 import Button from "../../components/ui/Button";
 import { adminService } from "../../services/admin.service";
 
 const STATUS_CFG = {
-  draft:        { label: "Draft",        cls: "bg-gray-100 text-gray-700",    dot: "bg-gray-400"    },
-  submitted:    { label: "Submitted",    cls: "bg-blue-100 text-blue-800",    dot: "bg-blue-500"    },
-  under_review: { label: "Under Review", cls: "bg-amber-100 text-amber-800",  dot: "bg-amber-500"   },
-  verified:     { label: "Verified",     cls: "bg-emerald-100 text-emerald-800", dot: "bg-emerald-500" },
-  approved:     { label: "Approved",     cls: "bg-emerald-100 text-emerald-800", dot: "bg-emerald-500" },
-  rejected:     { label: "Rejected",     cls: "bg-red-100 text-red-800",      dot: "bg-red-500"     },
+  draft: {
+    label: "Draft",
+    cls: "bg-gray-100 text-gray-700",
+    dot: "bg-gray-400",
+  },
+  submitted: {
+    label: "Submitted",
+    cls: "bg-blue-100 text-blue-800",
+    dot: "bg-blue-500",
+  },
+  under_review: {
+    label: "Under Review",
+    cls: "bg-amber-100 text-amber-800",
+    dot: "bg-amber-500",
+  },
+  verified: {
+    label: "Verified",
+    cls: "bg-emerald-100 text-emerald-800",
+    dot: "bg-emerald-500",
+  },
+  approved: {
+    label: "Approved",
+    cls: "bg-emerald-100 text-emerald-800",
+    dot: "bg-emerald-500",
+  },
+  rejected: {
+    label: "Rejected",
+    cls: "bg-red-100 text-red-800",
+    dot: "bg-red-500",
+  },
 };
 
 const PAY_CFG = {
-  paid:    "bg-emerald-100 text-emerald-800",
+  paid: "bg-emerald-100 text-emerald-800",
   pending: "bg-amber-100 text-amber-800",
-  failed:  "bg-red-100 text-red-800",
+  failed: "bg-red-100 text-red-800",
 };
 
 const TABS = [
-  { id: "custom",     label: "Application Form", icon: FileText },
-  { id: "documents",  label: "Documents",  icon: Upload        },
-  { id: "payment",    label: "Payment",    icon: CreditCard    },
+  { id: "personal", label: "Personal Details", icon: User },
+  { id: "education", label: "Education", icon: GraduationCap },
+  { id: "additional", label: "Additional Info", icon: Info },
+  { id: "address", label: "Address", icon: MapPin },
+  { id: "custom", label: "Application Form", icon: FileText },
+  { id: "documents", label: "Documents", icon: Upload },
+  { id: "posts", label: "Applied Posts", icon: ListChecks },
+  { id: "payment", label: "Payment", icon: CreditCard },
 ];
 
 const Row = ({ label, value }) =>
@@ -57,17 +100,19 @@ const EduCard = ({ title, data }) => {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[
           ["Board/University", data.board || data.university],
-          ["School/College",   data.school || data.college],
-          ["Year",             data.year],
-          ["Percentage",       data.percentage ? `${data.percentage}%` : null],
-          ["Stream/Degree",    data.stream || data.degree],
-          ["Roll Number",      data.rollNumber],
-        ].map(([l, v]) => v ? (
-          <div key={l}>
-            <p className="text-xs text-gray-500">{l}</p>
-            <p className="text-sm font-medium text-gray-800">{v}</p>
-          </div>
-        ) : null)}
+          ["School/College", data.school || data.college],
+          ["Year", data.year],
+          ["Percentage", data.percentage ? `${data.percentage}%` : null],
+          ["Stream/Degree", data.stream || data.degree],
+          ["Roll Number", data.rollNumber],
+        ].map(([l, v]) =>
+          v ? (
+            <div key={l}>
+              <p className="text-xs text-gray-500">{l}</p>
+              <p className="text-sm font-medium text-gray-800">{v}</p>
+            </div>
+          ) : null,
+        )}
       </div>
     </div>
   );
@@ -77,20 +122,27 @@ const AddrCard = ({ title, data }) => {
   if (!data || Object.keys(data).length === 0) return null;
   return (
     <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/60">
-      <h4 className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-3">{title}</h4>
+      <h4 className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-3">
+        {title}
+      </h4>
       {[
         ["Address Line 1", data.addressLine1],
         ["Address Line 2", data.addressLine2],
-        ["District",       data.district],
-        ["State",          data.state],
+        ["District", data.district],
+        ["State", data.state],
         ["Police Station", data.policeStation],
-        ["Pincode",        data.pincode],
-      ].map(([l, v]) => v ? (
-        <div key={l} className="py-1.5 border-b border-gray-100 last:border-0">
-          <p className="text-xs text-gray-500">{l}</p>
-          <p className="text-sm font-medium text-gray-800">{v}</p>
-        </div>
-      ) : null)}
+        ["Pincode", data.pincode],
+      ].map(([l, v]) =>
+        v ? (
+          <div
+            key={l}
+            className="py-1.5 border-b border-gray-100 last:border-0"
+          >
+            <p className="text-xs text-gray-500">{l}</p>
+            <p className="text-sm font-medium text-gray-800">{v}</p>
+          </div>
+        ) : null,
+      )}
     </div>
   );
 };
@@ -113,9 +165,18 @@ const ApplicationDetails = () => {
 
   const { mutate: updateStatus, isPending } = useMutation({
     mutationFn: ({ status, notes }) =>
-      adminService.updateApplicationStatus(id, { status, notes }),
+      adminService.updateApplicationStatus(id, {
+        status,
+        rejectionReason: notes,
+      }),
     onSuccess: (_, vars) => {
-      toast.success(vars.status === "approved" ? "Application approved" : vars.status === "rejected" ? "Application rejected" : "Status updated");
+      toast.success(
+        vars.status === "approved"
+          ? "Application approved"
+          : vars.status === "rejected"
+            ? "Application rejected"
+            : "Status updated",
+      );
       queryClient.invalidateQueries({ queryKey: ["admin-application", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-applications"] });
       setShowRejectModal(false);
@@ -139,7 +200,10 @@ const ApplicationDetails = () => {
         <div className="p-6 flex flex-col items-center justify-center h-96 gap-4">
           <FileText className="w-12 h-12 text-gray-300" />
           <p className="text-gray-500">Application not found</p>
-          <Button variant="outline" onClick={() => navigate("/admin/applications")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/admin/applications")}
+          >
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
         </div>
@@ -147,11 +211,13 @@ const ApplicationDetails = () => {
     );
 
   // exact model fields
-  const personal   = application.personalDetails || {};
-  const education  = application.education || {};
+  const personal = application.personalDetails || {};
+  const education = application.education || {};
   const additional = application.additionalInfo || {};
-  const address    = application.address || {};
-  const documents  = Array.isArray(application.documents) ? application.documents : [];
+  const address = application.address || {};
+  const documents = Array.isArray(application.documents)
+    ? application.documents
+    : [];
   const formResponses = application.formResponses || {};
   const fieldLabelMap = {};
   (application.jobId?.formSections || []).forEach((section) => {
@@ -159,17 +225,21 @@ const ApplicationDetails = () => {
       fieldLabelMap[String(field._id)] = field.label;
     });
   });
-  const canAct     = ["submitted", "under_review"].includes(application.status);
+  const canAct = ["submitted", "under_review"].includes(application.status);
 
-  const sCfg    = STATUS_CFG[application.status] || STATUS_CFG.draft;
-  const payCfg  = PAY_CFG[application.paymentStatus] || "bg-gray-100 text-gray-600";
+  const sCfg = STATUS_CFG[application.status] || STATUS_CFG.draft;
+  const payCfg =
+    PAY_CFG[application.paymentStatus] || "bg-gray-100 text-gray-600";
   const initials = (application.candidateId?.fullName || "?")
-    .split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <AdminLayout title="Application Details">
       <div className="p-6 space-y-5 max-w-7xl mx-auto">
-
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -181,7 +251,9 @@ const ApplicationDetails = () => {
             </button>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-gray-900">Application Details</h1>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Application Details
+                </h1>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
                 <span className="font-mono text-sm font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">
                   {application.applicationId || id}
@@ -195,11 +267,15 @@ const ApplicationDetails = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${sCfg.cls}`}>
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${sCfg.cls}`}
+            >
               <span className={`w-1.5 h-1.5 rounded-full ${sCfg.dot}`} />
               {sCfg.label}
             </span>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${payCfg}`}>
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${payCfg}`}
+            >
               {application.paymentStatus || "Unpaid"}
             </span>
           </div>
@@ -213,22 +289,51 @@ const ApplicationDetails = () => {
             </div>
             <div>
               <p className="text-white font-bold text-lg leading-tight">
-                {application.candidateId?.fullName || <span className="opacity-60 italic font-normal text-base">Name not provided</span>}
+                {application.candidateId?.fullName || (
+                  <span className="opacity-60 italic font-normal text-base">
+                    Name not provided
+                  </span>
+                )}
               </p>
-              <p className="text-orange-100 text-sm">{application.candidateId?.email || "—"}</p>
+              <p className="text-orange-100 text-sm">
+                {application.candidateId?.email || "—"}
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
             {[
-              { label: "Job Applied",  val: application.jobId?.title,   sub: application.jobId?.department },
-              { label: "Category",     val: personal.category || "—",   sub: null },
-              { label: "Mobile",       val: application.candidateId?.registeredMobile || personal.registeredMobile || "—", sub: null },
-              { label: "Fee",          val: application.totalFee ? `₹${Number(application.totalFee).toLocaleString("en-IN")}` : "—", sub: application.transactionId },
+              {
+                label: "Job Applied",
+                val: application.jobId?.title,
+                sub: application.jobId?.department,
+              },
+              { label: "Category", val: personal.category || "—", sub: null },
+              {
+                label: "Mobile",
+                val:
+                  application.candidateId?.registeredMobile ||
+                  personal.registeredMobile ||
+                  "—",
+                sub: null,
+              },
+              {
+                label: "Fee",
+                val: application.totalFee
+                  ? `₹${Number(application.totalFee).toLocaleString("en-IN")}`
+                  : "—",
+                sub: application.transactionId,
+              },
             ].map(({ label, val, sub }) => (
               <div key={label} className="px-5 py-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">{label}</p>
-                <p className="font-semibold text-gray-900 text-sm">{val || "—"}</p>
-                {sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{sub}</p>}
+                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
+                  {label}
+                </p>
+                <p className="font-semibold text-gray-900 text-sm">
+                  {val || "—"}
+                </p>
+                {sub && (
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">{sub}</p>
+                )}
               </div>
             ))}
           </div>
@@ -239,8 +344,12 @@ const ApplicationDetails = () => {
           <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-start gap-3">
             <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-red-800">Rejection Reason</p>
-              <p className="text-sm text-red-700 mt-0.5">{application.rejectionReason}</p>
+              <p className="text-sm font-semibold text-red-800">
+                Rejection Reason
+              </p>
+              <p className="text-sm text-red-700 mt-0.5">
+                {application.rejectionReason}
+              </p>
             </div>
           </div>
         )}
@@ -262,7 +371,9 @@ const ApplicationDetails = () => {
               />
               <div className="flex gap-2 flex-wrap">
                 <Button
-                  onClick={() => updateStatus({ status: "under_review", notes: reviewNote })}
+                  onClick={() =>
+                    updateStatus({ status: "under_review", notes: reviewNote })
+                  }
                   disabled={isPending || application.status === "under_review"}
                   variant="outline"
                   className="text-amber-700 border-amber-300 hover:bg-amber-50"
@@ -270,11 +381,20 @@ const ApplicationDetails = () => {
                   <Clock className="w-4 h-4 mr-1.5" /> Under Review
                 </Button>
                 <Button
-                  onClick={() => updateStatus({ status: "approved", notes: reviewNote })}
+                  onClick={() =>
+                    updateStatus({ status: "approved", notes: reviewNote })
+                  }
                   disabled={isPending}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1.5" />Approve</>}
+                  {isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-1.5" />
+                      Approve
+                    </>
+                  )}
                 </Button>
                 <Button
                   onClick={() => setShowRejectModal(true)}
@@ -312,7 +432,6 @@ const ApplicationDetails = () => {
 
           {/* Content Panel */}
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 min-h-[420px]">
-
             {/* Admin-configured form */}
             {activeTab === "custom" && (
               <div>
@@ -320,10 +439,14 @@ const ApplicationDetails = () => {
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                     <FileText className="w-4 h-4 text-orange-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Application Form Responses</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Application Form Responses
+                  </h3>
                 </div>
                 {Object.keys(formResponses).length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-10">No form responses submitted yet.</p>
+                  <p className="text-gray-400 text-sm text-center py-10">
+                    No form responses submitted yet.
+                  </p>
                 ) : (
                   <Grid>
                     {Object.entries(formResponses).map(([fieldId, value]) => (
@@ -345,23 +468,45 @@ const ApplicationDetails = () => {
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                     <User className="w-4 h-4 text-orange-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Personal Information</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Personal Information
+                  </h3>
                 </div>
                 {Object.keys(personal).length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-10">No personal details submitted yet.</p>
+                  <p className="text-gray-400 text-sm text-center py-10">
+                    No personal details submitted yet.
+                  </p>
                 ) : (
                   <Grid>
-                    <Row label="Full Name"       value={personal.fullName} />
-                    <Row label="Father's Name"   value={personal.fatherName} />
-                    <Row label="Mother's Name"   value={personal.motherName} />
-                    <Row label="Date of Birth"   value={personal.dateOfBirth ? new Date(personal.dateOfBirth).toLocaleDateString("en-IN") : null} />
-                    <Row label="Gender"          value={personal.gender} />
-                    <Row label="Category"        value={personal.category} />
-                    <Row label="Marital Status"  value={personal.maritalStatus} />
-                    <Row label="Religion"        value={personal.religion} />
-                    <Row label="Mobile"          value={personal.registeredMobile} />
-                    <Row label="Identification Mark" value={personal.identificationMark} />
-                    <Row label="Domicile of Bihar"   value={personal.isDomicileOfBihar} />
+                    <Row label="Full Name" value={personal.fullName} />
+                    <Row label="Father's Name" value={personal.fatherName} />
+                    <Row label="Mother's Name" value={personal.motherName} />
+                    <Row
+                      label="Date of Birth"
+                      value={
+                        personal.dateOfBirth
+                          ? new Date(personal.dateOfBirth).toLocaleDateString(
+                              "en-IN",
+                            )
+                          : null
+                      }
+                    />
+                    <Row label="Gender" value={personal.gender} />
+                    <Row label="Category" value={personal.category} />
+                    <Row
+                      label="Marital Status"
+                      value={personal.maritalStatus}
+                    />
+                    <Row label="Religion" value={personal.religion} />
+                    <Row label="Mobile" value={personal.registeredMobile} />
+                    <Row
+                      label="Identification Mark"
+                      value={personal.identificationMark}
+                    />
+                    <Row
+                      label="Domicile of Bihar"
+                      value={personal.isDomicileOfBihar}
+                    />
                   </Grid>
                 )}
               </div>
@@ -374,17 +519,30 @@ const ApplicationDetails = () => {
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                     <GraduationCap className="w-4 h-4 text-orange-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Educational Qualifications</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Educational Qualifications
+                  </h3>
                 </div>
                 {Object.keys(education).length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-10">No education details submitted yet.</p>
+                  <p className="text-gray-400 text-sm text-center py-10">
+                    No education details submitted yet.
+                  </p>
                 ) : (
                   <div className="space-y-4">
-                    <EduCard title="10th (Matriculation)" data={education.tenth} />
-                    <EduCard title="12th (Intermediate)"  data={education.twelfth} />
-                    <EduCard title="Graduation"           data={education.graduation} />
+                    <EduCard
+                      title="10th (Matriculation)"
+                      data={education.tenth}
+                    />
+                    <EduCard
+                      title="12th (Intermediate)"
+                      data={education.twelfth}
+                    />
+                    <EduCard title="Graduation" data={education.graduation} />
                     {education.hasPostGraduation !== undefined && (
-                      <Row label="Has Post Graduation" value={education.hasPostGraduation} />
+                      <Row
+                        label="Has Post Graduation"
+                        value={education.hasPostGraduation}
+                      />
                     )}
                   </div>
                 )}
@@ -398,22 +556,60 @@ const ApplicationDetails = () => {
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                     <Info className="w-4 h-4 text-orange-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Additional Information</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Additional Information
+                  </h3>
                 </div>
                 {Object.keys(additional).length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-10">No additional info submitted yet.</p>
+                  <p className="text-gray-400 text-sm text-center py-10">
+                    No additional info submitted yet.
+                  </p>
                 ) : (
                   <Grid>
-                    <Row label="Govt Employee"         value={additional.isGovtEmployee} />
-                    <Row label="Department Name"       value={additional.departmentName} />
-                    <Row label="Years of Service"      value={additional.yearsOfService} />
-                    <Row label="Ex-Serviceman"         value={additional.isExServiceman} />
-                    <Row label="Person with Disability" value={additional.isPwD} />
-                    <Row label="Disability Type"       value={additional.disabilityType} />
-                    <Row label="Disability %"          value={additional.disabilityPercentage ? `${additional.disabilityPercentage}%` : null} />
-                    <Row label="Driving License"       value={additional.drivingLicense} />
-                    <Row label="Computer Certificate"  value={additional.computerCertificate} />
-                    <Row label="Subject Combination"   value={additional.subjectCombination} />
+                    <Row
+                      label="Govt Employee"
+                      value={additional.isGovtEmployee}
+                    />
+                    <Row
+                      label="Department Name"
+                      value={additional.departmentName}
+                    />
+                    <Row
+                      label="Years of Service"
+                      value={additional.yearsOfService}
+                    />
+                    <Row
+                      label="Ex-Serviceman"
+                      value={additional.isExServiceman}
+                    />
+                    <Row
+                      label="Person with Disability"
+                      value={additional.isPwD}
+                    />
+                    <Row
+                      label="Disability Type"
+                      value={additional.disabilityType}
+                    />
+                    <Row
+                      label="Disability %"
+                      value={
+                        additional.disabilityPercentage
+                          ? `${additional.disabilityPercentage}%`
+                          : null
+                      }
+                    />
+                    <Row
+                      label="Driving License"
+                      value={additional.drivingLicense}
+                    />
+                    <Row
+                      label="Computer Certificate"
+                      value={additional.computerCertificate}
+                    />
+                    <Row
+                      label="Subject Combination"
+                      value={additional.subjectCombination}
+                    />
                   </Grid>
                 )}
               </div>
@@ -426,14 +622,24 @@ const ApplicationDetails = () => {
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                     <MapPin className="w-4 h-4 text-orange-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Address Details</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Address Details
+                  </h3>
                 </div>
                 {Object.keys(address).length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-10">No address details submitted yet.</p>
+                  <p className="text-gray-400 text-sm text-center py-10">
+                    No address details submitted yet.
+                  </p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <AddrCard title="Permanent Address"      data={address.permanent} />
-                    <AddrCard title="Correspondence Address" data={address.correspondence} />
+                    <AddrCard
+                      title="Permanent Address"
+                      data={address.permanent}
+                    />
+                    <AddrCard
+                      title="Correspondence Address"
+                      data={address.correspondence}
+                    />
                     {address.sameAsPermanent && (
                       <p className="text-xs text-gray-500 md:col-span-2">
                         ✓ Correspondence address same as permanent
@@ -451,21 +657,32 @@ const ApplicationDetails = () => {
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                     <Upload className="w-4 h-4 text-orange-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Uploaded Documents</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Uploaded Documents
+                  </h3>
                   <span className="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                    {documents.filter(d => d.cloudinaryUrl).length} / {documents.length} uploaded
+                    {documents.filter((d) => d.cloudinaryUrl).length} /{" "}
+                    {documents.length} uploaded
                   </span>
                 </div>
                 {documents.length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-10">No documents uploaded yet.</p>
+                  <p className="text-gray-400 text-sm text-center py-10">
+                    No documents uploaded yet.
+                  </p>
                 ) : (
                   <div className="space-y-3">
                     {documents.map((doc) => {
-                      const statusCls = doc.status === "verified" ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                        : doc.status === "rejected" ? "text-red-700 bg-red-50 border-red-200"
-                        : "text-amber-700 bg-amber-50 border-amber-200";
+                      const statusCls =
+                        doc.status === "verified"
+                          ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                          : doc.status === "rejected"
+                            ? "text-red-700 bg-red-50 border-red-200"
+                            : "text-amber-700 bg-amber-50 border-amber-200";
                       return (
-                        <div key={doc._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                        <div
+                          key={doc._id}
+                          className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                        >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
                               <FileText className="w-5 h-5 text-orange-600" />
@@ -475,20 +692,36 @@ const ApplicationDetails = () => {
                                 {doc.type?.replace(/_/g, " ")}
                               </p>
                               <div className="flex items-center gap-2 mt-0.5">
-                                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusCls}`}>
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusCls}`}
+                                >
                                   {doc.status || "pending"}
                                 </span>
-                                {doc.sizeKB && <span className="text-xs text-gray-400">{doc.sizeKB} KB</span>}
+                                {doc.sizeKB && (
+                                  <span className="text-xs text-gray-400">
+                                    {doc.sizeKB} KB
+                                  </span>
+                                )}
                               </div>
                               {doc.rejectionReason && (
-                                <p className="text-xs text-red-600 mt-1">{doc.rejectionReason}</p>
+                                <p className="text-xs text-red-600 mt-1">
+                                  {doc.rejectionReason}
+                                </p>
                               )}
                             </div>
                           </div>
                           {doc.cloudinaryUrl && (
                             <div className="flex gap-2">
-                              <a href={doc.cloudinaryUrl} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                              <a
+                                href={doc.cloudinaryUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                >
                                   <Eye className="w-4 h-4 mr-1" /> View
                                 </Button>
                               </a>
@@ -507,6 +740,75 @@ const ApplicationDetails = () => {
               </div>
             )}
 
+            {/* Applied Posts */}
+            {activeTab === "posts" && (
+              <div>
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <ListChecks className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Applied Posts</h3>
+                </div>
+                {!application.appliedPosts ||
+                application.appliedPosts.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-10">
+                    No posts selected yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {application.appliedPosts.map((post, idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900">
+                              {post.title || "Post"}
+                            </p>
+                            <div className="grid grid-cols-2 gap-3 mt-2 text-sm">
+                              <div>
+                                <p className="text-xs text-gray-500">
+                                  Designation
+                                </p>
+                                <p className="text-gray-800">
+                                  {post.designation || "—"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">
+                                  Department
+                                </p>
+                                <p className="text-gray-800">
+                                  {post.department || "—"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">
+                                  Vacancies
+                                </p>
+                                <p className="text-gray-800">
+                                  {post.vacancies || "—"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">
+                                  Preference
+                                </p>
+                                <p className="text-gray-800 font-medium">
+                                  #{post.preference || "—"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Payment */}
             {activeTab === "payment" && (
               <div>
@@ -514,41 +816,67 @@ const ApplicationDetails = () => {
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                     <CreditCard className="w-4 h-4 text-orange-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Payment Information</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Payment Information
+                  </h3>
                 </div>
                 {!application.totalFee && !application.transactionId ? (
-                  <p className="text-gray-400 text-sm text-center py-10">No payment information available.</p>
+                  <p className="text-gray-400 text-sm text-center py-10">
+                    No payment information available.
+                  </p>
                 ) : (
                   <div className="space-y-4">
-                    <div className={`p-4 rounded-xl flex items-center gap-3 border ${
-                      application.paymentStatus === "paid" ? "bg-emerald-50 border-emerald-200"
-                      : application.paymentStatus === "pending" ? "bg-amber-50 border-amber-200"
-                      : "bg-red-50 border-red-200"
-                    }`}>
-                      {application.paymentStatus === "paid"
-                        ? <CheckCircle className="w-5 h-5 text-emerald-600" />
-                        : application.paymentStatus === "pending"
-                        ? <Clock className="w-5 h-5 text-amber-600" />
-                        : <XCircle className="w-5 h-5 text-red-600" />}
+                    <div
+                      className={`p-4 rounded-xl flex items-center gap-3 border ${
+                        application.paymentStatus === "paid"
+                          ? "bg-emerald-50 border-emerald-200"
+                          : application.paymentStatus === "pending"
+                            ? "bg-amber-50 border-amber-200"
+                            : "bg-red-50 border-red-200"
+                      }`}
+                    >
+                      {application.paymentStatus === "paid" ? (
+                        <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      ) : application.paymentStatus === "pending" ? (
+                        <Clock className="w-5 h-5 text-amber-600" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      )}
                       <span className="font-semibold text-sm">
-                        Payment {application.paymentStatus === "paid" ? "Successful" : application.paymentStatus || "Unknown"}
+                        Payment{" "}
+                        {application.paymentStatus === "paid"
+                          ? "Successful"
+                          : application.paymentStatus || "Unknown"}
                       </span>
                       {application.totalFee > 0 && (
                         <span className="ml-auto font-bold text-gray-900">
-                          ₹{Number(application.totalFee).toLocaleString("en-IN")}
+                          ₹
+                          {Number(application.totalFee).toLocaleString("en-IN")}
                         </span>
                       )}
                     </div>
                     <Grid>
-                      <Row label="Payment Status"  value={application.paymentStatus} />
-                      <Row label="Total Fee"       value={application.totalFee ? `₹${Number(application.totalFee).toLocaleString("en-IN")}` : null} />
-                      <Row label="Transaction ID"  value={application.transactionId} />
+                      <Row
+                        label="Payment Status"
+                        value={application.paymentStatus}
+                      />
+                      <Row
+                        label="Total Fee"
+                        value={
+                          application.totalFee
+                            ? `₹${Number(application.totalFee).toLocaleString("en-IN")}`
+                            : null
+                        }
+                      />
+                      <Row
+                        label="Transaction ID"
+                        value={application.transactionId}
+                      />
                     </Grid>
                   </div>
                 )}
               </div>
             )}
-
           </div>
         </div>
       </div>
@@ -558,8 +886,12 @@ const ApplicationDetails = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Reject Application</h3>
-              <p className="text-sm text-gray-500 mt-1">Provide a reason — this will be visible to the candidate.</p>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Reject Application
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Provide a reason — this will be visible to the candidate.
+              </p>
             </div>
             <div className="p-6">
               <textarea
@@ -571,13 +903,24 @@ const ApplicationDetails = () => {
               />
             </div>
             <div className="px-6 pb-6 flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => setShowRejectModal(false)}>Cancel</Button>
               <Button
-                onClick={() => updateStatus({ status: "rejected", notes: rejectReason })}
+                variant="outline"
+                onClick={() => setShowRejectModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() =>
+                  updateStatus({ status: "rejected", notes: rejectReason })
+                }
                 disabled={isPending || !rejectReason.trim()}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
-                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Rejection"}
+                {isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Confirm Rejection"
+                )}
               </Button>
             </div>
           </div>

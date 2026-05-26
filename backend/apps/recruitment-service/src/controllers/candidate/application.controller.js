@@ -24,6 +24,7 @@ const {
   deleteFromCloudinary,
 } = require("../../shared/services/upload.service");
 const { notify } = require("../../shared/utils/notify");
+const { notifyAdmins } = require("../../shared/utils/notifyAdmins");
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -721,6 +722,15 @@ const finalizeApplication = asyncHandler(async (req, res) => {
     title: "Application Submitted",
     message: `Your application ${app.applicationId} for ${app.jobId?.title || "the job"} has been submitted successfully.`,
     link: `/candidate/applications`,
+    metadata: { applicationId: app.applicationId },
+  });
+
+  // Notify all admins — new application received
+  notifyAdmins({
+    type: "application_submitted",
+    title: "New Application Received",
+    message: `${candidate?.fullName || "A candidate"} submitted application ${app.applicationId} for "${app.jobId?.title || "a job"}".`,
+    link: `/admin/applications/${app._id}`,
     metadata: { applicationId: app.applicationId },
   });
 

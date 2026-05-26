@@ -74,7 +74,9 @@ const Support = () => {
   const validate = () => {
     const e = {};
     if (!form.title.trim()) e.title = "Subject is required";
+    else if (form.title.trim().length < 5) e.title = "Subject must be at least 5 characters";
     if (!form.description.trim()) e.description = "Description is required";
+    else if (form.description.trim().length < 10) e.description = "Description must be at least 10 characters";
     setFormErrors(e);
     return Object.keys(e).length === 0;
   };

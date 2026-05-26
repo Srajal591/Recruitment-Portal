@@ -1,14 +1,17 @@
 export const APP_DRAFT_KEY = "app_draft";
 
 const normaliseJob = (jobOrApplication) => {
-  const job = jobOrApplication?.jobId || jobOrApplication?.job || jobOrApplication;
+  const job =
+    jobOrApplication?.jobId || jobOrApplication?.job || jobOrApplication;
   return job?.job || job;
 };
 
 export const getJobFormSections = (jobOrApplication) => {
   const job = normaliseJob(jobOrApplication);
   return Array.isArray(job?.formSections)
-    ? job.formSections.filter((section) => Array.isArray(section.fields) && section.fields.length > 0)
+    ? job.formSections.filter(
+        (section) => Array.isArray(section.fields) && section.fields.length > 0,
+      )
     : [];
 };
 
@@ -21,30 +24,68 @@ export const getJobDocumentRequirements = (jobOrApplication) => {
 
 export const hasPaymentStep = (jobOrApplication, application) => {
   const job = normaliseJob(jobOrApplication);
-  const fee = application?.totalFee || job?.applicationFee?.general || job?.paymentConfig?.applicationFee || 0;
+  const fee =
+    application?.totalFee ||
+    job?.applicationFee?.general ||
+    job?.paymentConfig?.applicationFee ||
+    0;
   return Number(fee) >= 0;
 };
 
 export const buildApplicationSteps = (jobOrApplication, application = {}) => {
-  const formSections = getJobFormSections(jobOrApplication);
-  const documentRequirements = getJobDocumentRequirements(jobOrApplication);
-  const steps = formSections.map((section, index) => ({
-    id: index + 1,
-    type: "form",
-    name: section.title || `Form Section ${index + 1}`,
-    path: `/application/form-responses?section=${index}`,
-    sectionIndex: index,
-  }));
+  const job = normaliseJob(jobOrApplication);
 
-  if (documentRequirements.length > 0) {
-    steps.push({
-      id: steps.length + 1,
-      type: "documents",
-      name: "Document Upload",
-      path: "/application/documents",
+  // All 9 fixed steps + dynamic custom form sections inserted between Address and Documents
+  const steps = [
+    {
+      id: 1,
+      type: "personal-details",
+      name: "Personal Details",
+      path: "/application/personal-details",
+    },
+    {
+      id: 2,
+      type: "education",
+      name: "Educational Info",
+      path: "/application/education",
+    },
+    {
+      id: 3,
+      type: "additional-info",
+      name: "Additional Information",
+      path: "/application/additional-info",
+    },
+    {
+      id: 4,
+      type: "address",
+      name: "Address Details",
+      path: "/application/address",
+    },
+  ];
+
+  // Insert custom form sections if admin configured them (between Address and Documents)
+  const formSections = getJobFormSections(job);
+  if (formSections.length > 0) {
+    formSections.forEach((section, index) => {
+      steps.push({
+        id: steps.length + 1,
+        type: "form-section",
+        name: section.title || `Form Section ${index + 1}`,
+        path: `/application/form-responses?section=${index}`,
+        sectionIndex: index,
+      });
     });
   }
 
+  // Step 5 (or 5+N if custom forms): Documents
+  steps.push({
+    id: steps.length + 1,
+    type: "documents",
+    name: "Document Upload",
+    path: "/application/documents",
+  });
+
+  // Step 6 (or 6+N): Review
   steps.push({
     id: steps.length + 1,
     type: "review",
@@ -52,8 +93,8 @@ export const buildApplicationSteps = (jobOrApplication, application = {}) => {
     path: "/application/review",
   });
 
-  const job = normaliseJob(jobOrApplication);
-  const hasMultiplePosts = Array.isArray(job?.posts) && job.posts.length > 0;
+  // Step 7 (or 7+N): Post Selection (only if multiple posts)
+  const hasMultiplePosts = Array.isArray(job?.posts) && job.posts.length > 1;
   if (hasMultiplePosts) {
     steps.push({
       id: steps.length + 1,
@@ -63,15 +104,15 @@ export const buildApplicationSteps = (jobOrApplication, application = {}) => {
     });
   }
 
-  if (hasPaymentStep(jobOrApplication, application)) {
-    steps.push({
-      id: steps.length + 1,
-      type: "payment",
-      name: "Payment",
-      path: "/application/payment",
-    });
-  }
+  // Step 8 (or 8+N): Payment
+  steps.push({
+    id: steps.length + 1,
+    type: "payment",
+    name: "Payment",
+    path: "/application/payment",
+  });
 
+  // Step 9 (or 9+N): Submit
   steps.push({
     id: steps.length + 1,
     type: "success",
@@ -87,52 +128,28 @@ export const getFirstApplicationRoute = (jobOrApplication) => {
   return steps[0]?.path || "/candidate/applications";
 };
 
-export const getRouteForApplicationStep = (jobOrApplication, currentStep = 1) => {
+export const getRouteForApplicationStep = (
+  jobOrApplication,
+  currentStep = 1,
+) => {
   const app = jobOrApplication?.jobId ? jobOrApplication : null;
   const job = app?.jobId || jobOrApplication;
   const steps = buildApplicationSteps(job, app || jobOrApplication);
 
-  if (app) {
-    const responses = app.formResponses || {};
-    const missingSection = getJobFormSections(job).findIndex((section) =>
-      (section.fields || []).some((field) => {
-        const value = responses[String(field._id || field.id)];
-        return (
-          field.required &&
-          (value === undefined ||
-            value === null ||
-            value === "" ||
-            (typeof value === "string" && !value.trim()))
-        );
-      }),
-    );
-    if (missingSection >= 0) return `/application/form-responses?section=${missingSection}`;
-
-    const requiredDocs = getJobDocumentRequirements(job).filter((doc) => doc.required !== false);
-    const uploadedDocs = new Set(
-      (app.documents || [])
-        .filter((doc) => ["uploaded", "verified"].includes(doc.status))
-        .map((doc) => doc.type),
-    );
-    const missingDocs = requiredDocs.some((doc) => {
-      const type = String(doc.name || "")
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
-      return !uploadedDocs.has(type);
-    });
-    if (missingDocs) {
-      return steps.find((step) => step.type === "documents")?.path || getFirstApplicationRoute(job);
-    }
-
-    return steps.find((step) => step.type === "review")?.path || getFirstApplicationRoute(job);
-  }
-
-  return steps[Math.max(0, Math.min((currentStep || 1) - 1, steps.length - 1))]?.path || getFirstApplicationRoute(job);
+  // For fixed 9-step flow, just return the step at currentStep
+  // The step validation happens within each page component
+  const stepIndex = Math.max(
+    0,
+    Math.min((currentStep || 1) - 1, steps.length - 1),
+  );
+  return steps[stepIndex]?.path || getFirstApplicationRoute(job);
 };
 
-export const persistApplicationDraft = ({ applicationId, jobId, declaration }) => {
+export const persistApplicationDraft = ({
+  applicationId,
+  jobId,
+  declaration,
+}) => {
   let draft = {};
   try {
     draft = JSON.parse(sessionStorage.getItem(APP_DRAFT_KEY) || "{}");

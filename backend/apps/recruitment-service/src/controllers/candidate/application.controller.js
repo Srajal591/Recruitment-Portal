@@ -45,6 +45,45 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
+// Calculate the correct step number based on job configuration
+// Fixed steps: 1=Personal, 2=Education, 3=AdditionalInfo, 4=Address
+// Dynamic steps: 5+=CustomForms, Documents, Review, PostSelection, Payment, Submit
+const getNextStepNumber = (job, currentStepType) => {
+  let stepNum = 4; // After fixed 4 steps
+
+  // Add custom form sections
+  const formSections = Array.isArray(job?.formSections)
+    ? job.formSections.filter(
+        (s) => Array.isArray(s.fields) && s.fields.length > 0,
+      )
+    : [];
+  if (formSections.length > 0) {
+    stepNum += formSections.length;
+  }
+
+  // Add documents step if configured
+  const documentRequirements = Array.isArray(job?.documentRequirements)
+    ? job.documentRequirements.filter((d) => d?.name)
+    : [];
+  if (documentRequirements.length > 0) {
+    stepNum += 1;
+  }
+
+  // Review is always next
+  stepNum += 1;
+
+  // Add post selection if multiple posts
+  const hasMultiplePosts = Array.isArray(job?.posts) && job.posts.length > 1;
+  if (hasMultiplePosts) {
+    stepNum += 1;
+  }
+
+  // Payment and Submit are always last
+  // stepNum += 2; (will be added by caller if needed)
+
+  return stepNum;
+};
+
 const assertApplicationCompleteForJob = (app) => {
   const job = app.jobId;
   const responses =
@@ -62,7 +101,10 @@ const assertApplicationCompleteForJob = (app) => {
         value === "" ||
         (typeof value === "string" && value.trim() === "");
       if (field.required && empty) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} is required`);
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          `${field.label} is required`,
+        );
       }
     });
   });
@@ -294,6 +336,7 @@ const updatePersonalDetails = asyncHandler(async (req, res) => {
     ...(app.personalDetails?.toObject?.() || {}),
     ...req.body,
   };
+  // Move to next step after completing this one
   app.currentStep = Math.max(app.currentStep, 2);
   app.lastSavedAt = new Date();
   await app.save();
@@ -408,7 +451,7 @@ const updateAddress = asyncHandler(async (req, res) => {
  */
 const updateFormResponses = asyncHandler(async (req, res) => {
   const app = await getOwnDraftApplication(req.params.id, req.user.id);
-  
+
   // Fetch the job to get formSections for validation
   const job = await Job.findById(app.jobId);
   if (!job) {
@@ -417,10 +460,7 @@ const updateFormResponses = asyncHandler(async (req, res) => {
 
   const { formResponses } = req.body;
   if (!formResponses || typeof formResponses !== "object") {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      "Invalid formResponses format"
-    );
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid formResponses format");
   }
 
   // Validate that submitted fields exist in job's formSections and satisfy
@@ -440,7 +480,7 @@ const updateFormResponses = asyncHandler(async (req, res) => {
     if (!allowedFieldIds.has(fieldId)) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
-        `Field ${fieldId} is not allowed for this job`
+        `Field ${fieldId} is not allowed for this job`,
       );
     }
   }
@@ -455,10 +495,7 @@ const updateFormResponses = asyncHandler(async (req, res) => {
       (typeof value === "string" && value.trim() === "");
 
     if (field.required && empty) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        `${field.label} is required`,
-      );
+      throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} is required`);
     }
 
     if (empty) continue;
@@ -474,23 +511,41 @@ const updateFormResponses = asyncHandler(async (req, res) => {
     }
 
     if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} must be a valid email`);
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `${field.label} must be a valid email`,
+      );
     }
 
-    if (field.type === "tel" && !/^[6-9]\d{9}$/.test(String(value).replace(/\D/g, ""))) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} must be a valid mobile number`);
+    if (
+      field.type === "tel" &&
+      !/^[6-9]\d{9}$/.test(String(value).replace(/\D/g, ""))
+    ) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `${field.label} must be a valid mobile number`,
+      );
     }
 
     if (field.type === "number") {
       const num = Number(value);
       if (Number.isNaN(num)) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, `${field.label} must be a number`);
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          `${field.label} must be a number`,
+        );
       }
       if (field.validation?.min !== undefined && num < field.validation.min) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, field.validation.message || `${field.label} is below minimum`);
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          field.validation.message || `${field.label} is below minimum`,
+        );
       }
       if (field.validation?.max !== undefined && num > field.validation.max) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, field.validation.message || `${field.label} is above maximum`);
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          field.validation.message || `${field.label} is above maximum`,
+        );
       }
     }
 
@@ -498,7 +553,10 @@ const updateFormResponses = asyncHandler(async (req, res) => {
       try {
         const regex = new RegExp(field.validation.pattern);
         if (!regex.test(String(value))) {
-          throw new ApiError(StatusCodes.BAD_REQUEST, field.validation.message || `${field.label} is invalid`);
+          throw new ApiError(
+            StatusCodes.BAD_REQUEST,
+            field.validation.message || `${field.label} is invalid`,
+          );
         }
       } catch (err) {
         if (err instanceof ApiError) throw err;
@@ -508,7 +566,14 @@ const updateFormResponses = asyncHandler(async (req, res) => {
 
   // Update formResponses in application
   app.formResponses = new Map(Object.entries(formResponses));
-  app.currentStep = Math.max(app.currentStep, 6);
+
+  // Compute the correct next step dynamically based on job config
+  // Fixed steps: 1-4. Custom form sections: 5..4+N. Documents: 4+N+1. Review: 4+N+2. etc.
+  const formSectionsCount = (job.formSections || []).filter(
+    (s) => Array.isArray(s.fields) && s.fields.length > 0,
+  ).length;
+  const nextStepAfterForms = 4 + formSectionsCount + 1; // step after all custom form sections
+  app.currentStep = Math.max(app.currentStep, nextStepAfterForms);
   app.lastSavedAt = new Date();
   await app.save();
 
@@ -626,7 +691,21 @@ const uploadDocument = asyncHandler(async (req, res) => {
     app.documents.push(docData);
   }
 
-  app.currentStep = Math.max(app.currentStep, 6);
+  app.currentStep = Math.max(
+    app.currentStep,
+    (() => {
+      // Compute documents step number dynamically
+      const formSectionsCount = (app.jobId?.formSections || []).filter(
+        (s) => Array.isArray(s.fields) && s.fields.length > 0,
+      ).length;
+      const hasDocRequirements =
+        (app.jobId?.documentRequirements || []).filter((d) => d?.name).length >
+        0;
+      // Documents step = 4 (fixed) + formSectionsCount + 1 (documents itself)
+      // After saving documents, advance to next step (review)
+      return 4 + formSectionsCount + (hasDocRequirements ? 1 : 0) + 1;
+    })(),
+  );
   app.lastSavedAt = new Date();
 
   // Check if all required docs are uploaded
@@ -635,7 +714,9 @@ const uploadDocument = asyncHandler(async (req, res) => {
     .map((d) => d.type);
   const requiredTypes =
     requirements.length > 0
-      ? requirements.filter((doc) => doc.required !== false).map((doc) => slugify(doc.name))
+      ? requirements
+          .filter((doc) => doc.required !== false)
+          .map((doc) => slugify(doc.name))
       : [
           "passport_photo",
           "signature",
@@ -765,7 +846,22 @@ const updatePostSelection = asyncHandler(async (req, res) => {
 
   app.appliedPosts = postsWithFee;
   app.totalFee = totalFee;
-  app.currentStep = Math.max(app.currentStep, 8);
+  // Compute post-selection step number dynamically
+  const formSectionsCountPS = (app.jobId?.formSections || []).filter(
+    (s) => Array.isArray(s.fields) && s.fields.length > 0,
+  ).length;
+  const hasDocRequirementsPS =
+    (app.jobId?.documentRequirements || []).filter((d) => d?.name).length > 0;
+  const hasMultiplePostsPS =
+    Array.isArray(app.jobId?.posts) && app.jobId.posts.length > 1;
+  // Post-selection step = 4 + formSections + (1 if docs) + 1 (review) + (1 if post-selection)
+  const postSelectionStepNum =
+    4 +
+    formSectionsCountPS +
+    (hasDocRequirementsPS ? 1 : 0) +
+    1 +
+    (hasMultiplePostsPS ? 1 : 0);
+  app.currentStep = Math.max(app.currentStep, postSelectionStepNum);
   app.lastSavedAt = new Date();
   await app.save();
 
@@ -834,8 +930,18 @@ const submitApplication = asyncHandler(async (req, res) => {
     app.declaration = req.body.declaration;
   }
 
+  // Compute review step number dynamically
+  await app.populate("jobId");
+  const formSectionsCount = (app.jobId?.formSections || []).filter(
+    (s) => Array.isArray(s.fields) && s.fields.length > 0,
+  ).length;
+  const hasDocRequirements =
+    (app.jobId?.documentRequirements || []).filter((d) => d?.name).length > 0;
+  // Review step = 4 + formSections + (1 if docs) + 1 (review itself)
+  const reviewStepNum =
+    4 + formSectionsCount + (hasDocRequirements ? 1 : 0) + 1;
   // Always keep as draft — finalize handles the actual submission
-  app.currentStep = Math.max(app.currentStep, 7);
+  app.currentStep = Math.max(app.currentStep, reviewStepNum);
   app.lastSavedAt = new Date();
   await app.save();
 

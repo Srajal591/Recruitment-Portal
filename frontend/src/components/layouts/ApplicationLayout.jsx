@@ -74,24 +74,11 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
   });
 
   const app = appData?.application || appData;
-  const loadingSteps = [
-    {
-      id: 1,
-      name: "Loading Form",
-      icon: FileText,
-      path: location.pathname + location.search,
-    },
-  ];
   const dynamicSteps =
     app?.jobId?.formSections || app?.jobId?.documentRequirements
       ? buildApplicationSteps(app.jobId, app)
       : [];
-  const steps =
-    dynamicSteps.length > 0
-      ? dynamicSteps
-      : draft.applicationId
-        ? loadingSteps
-        : FALLBACK_STEPS;
+  const steps = dynamicSteps.length > 0 ? dynamicSteps : FALLBACK_STEPS;
   const activeStep =
     steps.find((step) => {
       const [path, query = ""] = step.path.split("?");
@@ -177,7 +164,7 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
                       </div>
                     </div>
                   </div>
-                  {index < STEPS.length - 1 && (
+                  {index < steps.length - 1 && (
                     <div
                       className={`w-6 h-0.5 mx-2 flex-shrink-0 ${
                         isCompleted ? "bg-orange-600" : "bg-gray-300"

@@ -239,6 +239,40 @@ export const adminService = {
     return unwrapData(response);
   },
 
+  // ── Admin Notifications ───────────────────────────────────
+  async getAdminNotifications(params = {}) {
+    const response = await apiClient.get("/admin/notifications", { params });
+    return { notifications: response?.data?.notifications ?? [], unreadCount: response?.data?.unreadCount ?? 0, meta: response?.meta ?? {} };
+  },
+  async markAdminNotificationRead(id) {
+    const response = await apiClient.patch(`/admin/notifications/${id}/read`);
+    return unwrapData(response);
+  },
+  async markAllAdminNotificationsRead() {
+    const response = await apiClient.patch("/admin/notifications/read-all");
+    return unwrapData(response);
+  },
+  async deleteAdminNotification(id) {
+    const response = await apiClient.delete(`/admin/notifications/${id}`);
+    return unwrapData(response);
+  },
+
+  // ── Admin Profile (self) ──────────────────────────────────
+  async getMyProfile() {
+    const user = JSON.parse(localStorage.getItem('rp_user') || '{}');
+    const id = user?.id || user?._id;
+    if (!id) throw new Error('Not logged in');
+    const response = await apiClient.get(`/admin/employees/${id}`);
+    return unwrapData(response);
+  },
+  async updateMyProfile(data) {
+    const user = JSON.parse(localStorage.getItem('rp_user') || '{}');
+    const id = user?.id || user?._id;
+    if (!id) throw new Error('Not logged in');
+    const response = await apiClient.put(`/admin/employees/${id}`, data);
+    return unwrapData(response);
+  },
+
   // ── Activity Logs ─────────────────────────────────────────
   async getActivityLogs(params = {}) {
     const response = await apiClient.get("/admin/activity-logs", { params });

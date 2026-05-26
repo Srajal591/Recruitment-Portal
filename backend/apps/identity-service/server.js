@@ -26,6 +26,7 @@ const authRoutes = require("./src/routes/auth.routes");
 const employeeRoutes = require("./src/routes/employee.routes");
 const roleRoutes = require("./src/routes/role.routes");
 const activityLogRoutes = require("./src/routes/activityLog.routes");
+const adminNotificationRoutes = require("./src/routes/adminNotification.routes");
 
 const PORT = parseInt(process.env.IDENTITY_SERVICE_PORT) || 5001;
 
@@ -54,6 +55,7 @@ app.use("/api/auth", authRoutes); // authLimiter is applied per-route inside aut
 app.use("/api/admin/employees", employeeRoutes);
 app.use("/api/admin/roles", roleRoutes);
 app.use("/api/admin/activity-logs", activityLogRoutes);
+app.use("/api/admin/notifications", adminNotificationRoutes);
 
 // ── Health ────────────────────────────────────────────────────
 app.get("/health", (_req, res) => {

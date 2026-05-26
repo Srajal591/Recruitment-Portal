@@ -2,283 +2,224 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
-  Bell, Trash2, Archive, CheckCircle, AlertCircle, Info,
-  Clock, Filter, Search, Loader2,
+  Bell, Trash2, CheckCircle, Clock, Search, Loader2,
+  CreditCard, FileText, Briefcase, AlertTriangle, Settings, Info,
 } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
-import { Card, CardContent, CardHeader } from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
+import { adminService } from '../../services/admin.service'
 
-// Mock notifications data
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'payment',
-    title: 'Payment Received',
-    message: 'Payment of ₹500 received from candidate Raj Kumar for job application',
-    timestamp: new Date(Date.now() - 5 * 60000),
-    read: false,
-    icon: '💳',
-  },
-  {
-    id: 2,
-    type: 'application',
-    title: 'New Application Submitted',
-    message: 'Priya Singh submitted application for Assistant Professor position',
-    timestamp: new Date(Date.now() - 15 * 60000),
-    read: false,
-    icon: '📝',
-  },
-  {
-    id: 3,
-    type: 'system',
-    title: 'System Maintenance',
-    message: 'Scheduled maintenance completed successfully',
-    timestamp: new Date(Date.now() - 2 * 3600000),
-    read: true,
-    icon: '⚙️',
-  },
-  {
-    id: 4,
-    type: 'job',
-    title: 'Job Posted Successfully',
-    message: 'Senior Lecturer - Physics job has been published',
-    timestamp: new Date(Date.now() - 24 * 3600000),
-    read: true,
-    icon: '📢',
-  },
-  {
-    id: 5,
-    type: 'alert',
-    title: 'High Application Volume',
-    message: 'Received 150+ applications for Physics position in last 24 hours',
-    timestamp: new Date(Date.now() - 48 * 3600000),
-    read: true,
-    icon: '⚠️',
-  },
+const TYPE_CFG = {
+  payment_success:      { icon: CreditCard,    bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Payment'     },
+  payment_failed:       { icon: CreditCard,    bg: 'bg-red-100',     text: 'text-red-700',     label: 'Payment'     },
+  application_submitted:{ icon: FileText,      bg: 'bg-blue-100',    text: 'text-blue-700',    label: 'Application' },
+  application_approved: { icon: FileText,      bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Application' },
+  application_rejected: { icon: FileText,      bg: 'bg-red-100',     text: 'text-red-700',     label: 'Application' },
+  document_verified:    { icon: CheckCircle,   bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Document'    },
+  document_rejected:    { icon: AlertTriangle, bg: 'bg-red-100',     text: 'text-red-700',     label: 'Document'    },
+  new_job_posted:       { icon: Briefcase,     bg: 'bg-purple-100',  text: 'text-purple-700',  label: 'Job'         },
+  ticket_reply:         { icon: Info,          bg: 'bg-amber-100',   text: 'text-amber-700',   label: 'Support'     },
+  ticket_resolved:      { icon: CheckCircle,   bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Support'     },
+  general:              { icon: Bell,          bg: 'bg-gray-100',    text: 'text-gray-700',    label: 'General'     },
+}
+
+const getCfg = (type) => TYPE_CFG[type] || TYPE_CFG.general
+
+const formatTime = (date) => {
+  const diff = Date.now() - new Date(date)
+  const m = Math.floor(diff / 60000)
+  const h = Math.floor(diff / 3600000)
+  const d = Math.floor(diff / 86400000)
+  if (m < 1) return 'Just now'
+  if (m < 60) return `${m}m ago`
+  if (h < 24) return `${h}h ago`
+  if (d < 7) return `${d}d ago`
+  return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+const FILTERS = [
+  { id: 'all',                   label: 'All'          },
+  { id: 'unread',                label: 'Unread'       },
+  { id: 'payment_success',       label: 'Payments'     },
+  { id: 'application_submitted', label: 'Applications' },
+  { id: 'new_job_posted',        label: 'Jobs'         },
+  { id: 'general',               label: 'General'      },
 ]
 
 const AdminNotifications = () => {
   const queryClient = useQueryClient()
-  const [filter, setFilter] = useState('all') // all, unread, payment, application, system, job, alert
-  const [searchTerm, setSearchTerm] = useState('')
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS)
+  const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
 
-  // Filter notifications
-  const filteredNotifications = notifications.filter(n => {
-    const matchesFilter = filter === 'all' || (filter === 'unread' ? !n.read : n.type === filter)
-    const matchesSearch = n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         n.message.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesFilter && matchesSearch
+  const queryParams = {
+    page, limit: 20,
+    ...(filter === 'unread' && { isRead: 'false' }),
+    ...(filter !== 'all' && filter !== 'unread' && { type: filter }),
+  }
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-notifications', filter, page],
+    queryFn: () => adminService.getAdminNotifications(queryParams),
+    refetchInterval: 30000,
   })
 
-  // Mark as read
-  const handleMarkAsRead = (id) => {
-    setNotifications(n => n.map(notif => notif.id === id ? { ...notif, read: true } : notif))
-  }
+  const notifications = (data?.notifications || []).filter(n =>
+    !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.message?.toLowerCase().includes(search.toLowerCase())
+  )
+  const unreadCount = data?.unreadCount || 0
 
-  // Mark all as read
-  const handleMarkAllAsRead = () => {
-    setNotifications(n => n.map(notif => ({ ...notif, read: true })))
-    toast.success('All notifications marked as read')
-  }
+  const { mutate: markRead } = useMutation({
+    mutationFn: (id) => adminService.markAdminNotificationRead(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-notifications'] }),
+  })
 
-  // Delete notification
-  const handleDelete = (id) => {
-    setNotifications(n => n.filter(notif => notif.id !== id))
-    toast.success('Notification deleted')
-  }
+  const { mutate: markAllRead, isPending: markingAll } = useMutation({
+    mutationFn: adminService.markAllAdminNotificationsRead,
+    onSuccess: () => {
+      toast.success('All notifications marked as read')
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] })
+    },
+  })
 
-  // Archive notification
-  const handleArchive = (id) => {
-    setNotifications(n => n.filter(notif => notif.id !== id))
-    toast.success('Notification archived')
-  }
-
-  const unreadCount = notifications.filter(n => !n.read).length
-
-  const getTypeColor = (type) => {
-    const colors = {
-      payment: 'bg-green-100 text-green-700',
-      application: 'bg-blue-100 text-blue-700',
-      system: 'bg-gray-100 text-gray-700',
-      job: 'bg-purple-100 text-purple-700',
-      alert: 'bg-red-100 text-red-700',
-    }
-    return colors[type] || 'bg-gray-100 text-gray-700'
-  }
-
-  const getTypeIcon = (type) => {
-    const icons = {
-      payment: '💳',
-      application: '📝',
-      system: '⚙️',
-      job: '📢',
-      alert: '⚠️',
-    }
-    return icons[type] || '📌'
-  }
-
-  const formatTime = (date) => {
-    const now = new Date()
-    const diff = now - date
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
-
-    if (minutes < 1) return 'Just now'
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    if (days < 7) return `${days}d ago`
-    return date.toLocaleDateString()
-  }
+  const { mutate: deleteNotif } = useMutation({
+    mutationFn: (id) => adminService.deleteAdminNotification(id),
+    onSuccess: () => {
+      toast.success('Notification deleted')
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] })
+    },
+  })
 
   return (
     <AdminLayout title="Notifications">
-      <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+      <div className="p-5 max-w-4xl mx-auto space-y-5">
+
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Notifications</h1>
-              <p className="text-gray-500 text-sm mt-1">
-                {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All caught up!'}
-              </p>
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All caught up!'}
+            </p>
+          </div>
+          {unreadCount > 0 && (
+            <button
+              onClick={() => markAllRead()}
+              disabled={markingAll}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {markingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              Mark all as read
+            </button>
+          )}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search notifications..."
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm bg-white"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {FILTERS.map(f => (
+            <button
+              key={f.id}
+              onClick={() => { setFilter(f.id); setPage(1) }}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                filter === f.id ? 'bg-orange-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-orange-300'
+              }`}
+            >
+              {f.label}
+              {f.id === 'unread' && unreadCount > 0 && (
+                <span className="ml-1.5 bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* List */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {isLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
             </div>
-            {unreadCount > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleMarkAllAsRead}
-                className="text-sm"
-              >
-                Mark all as read
-              </Button>
-            )}
-          </div>
-        </div>
+          )}
 
-        {/* Search and Filter */}
-        <div className="space-y-4 mb-6">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search notifications..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          {!isLoading && notifications.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+              <Bell className="w-12 h-12 text-gray-200 mb-3" />
+              <p className="font-medium text-gray-500">No notifications</p>
+              <p className="text-sm mt-1">{search ? 'Try adjusting your search' : "You're all caught up!"}</p>
+            </div>
+          )}
 
-          {/* Filter Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {[
-              { id: 'all', label: 'All', count: notifications.length },
-              { id: 'unread', label: 'Unread', count: unreadCount },
-              { id: 'payment', label: 'Payments', count: notifications.filter(n => n.type === 'payment').length },
-              { id: 'application', label: 'Applications', count: notifications.filter(n => n.type === 'application').length },
-              { id: 'job', label: 'Jobs', count: notifications.filter(n => n.type === 'job').length },
-              { id: 'alert', label: 'Alerts', count: notifications.filter(n => n.type === 'alert').length },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setFilter(tab.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  filter === tab.id
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {tab.label} {tab.count > 0 && <span className="ml-1">({tab.count})</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Notifications List */}
-        {filteredNotifications.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">No notifications</p>
-              <p className="text-gray-400 text-sm mt-1">
-                {searchTerm ? 'Try adjusting your search' : 'You\'re all caught up!'}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredNotifications.map(notification => (
+          {notifications.map((n, i) => {
+            const cfg = getCfg(n.type)
+            const Icon = cfg.icon
+            return (
               <div
-                key={notification.id}
-                className={`p-4 rounded-lg border transition-all ${
-                  notification.read
-                    ? 'bg-white border-gray-200 hover:border-gray-300'
-                    : 'bg-orange-50 border-orange-200 hover:border-orange-300'
+                key={n._id}
+                className={`flex items-start gap-4 px-5 py-4 border-b border-gray-50 last:border-0 transition-colors ${
+                  !n.isRead ? 'bg-orange-50/50' : 'hover:bg-gray-50/50'
                 }`}
               >
-                <div className="flex items-start gap-4">
-                  {/* Icon */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg ${getTypeColor(notification.type)}`}>
-                    {notification.icon}
-                  </div>
+                {/* Icon */}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.bg}`}>
+                  <Icon className={`w-5 h-5 ${cfg.text}`} />
+                </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                          {!notification.read && (
-                            <span className="w-2 h-2 bg-orange-600 rounded-full flex-shrink-0"></span>
-                          )}
-                        </div>
-                        <p className="text-gray-600 text-sm mt-1">{notification.message}</p>
-                        <p className="text-gray-400 text-xs mt-2 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatTime(notification.timestamp)}
-                        </p>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-900 text-sm">{n.title}</p>
+                        {!n.isRead && <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0" />}
                       </div>
-
-                      {/* Type Badge */}
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getTypeColor(notification.type)}`}>
-                        {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
-                      </span>
+                      <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{n.message}</p>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                          <Clock className="w-3 h-3" />
+                          {formatTime(n.createdAt)}
+                        </span>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>
+                          {cfg.label}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {!notification.read && (
-                      <button
-                        onClick={() => handleMarkAsRead(notification.id)}
-                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                        title="Mark as read"
-                      >
-                        <CheckCircle className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-                      </button>
-                    )}
+                {/* Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {!n.isRead && (
                     <button
-                      onClick={() => handleArchive(notification.id)}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                      title="Archive"
+                      onClick={() => markRead(n._id)}
+                      className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Mark as read"
                     >
-                      <Archive className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                      <CheckCircle className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleDelete(notification.id)}
-                      className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
-                    </button>
-                  </div>
+                  )}
+                  <button
+                    onClick={() => deleteNotif(n._id)}
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            )
+          })}
+        </div>
+
       </div>
     </AdminLayout>
   )

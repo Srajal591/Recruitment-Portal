@@ -38,6 +38,10 @@ export default defineConfig({
         target: IDENTITY_URL,
         changeOrigin: true,
       },
+      '/api/admin/notifications': {
+        target: IDENTITY_URL,
+        changeOrigin: true,
+      },
 
       // ── Recruitment Service ───────────────────────────────
       '/api/jobs': {

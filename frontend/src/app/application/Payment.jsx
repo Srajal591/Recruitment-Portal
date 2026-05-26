@@ -11,6 +11,7 @@ import ApplicationLayout from "../../components/layouts/ApplicationLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { candidateService } from "../../services/candidate.service";
+import { buildApplicationSteps } from "../../utils/applicationFlow";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
@@ -87,6 +88,9 @@ const Payment = () => {
   });
 
   const application = appData?.application || appData;
+  const steps = buildApplicationSteps(application?.jobId, application);
+  const paymentStep = steps.find((step) => step.type === "payment")?.id || 1;
+  const previousStep = steps.find((step) => step.id === paymentStep - 1);
   const totalFee = application?.totalFee ?? 0;
   const processingFee = totalFee > 0 ? Math.round(totalFee * 0.02) : 0;
   const grandTotal = totalFee + processingFee;
@@ -266,7 +270,7 @@ const Payment = () => {
 
   if (isLoading)
     return (
-      <ApplicationLayout currentStep={8} title="Payment">
+      <ApplicationLayout currentStep={paymentStep} title="Payment">
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
         </div>
@@ -275,7 +279,7 @@ const Payment = () => {
 
   if (!application && !isLoading)
     return (
-      <ApplicationLayout currentStep={8} title="Payment">
+      <ApplicationLayout currentStep={paymentStep} title="Payment">
         <Card>
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -287,7 +291,7 @@ const Payment = () => {
     );
 
   return (
-    <ApplicationLayout currentStep={8} title="Payment Gateway">
+    <ApplicationLayout currentStep={paymentStep} title="Payment Gateway">
       <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -477,7 +481,11 @@ const Payment = () => {
           <Button
             variant="outline"
             disabled={processing}
-            onClick={() => navigate("/application/post-selection", { state: { applicationId } })}
+            onClick={() =>
+              navigate(previousStep?.path || "/application/review", {
+                state: { applicationId },
+              })
+            }
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>

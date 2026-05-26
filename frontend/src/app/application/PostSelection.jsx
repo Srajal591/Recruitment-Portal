@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
+import { buildApplicationSteps } from "../../utils/applicationFlow";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
@@ -66,6 +67,10 @@ const PostSelection = () => {
 
   const app = appData?.application || appData;
   const job = app?.jobId;
+  const steps = buildApplicationSteps(job, app);
+  const postStep = steps.find((step) => step.type === "post-selection")?.id || 1;
+  const previousStep = steps.find((step) => step.id === postStep - 1);
+  const nextStep = steps.find((step) => step.id === postStep + 1);
 
   // Candidate's category from Step 1 personal details
   const candidateCategory = app?.personalDetails?.category || "";
@@ -180,7 +185,7 @@ const PostSelection = () => {
       candidateService.savePostSelection(applicationId, data),
     onSuccess: (result) => {
       toast.success("Post preferences saved");
-      navigate("/application/payment", {
+      navigate(nextStep?.path || "/application/payment", {
         state: {
           applicationId,
           totalFee: result?.totalFee ?? applicationFee,
@@ -224,7 +229,7 @@ const PostSelection = () => {
   };
 
   return (
-    <ApplicationLayout currentStep={7} title="Post Preference Selection">
+    <ApplicationLayout currentStep={postStep} title="Post Preference Selection">
       <div className="space-y-6">
         {/* Fee info banner — shows candidate's applicable fee */}
         {candidateCategory && job?.applicationFee && (
@@ -482,7 +487,9 @@ const PostSelection = () => {
           <Button
             variant="outline"
             onClick={() =>
-              navigate("/application/review", { state: { applicationId } })
+              navigate(previousStep?.path || "/application/review", {
+                state: { applicationId },
+              })
             }
           >
             ← Back

@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle,
   Lock,
@@ -12,8 +13,13 @@ import {
   ListChecks,
   CheckCheck,
 } from "lucide-react";
+import { candidateService } from "../../services/candidate.service";
+import {
+  buildApplicationSteps,
+  readApplicationDraft,
+} from "../../utils/applicationFlow";
 
-const STEPS = [
+const FALLBACK_STEPS = [
   {
     id: 1,
     name: "Personal Details",
@@ -57,10 +63,46 @@ const STEPS = [
 
 const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const draft = readApplicationDraft();
+
+  const { data: appData } = useQuery({
+    queryKey: ["application-layout", draft.applicationId],
+    queryFn: () => candidateService.getApplication(draft.applicationId),
+    enabled: Boolean(draft.applicationId),
+    staleTime: 30000,
+  });
+
+  const app = appData?.application || appData;
+  const loadingSteps = [
+    {
+      id: 1,
+      name: "Loading Form",
+      icon: FileText,
+      path: location.pathname + location.search,
+    },
+  ];
+  const dynamicSteps =
+    app?.jobId?.formSections || app?.jobId?.documentRequirements
+      ? buildApplicationSteps(app.jobId, app)
+      : [];
+  const steps =
+    dynamicSteps.length > 0
+      ? dynamicSteps
+      : draft.applicationId
+        ? loadingSteps
+        : FALLBACK_STEPS;
+  const activeStep =
+    steps.find((step) => {
+      const [path, query = ""] = step.path.split("?");
+      if (path !== location.pathname) return false;
+      if (!query) return true;
+      return query === location.search.replace(/^\?/, "");
+    })?.id || Math.min(currentStep, steps.length);
 
   // A step is accessible only if it has been reached (currentStep >= step.id)
   // OR it's the current step. Future steps are locked.
-  const canAccess = (stepId) => stepId <= currentStep;
+  const canAccess = (stepId) => stepId <= activeStep;
 
   const handleStepClick = (step) => {
     if (!canAccess(step.id)) return; // locked — do nothing
@@ -90,8 +132,8 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
           </button>
           <div className="text-sm text-gray-600">
             Step{" "}
-            <span className="font-semibold text-orange-600">{currentStep}</span>{" "}
-            of 9
+            <span className="font-semibold text-orange-600">{activeStep}</span>{" "}
+            of {steps.length}
           </div>
         </div>
       </header>
@@ -100,10 +142,10 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
       <div className="bg-white border-b border-orange-200 px-6 py-4 overflow-x-auto">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center min-w-max">
-            {STEPS.map((step, index) => {
-              const isCompleted = step.id < currentStep;
-              const isActive = step.id === currentStep;
-              const isLocked = step.id > currentStep;
+            {steps.map((step, index) => {
+              const isCompleted = step.id < activeStep;
+              const isActive = step.id === activeStep;
+              const isLocked = step.id > activeStep;
 
               return (
                 <div key={step.id} className="flex items-center">
@@ -163,11 +205,23 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
             </div>
 
             <nav className="p-3 space-y-0.5">
-              {STEPS.map((step) => {
-                const Icon = step.icon;
-                const isActive = step.id === currentStep;
-                const isCompleted = step.id < currentStep;
-                const isLocked = step.id > currentStep;
+              {steps.map((step) => {
+                const Icon =
+                  step.icon ||
+                  (step.type === "form"
+                    ? FileText
+                    : step.type === "documents"
+                      ? Upload
+                      : step.type === "post-selection"
+                        ? ListChecks
+                        : step.type === "payment"
+                          ? CreditCard
+                          : step.type === "success"
+                            ? CheckCheck
+                            : Eye);
+                const isActive = step.id === activeStep;
+                const isCompleted = step.id < activeStep;
+                const isLocked = step.id > activeStep;
 
                 return (
                   <button
@@ -213,18 +267,18 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
               <div className="flex justify-between text-xs text-gray-400 mb-2">
                 <span>Progress</span>
                 <span className="text-orange-400 font-semibold">
-                  Step {currentStep}/9
+                  Step {activeStep}/{steps.length}
                 </span>
               </div>
               <div className="w-full bg-gray-700 rounded-full h-1.5">
                 <div
                   className="bg-orange-600 h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${(currentStep / 9) * 100}%` }}
+                  style={{ width: `${(activeStep / steps.length) * 100}%` }}
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                {currentStep < 9
-                  ? `${9 - currentStep} step${9 - currentStep !== 1 ? "s" : ""} remaining`
+                {activeStep < steps.length
+                  ? `${steps.length - activeStep} step${steps.length - activeStep !== 1 ? "s" : ""} remaining`
                   : "All steps completed!"}
               </p>
             </div>

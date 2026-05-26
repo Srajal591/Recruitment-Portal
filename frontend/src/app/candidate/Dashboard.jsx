@@ -23,20 +23,12 @@ import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { dashboardService } from "../../services/dashboard.service";
 import { getStoredUser } from "../../services/auth.service";
+import {
+  getRouteForApplicationStep,
+  persistApplicationDraft,
+} from "../../utils/applicationFlow";
 
 // ── Helpers ───────────────────────────────────────────────────
-
-const STEP_ROUTES = {
-  1: "/application/personal-details",
-  2: "/application/education",
-  3: "/application/additional-info",
-  4: "/application/address",
-  5: "/application/documents",
-  6: "/application/review",
-  7: "/application/post-selection",
-  8: "/application/payment",
-  9: "/application/success",
-};
 
 const STATUS_CONFIG = {
   draft: { label: "Draft", color: "bg-gray-100 text-gray-700", icon: Clock },
@@ -143,17 +135,9 @@ const CandidateDashboard = () => {
   const completionPct = user?.profileCompletionPercentage || 0;
 
   const handleAppAction = (app) => {
-    const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
-    sessionStorage.setItem(
-      "app_draft",
-      JSON.stringify({
-        ...draft,
-        applicationId: app._id,
-        jobId: app.jobId?._id,
-      }),
-    );
+    persistApplicationDraft({ applicationId: app._id, jobId: app.jobId?._id });
     if (app.status === "draft") {
-      navigate(STEP_ROUTES[app.currentStep || 1], {
+      navigate(getRouteForApplicationStep(app, app.currentStep || 1), {
         state: { applicationId: app._id, jobId: app.jobId?._id },
       });
     } else {

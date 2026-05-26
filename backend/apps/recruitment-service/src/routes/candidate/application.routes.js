@@ -44,6 +44,10 @@ router.put(
   validate(addressSchema),
   applicationController.updateAddress,
 );
+router.put(
+  "/:id/form-responses",
+  applicationController.updateFormResponses,
+);
 router.post(
   "/:id/documents/:type",
   upload.single("file"),

@@ -14,6 +14,10 @@ export const candidateService = {
     const response = await apiClient.post("/candidate/applications", { jobId });
     return unwrapData(response);
   },
+  async getJobDetails(jobId) {
+    const response = await apiClient.get(`/jobs/${jobId}`);
+    return unwrapData(response);
+  },
 
   // ── Application Steps ─────────────────────────────────────
   async savePersonalDetails(id, data) {
@@ -51,6 +55,13 @@ export const candidateService = {
       `/candidate/applications/${id}/documents/${type}`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return unwrapData(response);
+  },
+  async saveDynamicFormResponses(id, data) {
+    const response = await apiClient.put(
+      `/candidate/applications/${id}/form-responses`,
+      { formResponses: data },
     );
     return unwrapData(response);
   },

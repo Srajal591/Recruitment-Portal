@@ -15,6 +15,10 @@ import ApplicationLayout from "../../components/layouts/ApplicationLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { candidateService } from "../../services/candidate.service";
+import {
+  buildApplicationSteps,
+  getJobDocumentRequirements,
+} from "../../utils/applicationFlow";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
@@ -108,6 +112,26 @@ const DOC_TYPES = [
   },
 ];
 
+const slugify = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const acceptFromFormats = (formats = []) => {
+  const map = {
+    PDF: "application/pdf",
+    JPG: "image/jpeg",
+    JPEG: "image/jpeg",
+    PNG: "image/png",
+    DOC: "application/msword",
+    DOCX: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  };
+  const accept = formats.map((format) => map[String(format).toUpperCase()]).filter(Boolean);
+  return accept.length ? accept.join(",") : "application/pdf,image/jpeg,image/png";
+};
+
 const Documents = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -140,9 +164,29 @@ const Documents = () => {
     staleTime: 0,
   });
 
+  const app = appData?.application || appData;
+  const job = app?.jobId;
+  const adminDocuments = getJobDocumentRequirements(job);
+  const docTypes =
+    adminDocuments.length > 0
+      ? adminDocuments.map((doc) => ({
+          id: slugify(doc.name),
+          name: doc.name,
+          description:
+            doc.description ||
+            `${(doc.formats || []).join(", ") || "PDF/JPG/PNG"} accepted`,
+          required: doc.required !== false,
+          accept: acceptFromFormats(doc.formats),
+          maxKB: doc.maxSizeKB || 500,
+        }))
+      : DOC_TYPES;
+  const steps = buildApplicationSteps(job, app);
+  const currentStep = steps.find((step) => step.type === "documents")?.id || 1;
+  const previousStep = steps.find((step) => step.id === currentStep - 1);
+  const nextStep = steps.find((step) => step.id === currentStep + 1);
+
   useEffect(() => {
     if (appData) {
-      const app = appData?.application || appData;
       const docs = app?.documents || [];
       const map = {};
       docs.forEach((doc) => {
@@ -160,7 +204,7 @@ const Documents = () => {
 
   const handleFileSelect = async (docType, file) => {
     if (!file) return;
-    const docConfig = DOC_TYPES.find((d) => d.id === docType);
+    const docConfig = docTypes.find((d) => d.id === docType);
     if (!docConfig) return;
 
     // Validate size
@@ -209,7 +253,7 @@ const Documents = () => {
       return;
     }
     // Check required docs
-    const missingRequired = DOC_TYPES.filter(
+    const missingRequired = docTypes.filter(
       (d) => d.required && !uploadedDocs[d.id],
     );
     if (missingRequired.length > 0) {
@@ -222,18 +266,18 @@ const Documents = () => {
     if (location.state?.returnToReview) {
       navigate("/application/review", { state: { applicationId } });
     } else {
-      navigate("/application/review", { state: { applicationId } });
+      navigate(nextStep?.path || "/application/review", { state: { applicationId } });
     }
   };
 
   const uploadedCount = Object.keys(uploadedDocs).length;
-  const requiredCount = DOC_TYPES.filter((d) => d.required).length;
-  const uploadedRequiredCount = DOC_TYPES.filter(
+  const requiredCount = docTypes.filter((d) => d.required).length;
+  const uploadedRequiredCount = docTypes.filter(
     (d) => d.required && uploadedDocs[d.id],
   ).length;
 
   return (
-    <ApplicationLayout currentStep={5} title="Document Upload">
+    <ApplicationLayout currentStep={currentStep} title="Document Upload">
       <div className="space-y-6">
         <Card className="shadow-sm">
           <CardHeader>
@@ -274,7 +318,7 @@ const Documents = () => {
               </div>
             )}
 
-            {DOC_TYPES.map((doc) => {
+            {docTypes.map((doc) => {
               const isUploaded = Boolean(uploadedDocs[doc.id]);
               const isUploadingNow = uploading[doc.id];
               const uploadedInfo = uploadedDocs[doc.id];
@@ -421,7 +465,9 @@ const Documents = () => {
           <Button
             variant="outline"
             onClick={() =>
-              navigate("/application/address", { state: { applicationId } })
+              navigate(previousStep?.path || "/application/form-responses", {
+                state: { applicationId },
+              })
             }
           >
             ← Back

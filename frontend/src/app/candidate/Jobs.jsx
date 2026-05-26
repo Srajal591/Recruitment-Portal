@@ -29,6 +29,11 @@ import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { jobService } from "../../services/job.service";
 import { candidateService } from "../../services/candidate.service";
+import {
+  getFirstApplicationRoute,
+  getRouteForApplicationStep,
+  persistApplicationDraft,
+} from "../../utils/applicationFlow";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -349,7 +354,9 @@ const CandidateJobs = () => {
       queryClient.invalidateQueries({
         queryKey: ["candidate-applications-ids"],
       });
-      navigate("/application/personal-details", {
+      const application = result?.application;
+      persistApplicationDraft({ applicationId: application?._id, jobId });
+      navigate(getFirstApplicationRoute(application?.jobId || application), {
         state: { applicationId: result?.application?._id, jobId },
       });
     },
@@ -375,32 +382,11 @@ const CandidateJobs = () => {
 
   const handleViewApp = (app) => {
     if (!app) return;
-    const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
-    sessionStorage.setItem(
-      "app_draft",
-      JSON.stringify({
-        ...draft,
-        applicationId: app._id,
-        jobId: app.jobId?._id,
-      }),
-    );
+    persistApplicationDraft({ applicationId: app._id, jobId: app.jobId?._id });
     if (app.status === "draft") {
-      const STEP_ROUTES = {
-        1: "/application/personal-details",
-        2: "/application/education",
-        3: "/application/additional-info",
-        4: "/application/address",
-        5: "/application/documents",
-        6: "/application/review",
-        7: "/application/post-selection",
-        8: "/application/payment",
-      };
-      navigate(
-        STEP_ROUTES[app.currentStep || 1] || "/application/personal-details",
-        {
-          state: { applicationId: app._id, jobId: app.jobId?._id },
-        },
-      );
+      navigate(getRouteForApplicationStep(app, app.currentStep || 1), {
+        state: { applicationId: app._id, jobId: app.jobId?._id },
+      });
     } else {
       navigate(`/candidate/applications/${app._id}`);
     }

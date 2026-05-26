@@ -225,7 +225,11 @@ const SupportTicketDetail = () => {
                     </div>
                   ) : (
                     replies.map((msg, i) => {
-                      const isAgent = msg.sentByModel === "Employee";
+                      const isAgent =
+                        msg.sentByModel === "Employee" ||
+                        msg.senderType === "Employee" ||
+                        msg.senderType === "agent" ||
+                        msg.isAdmin;
                       return (
                         <div
                           key={msg._id || i}

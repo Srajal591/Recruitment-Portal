@@ -24,6 +24,11 @@ import { jobService } from "../../services/job.service";
 import { candidateService } from "../../services/candidate.service";
 import { applicationService } from "../../services/application.service";
 import { useAuth, isCandidateUser } from "../../hooks/useAuth";
+import {
+  getFirstApplicationRoute,
+  getRouteForApplicationStep,
+  persistApplicationDraft,
+} from "../../utils/applicationFlow";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -84,28 +89,9 @@ const ApplySidebar = ({
     const stepProgress = Math.round(((existingApp.currentStep || 1) / 9) * 100);
 
     const handleResume = () => {
-      const STEP_ROUTES = {
-        1: "/application/personal-details",
-        2: "/application/education",
-        3: "/application/additional-info",
-        4: "/application/address",
-        5: "/application/documents",
-        6: "/application/review",
-        7: "/application/post-selection",
-        8: "/application/payment",
-        9: "/application/success",
-      };
-      const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
-      sessionStorage.setItem(
-        "app_draft",
-        JSON.stringify({
-          ...draft,
-          applicationId: existingApp._id,
-          jobId: job._id,
-        }),
-      );
+      persistApplicationDraft({ applicationId: existingApp._id, jobId: job._id });
       if (isDraft) {
-        navigate(STEP_ROUTES[existingApp.currentStep || 1], {
+        navigate(getRouteForApplicationStep({ ...existingApp, jobId: job }, existingApp.currentStep || 1), {
           state: { applicationId: existingApp._id, jobId: job._id },
         });
       } else {
@@ -342,8 +328,10 @@ const JobDetails = () => {
     mutationFn: () => applicationService.createApplication(id),
     onSuccess: (result) => {
       toast.success("Application started!");
-      navigate("/application/personal-details", {
-        state: { applicationId: result?.application?._id, jobId: id },
+      const application = result?.application;
+      persistApplicationDraft({ applicationId: application?._id, jobId: id });
+      navigate(getFirstApplicationRoute(application?.jobId || job), {
+        state: { applicationId: application?._id, jobId: id },
       });
     },
     onError: (err) => {
@@ -595,8 +583,10 @@ const JobDetails = () => {
                 {/* Required Documents */}
                 <Section title="Required Documents">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(job.requiredDocuments?.length
-                      ? job.requiredDocuments
+                    {(job.documentRequirements?.length
+                      ? job.documentRequirements
+                      : job.requiredDocuments?.length
+                        ? job.requiredDocuments
                       : [
                           "Passport Photo",
                           "Signature",
@@ -606,14 +596,14 @@ const JobDetails = () => {
                         ]
                     ).map((doc) => (
                       <div
-                        key={typeof doc === "string" ? doc : doc.type}
+                        key={typeof doc === "string" ? doc : doc._id || doc.name || doc.type}
                         className="flex items-center gap-3 bg-[#faf7f4] border border-[#ede3dc] rounded-lg p-4"
                       >
                         <FileBadge className="w-5 h-5 text-orange-500 flex-shrink-0" />
                         <span className="text-sm font-semibold text-[#4b4744]">
                           {typeof doc === "string"
                             ? doc
-                            : doc.label || doc.type}
+                            : doc.name || doc.label || doc.type}
                         </span>
                       </div>
                     ))}

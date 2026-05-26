@@ -27,10 +27,7 @@ const PAY_CFG = {
 };
 
 const TABS = [
-  { id: "personal",   label: "Personal",   icon: User          },
-  { id: "education",  label: "Education",  icon: GraduationCap },
-  { id: "additional", label: "Additional", icon: Info          },
-  { id: "address",    label: "Address",    icon: MapPin        },
+  { id: "custom",     label: "Application Form", icon: FileText },
   { id: "documents",  label: "Documents",  icon: Upload        },
   { id: "payment",    label: "Payment",    icon: CreditCard    },
 ];
@@ -102,7 +99,7 @@ const ApplicationDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("personal");
+  const [activeTab, setActiveTab] = useState("custom");
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [reviewNote, setReviewNote] = useState("");
@@ -155,6 +152,13 @@ const ApplicationDetails = () => {
   const additional = application.additionalInfo || {};
   const address    = application.address || {};
   const documents  = Array.isArray(application.documents) ? application.documents : [];
+  const formResponses = application.formResponses || {};
+  const fieldLabelMap = {};
+  (application.jobId?.formSections || []).forEach((section) => {
+    (section.fields || []).forEach((field) => {
+      fieldLabelMap[String(field._id)] = field.label;
+    });
+  });
   const canAct     = ["submitted", "under_review"].includes(application.status);
 
   const sCfg    = STATUS_CFG[application.status] || STATUS_CFG.draft;
@@ -308,6 +312,31 @@ const ApplicationDetails = () => {
 
           {/* Content Panel */}
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 min-h-[420px]">
+
+            {/* Admin-configured form */}
+            {activeTab === "custom" && (
+              <div>
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Application Form Responses</h3>
+                </div>
+                {Object.keys(formResponses).length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-10">No form responses submitted yet.</p>
+                ) : (
+                  <Grid>
+                    {Object.entries(formResponses).map(([fieldId, value]) => (
+                      <Row
+                        key={fieldId}
+                        label={fieldLabelMap[fieldId] || fieldId}
+                        value={Array.isArray(value) ? value.join(", ") : value}
+                      />
+                    ))}
+                  </Grid>
+                )}
+              </div>
+            )}
 
             {/* Personal */}
             {activeTab === "personal" && (

@@ -16,6 +16,10 @@ import { Card, CardContent } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
+import {
+  getRouteForApplicationStep,
+  persistApplicationDraft,
+} from "../../utils/applicationFlow";
 
 const STATUS_CONFIG = {
   draft: { label: "Draft", color: "bg-gray-100 text-gray-700", icon: Clock },
@@ -59,18 +63,6 @@ const STEP_LABELS = {
   9: "Submitted",
 };
 
-const STEP_ROUTES = {
-  1: "/application/personal-details",
-  2: "/application/education",
-  3: "/application/additional-info",
-  4: "/application/address",
-  5: "/application/documents",
-  6: "/application/review",
-  7: "/application/post-selection",
-  8: "/application/payment",
-  9: "/application/success",
-};
-
 const Applications = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("all");
@@ -103,20 +95,11 @@ const Applications = () => {
 
   const handleAction = (app) => {
     // Always sync sessionStorage
-    const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
-    sessionStorage.setItem(
-      "app_draft",
-      JSON.stringify({
-        ...draft,
-        applicationId: app._id,
-        jobId: app.jobId?._id,
-      }),
-    );
+    persistApplicationDraft({ applicationId: app._id, jobId: app.jobId?._id });
 
     if (app.status === "draft") {
       // Resume from where they left off
-      const route =
-        STEP_ROUTES[app.currentStep] || "/application/personal-details";
+      const route = getRouteForApplicationStep(app, app.currentStep || 1);
       navigate(route, {
         state: { applicationId: app._id, jobId: app.jobId?._id },
       });

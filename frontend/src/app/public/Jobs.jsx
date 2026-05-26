@@ -24,6 +24,11 @@ import { jobService } from "../../services/job.service";
 import { candidateService } from "../../services/candidate.service";
 import { applicationService } from "../../services/application.service";
 import { useAuth, isCandidateUser } from "../../hooks/useAuth";
+import {
+  getFirstApplicationRoute,
+  getRouteForApplicationStep,
+  persistApplicationDraft,
+} from "../../utils/applicationFlow";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -92,27 +97,9 @@ const JobCard = ({
       return;
     }
     // Already applied — resume draft or view status
-    const STEP_ROUTES = {
-      1: "/application/personal-details",
-      2: "/application/education",
-      3: "/application/additional-info",
-      4: "/application/address",
-      5: "/application/documents",
-      6: "/application/review",
-      7: "/application/post-selection",
-      8: "/application/payment",
-    };
-    const draft = JSON.parse(sessionStorage.getItem("app_draft") || "{}");
-    sessionStorage.setItem(
-      "app_draft",
-      JSON.stringify({
-        ...draft,
-        applicationId: existingApp._id,
-        jobId: job._id,
-      }),
-    );
+    persistApplicationDraft({ applicationId: existingApp._id, jobId: job._id });
     if (existingApp.status === "draft") {
-      navigate(STEP_ROUTES[existingApp.currentStep || 1], {
+      navigate(getRouteForApplicationStep({ ...existingApp, jobId: job }, existingApp.currentStep || 1), {
         state: { applicationId: existingApp._id, jobId: job._id },
       });
     } else {
@@ -370,8 +357,10 @@ const Jobs = () => {
       queryClient.invalidateQueries({
         queryKey: ["candidate-applications-ids"],
       });
-      navigate("/application/personal-details", {
-        state: { applicationId: result?.application?._id, jobId },
+      const application = result?.application;
+      persistApplicationDraft({ applicationId: application?._id, jobId });
+      navigate(getFirstApplicationRoute(application?.jobId || application), {
+        state: { applicationId: application?._id, jobId },
       });
     },
     onError: (err, jobId) => {

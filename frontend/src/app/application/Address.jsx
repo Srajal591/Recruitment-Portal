@@ -7,6 +7,7 @@ import ApplicationLayout from "../../components/layouts/ApplicationLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { candidateService } from "../../services/candidate.service";
+import { INDIA_STATE_CITIES, INDIA_STATES } from "../../constants/indiaLocations";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
@@ -16,33 +17,6 @@ const getAppId = () => {
     return null;
   }
 };
-
-const STATES = [
-  "Bihar",
-  "Delhi",
-  "Maharashtra",
-  "Karnataka",
-  "Tamil Nadu",
-  "Uttar Pradesh",
-  "West Bengal",
-  "Rajasthan",
-  "Gujarat",
-  "Madhya Pradesh",
-  "Other",
-];
-const DISTRICTS = [
-  "Patna",
-  "Gaya",
-  "Muzaffarpur",
-  "Bhagalpur",
-  "Darbhanga",
-  "Nalanda",
-  "Vaishali",
-  "Begusarai",
-  "Purnia",
-  "Araria",
-  "Other",
-];
 
 const emptyAddr = () => ({
   addressLine1: "",
@@ -108,7 +82,7 @@ const AddressFields = ({ data, setFn, prefix, disabled, errors }) => {
             onChange={(e) => setFn("state", e.target.value)}
           >
             <option value="">Select State</option>
-            {STATES.map((s) => (
+            {INDIA_STATES.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -132,7 +106,7 @@ const AddressFields = ({ data, setFn, prefix, disabled, errors }) => {
             onChange={(e) => setFn("district", e.target.value)}
           >
             <option value="">Select District</option>
-            {DISTRICTS.map((d) => (
+            {(INDIA_STATE_CITIES[data.state] || []).map((d) => (
               <option key={d} value={d}>
                 {d}
               </option>
@@ -205,10 +179,25 @@ const Address = () => {
   const applicationId = getAppId();
   const [dataLoaded, setDataLoaded] = useState(false);
 
+  const [jobId, setJobId] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(APP_KEY) || "{}").jobId;
+    } catch {
+      return null;
+    }
+  });
+
   const [permanent, setPermanent] = useState(emptyAddr());
   const [correspondence, setCorrespondence] = useState(emptyAddr());
   const [sameAsPermanent, setSameAsPermanent] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Load job details to check for custom form sections
+  const { data: jobData } = useQuery({
+    queryKey: ["job-details-for-address", jobId],
+    queryFn: () => candidateService.getJobDetails(jobId),
+    enabled: Boolean(jobId),
+  });
 
   // Load existing data
   const { data: appData, isLoading: loadingApp } = useQuery({
@@ -217,6 +206,21 @@ const Address = () => {
     enabled: Boolean(applicationId),
     staleTime: 0,
   });
+
+  useEffect(() => {
+    if (appData && !jobId) {
+      const app = appData?.application || appData;
+      const resolvedJobId = app?.jobId?._id || app?.jobId;
+      if (resolvedJobId) {
+        setJobId(resolvedJobId);
+        const existing = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
+        sessionStorage.setItem(
+          APP_KEY,
+          JSON.stringify({ ...existing, jobId: resolvedJobId }),
+        );
+      }
+    }
+  }, [appData, jobId]);
 
   useEffect(() => {
     if (appData && !dataLoaded) {
@@ -248,9 +252,17 @@ const Address = () => {
   }, [appData, dataLoaded]);
 
   const setP = (field, value) =>
-    setPermanent((prev) => ({ ...prev, [field]: value }));
+    setPermanent((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === "state" ? { district: "" } : {}),
+    }));
   const setC = (field, value) =>
-    setCorrespondence((prev) => ({ ...prev, [field]: value }));
+    setCorrespondence((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === "state" ? { district: "" } : {}),
+    }));
 
   const handleSameToggle = (checked) => {
     setSameAsPermanent(checked);
@@ -264,7 +276,14 @@ const Address = () => {
       if (location.state?.returnToReview) {
         navigate("/application/review", { state: { applicationId } });
       } else {
-        navigate("/application/documents", { state: { applicationId } });
+        // Check if job has custom form sections
+        const job = jobData?.job || jobData;
+        const hasCustomForms = job?.formSections && job.formSections.length > 0;
+        
+        const nextRoute = hasCustomForms
+          ? "/application/form-responses"
+          : "/application/documents";
+        navigate(nextRoute, { state: { applicationId } });
       }
     },
     onError: (err) => toast.error(err.message || "Failed to save"),

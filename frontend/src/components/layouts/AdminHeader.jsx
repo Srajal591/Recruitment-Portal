@@ -1,50 +1,45 @@
 import { Search, Bell, HelpCircle, Menu, Settings, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
-import { authService, getStoredUser } from '../../services/auth.service'
+import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { getStoredUser } from '../../services/auth.service'
+import { adminService } from '../../services/admin.service'
 
-const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) => {
-  const navigate = useNavigate()
+const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed, onLogout }) => {
   const user = getStoredUser()
   const displayName = user?.fullName || user?.officialEmail || 'Admin Central'
   const roleName = user?.systemRole?.roleName || user?.roleDesignation || 'Admin'
+  const initials = (user?.fullName || 'AC').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
 
-  const handleLogout = async () => {
-    await authService.logout()
-    navigate('/auth/admin-login', { replace: true })
-  }
+  // Live unread notification count
+  const { data: notifData } = useQuery({
+    queryKey: ['admin-notifications-count'],
+    queryFn: () => adminService.getAdminNotifications({ limit: 1 }),
+    refetchInterval: 30000,
+    staleTime: 15000,
+  })
+  const unreadCount = notifData?.unreadCount || 0
 
   return (
     <header className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3 shadow-sm">
       <div className="flex items-center justify-between gap-4">
+
         {/* Left: toggle + title */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onToggleSidebar}
             className="p-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors flex-shrink-0"
-            aria-label="Toggle sidebar"
           >
-            {/* Mobile: always hamburger; Desktop: panel open/close icon */}
-            <span className="lg:hidden">
-              <Menu className="w-5 h-5" />
-            </span>
+            <span className="lg:hidden"><Menu className="w-5 h-5" /></span>
             <span className="hidden lg:block">
-              {isCollapsed
-                ? <PanelLeftOpen className="w-5 h-5" />
-                : <PanelLeftClose className="w-5 h-5" />
-              }
+              {isCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
             </span>
           </button>
-
-          <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate leading-tight">
-              {title}
-            </h1>
-          </div>
+          <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate leading-tight">{title}</h1>
         </div>
 
-        {/* Right: search + actions */}
+        {/* Right */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-          {/* Search — hidden on small screens */}
+          {/* Search */}
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -53,37 +48,31 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
               className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent w-56 lg:w-72 bg-gray-50 focus:bg-white transition-all text-sm"
             />
           </div>
-
-          {/* Search icon only on mobile */}
           <button className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
             <Search className="w-5 h-5" />
           </button>
 
           {/* Notifications */}
-          <Link
-            to="/admin/notifications"
-            className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-            title="Notifications"
-          >
+          <Link to="/admin/notifications" className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+            {unreadCount > 0 ? (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            ) : (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+            )}
           </Link>
 
-          {/* Help */}
           <button className="hidden sm:flex p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
             <HelpCircle className="w-5 h-5" />
           </button>
 
-          {/* Settings */}
-          <Link
-            to="/admin/settings-profile"
-            className="hidden sm:flex p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-            title="Settings & Profile"
-          >
+          <Link to="/admin/settings-profile" className="hidden sm:flex p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
             <Settings className="w-5 h-5" />
           </Link>
 
-          {/* User profile */}
+          {/* User + dropdown */}
           <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-gray-200 ml-1">
             <div className="text-right hidden sm:block">
               <div className="text-sm font-semibold text-gray-800 leading-tight">{displayName}</div>
@@ -91,9 +80,8 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
             </div>
             <div className="relative group">
               <button className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-700 rounded-full flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-sm">AC</span>
+                <span className="text-white font-bold text-sm">{initials}</span>
               </button>
-
               {/* Dropdown */}
               <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="p-3 border-b border-gray-100">
@@ -101,17 +89,14 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed }) =>
                   <div className="text-xs text-gray-500">{user?.officialEmail || user?.email || ''}</div>
                 </div>
                 <div className="p-2">
-                  <Link
-                    to="/admin/settings-profile"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
+                  <Link to="/admin/settings-profile" className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                     <Settings className="w-4 h-4 text-gray-400" />
                     <span>Settings & Profile</span>
                   </Link>
                   <button
                     type="button"
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={onLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Sign Out</span>

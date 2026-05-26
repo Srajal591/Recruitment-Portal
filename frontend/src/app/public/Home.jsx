@@ -36,12 +36,16 @@ const Home = () => {
   const [eligibilityForm, setEligibilityForm] = useState({
     qualification: "",
     age: "",
-    category: "",
+    category: "general",
   });
 
   const [openFaq, setOpenFaq] = useState(null);
 
   const handleEligibilityCheck = () => {
+    if (!eligibilityForm.qualification && !eligibilityForm.age) {
+      navigate("/eligible-jobs");
+      return;
+    }
     navigate("/eligible-jobs", { state: eligibilityForm });
   };
 
@@ -51,8 +55,32 @@ const Home = () => {
     if (user && user.role === "candidate") {
       navigate(`/candidate/jobs/${jobId}`);
     } else {
-      navigate("/auth/candidate-login", { state: { jobId, redirectTo: `/candidate/jobs/${jobId}` } });
+      navigate("/auth/candidate-login", {
+        state: { jobId, redirectTo: `/candidate/jobs/${jobId}` },
+      });
     }
+  };
+
+  const handleNewUser = () => {
+    const user = getStoredUser();
+    if (user && user.role === "candidate") {
+      navigate("/");
+    } else {
+      navigate("/auth/register");
+    }
+  };
+
+  const handleLogin = () => {
+    const user = getStoredUser();
+    if (user && user.role === "candidate") {
+      navigate("/candidate/dashboard");
+    } else {
+      navigate("/auth/candidate-login");
+    }
+  };
+
+  const handleGetHelp = () => {
+    navigate("/help-center");
   };
 
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
@@ -163,17 +191,13 @@ const Home = () => {
                           qualification: e.target.value,
                         })
                       }
-                      className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
+                      className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none focus:ring-2 focus:ring-orange-500"
                     >
-                      <option>Select Highest Qualification</option>
-
-                      <option>10th Pass</option>
-
-                      <option>12th Pass</option>
-
-                      <option>Graduation</option>
-
-                      <option>Post Graduation</option>
+                      <option value="">Any Qualification</option>
+                      <option value="10th">10th Pass</option>
+                      <option value="12th">12th Pass</option>
+                      <option value="Graduation">Graduation / Degree</option>
+                      <option value="Post Graduation">Post Graduation</option>
                     </select>
                   </div>
 
@@ -184,10 +208,13 @@ const Home = () => {
 
                     <div>
                       <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-[#3f3b37] mb-2">
-                        Age
+                        Your Age
                       </label>
 
-                      <select
+                      <input
+                        type="number"
+                        min="18"
+                        max="60"
                         value={eligibilityForm.age}
                         onChange={(e) =>
                           setEligibilityForm({
@@ -195,14 +222,9 @@ const Home = () => {
                             age: e.target.value,
                           })
                         }
-                        className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
-                      >
-                        <option>Enter Age</option>
-
-                        <option>18-25</option>
-
-                        <option>25-30</option>
-                      </select>
+                        placeholder="e.g. 25"
+                        className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none focus:ring-2 focus:ring-orange-500"
+                      />
                     </div>
 
                     {/* CATEGORY */}
@@ -220,15 +242,14 @@ const Home = () => {
                             category: e.target.value,
                           })
                         }
-                        className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none"
+                        className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none focus:ring-2 focus:ring-orange-500"
                       >
-                        <option>General</option>
-
-                        <option>OBC</option>
-
-                        <option>SC</option>
-
-                        <option>ST</option>
+                        <option value="general">General</option>
+                        <option value="obc">OBC</option>
+                        <option value="sc">SC</option>
+                        <option value="st">ST</option>
+                        <option value="ews">EWS</option>
+                        <option value="pwd">PwD</option>
                       </select>
                     </div>
                   </div>
@@ -283,7 +304,7 @@ const Home = () => {
                   title: "New User?",
                   desc: "Create your profile and apply to multiple openings.",
                   action: "Register Now",
-                  onClick: () => navigate("/auth/candidate-register"),
+                  onClick: handleNewUser,
                 },
                 {
                   icon: LogIn,
@@ -292,7 +313,7 @@ const Home = () => {
                   title: "Already Applied?",
                   desc: "Check status, download admit cards, and results.",
                   action: "Login Here",
-                  onClick: () => navigate("/auth/candidate-login"),
+                  onClick: handleLogin,
                 },
                 {
                   icon: CircleHelp,
@@ -301,7 +322,7 @@ const Home = () => {
                   title: "Need Help?",
                   desc: "Get recruitment assistance and support resources.",
                   action: "Get Help",
-                  onClick: () => navigate("/contact"),
+                  onClick: handleGetHelp,
                 },
               ].map((card, index) => (
                 <motion.div
@@ -315,11 +336,17 @@ const Home = () => {
                   onClick={card.onClick}
                   className="bg-white rounded-[8px] border border-[#e0d7cd] p-7 text-center cursor-pointer"
                 >
-                  <div className={`w-14 h-14 rounded-full ${card.bg} flex items-center justify-center mx-auto`}>
+                  <div
+                    className={`w-14 h-14 rounded-full ${card.bg} flex items-center justify-center mx-auto`}
+                  >
                     <card.icon className={`w-7 h-7 ${card.color}`} />
                   </div>
-                  <h3 className="mt-5 text-[20px] tracking-[-0.5px] font-black text-[#1f1d1b]">{card.title}</h3>
-                  <p className="mt-3 text-[#6d6761] text-[14px] leading-7">{card.desc}</p>
+                  <h3 className="mt-5 text-[20px] tracking-[-0.5px] font-black text-[#1f1d1b]">
+                    {card.title}
+                  </h3>
+                  <p className="mt-3 text-[#6d6761] text-[14px] leading-7">
+                    {card.desc}
+                  </p>
                   <button className="mt-5 text-[#e46a1d] text-[12px] uppercase tracking-[0.12em] font-black flex items-center gap-1.5 mx-auto">
                     {card.action}
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -552,12 +579,17 @@ const Home = () => {
                   a: "You will need a valid photo ID (Aadhaar/PAN), educational certificates, caste certificate (if applicable), passport-size photograph, and signature scan. Specific posts may require additional documents.",
                 },
               ].map((item, index) => (
-                <div key={index} className="border-b border-[#ebe2d8] last:border-0">
+                <div
+                  key={index}
+                  className="border-b border-[#ebe2d8] last:border-0"
+                >
                   <button
                     onClick={() => setOpenFaq(openFaq === index ? null : index)}
                     className="w-full px-7 py-5 flex items-center justify-between hover:bg-[#faf7f2] transition-all text-left"
                   >
-                    <span className="text-[#2a2724] text-[14px] font-medium">{item.q}</span>
+                    <span className="text-[#2a2724] text-[14px] font-medium">
+                      {item.q}
+                    </span>
                     <motion.span
                       animate={{ rotate: openFaq === index ? 180 : 0 }}
                       transition={{ duration: 0.25 }}
@@ -568,7 +600,10 @@ const Home = () => {
                   </button>
                   <motion.div
                     initial={false}
-                    animate={{ height: openFaq === index ? "auto" : 0, opacity: openFaq === index ? 1 : 0 }}
+                    animate={{
+                      height: openFaq === index ? "auto" : 0,
+                      opacity: openFaq === index ? 1 : 0,
+                    }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >

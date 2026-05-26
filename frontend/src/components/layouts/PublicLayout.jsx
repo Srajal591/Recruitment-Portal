@@ -281,9 +281,9 @@ const PublicLayout = ({ children }) => {
               <div className="mt-6 space-y-4">
                 {[
                   ["FAQ", "/faq"],
+                  ["Help Center", "/help-center"],
+                  ["Technical Support", "/technical-support"],
                   ["Contact Us", "/contact"],
-                  ["Help Center", "/how-to-apply"],
-                  ["Technical Support", "/contact"],
                 ].map(([item, path]) => (
                   <Link
                     key={item}
@@ -335,15 +335,24 @@ const PublicLayout = ({ children }) => {
             </p>
 
             <div className="flex items-center gap-6 text-white/40 text-[12px]">
-              <Link to="/about" className="hover:text-orange-300 transition-colors">
+              <Link
+                to="/about"
+                className="hover:text-orange-300 transition-colors"
+              >
                 Privacy Policy
               </Link>
 
-              <Link to="/about" className="hover:text-orange-300 transition-colors">
+              <Link
+                to="/about"
+                className="hover:text-orange-300 transition-colors"
+              >
                 Terms & Conditions
               </Link>
 
-              <Link to="/about" className="hover:text-orange-300 transition-colors">
+              <Link
+                to="/about"
+                className="hover:text-orange-300 transition-colors"
+              >
                 Accessibility
               </Link>
             </div>

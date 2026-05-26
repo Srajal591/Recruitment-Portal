@@ -16,6 +16,7 @@ const {
 const { getPaginationParams } = require("../../shared/utils/helpers");
 const { saveAuditLog } = require("../../shared/middlewares/auditLog");
 const { notify } = require("../../shared/utils/notify");
+const { notifyAdmins } = require("../../shared/utils/notifyAdmins");
 
 /**
  * @desc    Get all applications with filters
@@ -214,6 +215,15 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
     title: notifTitle,
     message: notifMessage,
     link: `/candidate/applications`,
+    metadata: { applicationId: application.applicationId, status },
+  });
+
+  // Notify all admins about the status change
+  notifyAdmins({
+    type: "application_submitted",
+    title: `Application ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+    message: `${application.candidateId.fullName}'s application ${application.applicationId} for "${application.jobId?.title}" has been ${status}.`,
+    link: `/admin/applications/${application._id}`,
     metadata: { applicationId: application.applicationId, status },
   });
 

@@ -23,6 +23,10 @@ export const REALTIME_SOCKET_URLS = splitUrls(
   import.meta.env.VITE_REALTIME_SOCKET_URLS,
 );
 
+export const REALTIME_ENABLED =
+  import.meta.env.VITE_REALTIME_ENABLED === "true" ||
+  (!import.meta.env.PROD && import.meta.env.VITE_REALTIME_ENABLED !== "false");
+
 export const SERVICE_SOCKET_URLS = {
   identity:
     import.meta.env.VITE_IDENTITY_SOCKET_URL ||

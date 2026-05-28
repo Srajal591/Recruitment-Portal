@@ -36,10 +36,8 @@ const generateUUID = () => uuidv4();
  * Encrypt sensitive data (e.g. payment gateway API keys)
  */
 const encrypt = (text) => {
-  const key = Buffer.from(
-    env.ENCRYPTION_KEY || "fallback_key_32_chars_padded____",
-    "utf8",
-  ).slice(0, 32);
+  if (!env.ENCRYPTION_KEY) throw new Error("ENCRYPTION_KEY is required");
+  const key = Buffer.from(env.ENCRYPTION_KEY, "utf8").slice(0, 32);
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
   let encrypted = cipher.update(text, "utf8", "hex");
@@ -51,10 +49,8 @@ const encrypt = (text) => {
  * Decrypt sensitive data
  */
 const decrypt = (encryptedText) => {
-  const key = Buffer.from(
-    env.ENCRYPTION_KEY || "fallback_key_32_chars_padded____",
-    "utf8",
-  ).slice(0, 32);
+  if (!env.ENCRYPTION_KEY) throw new Error("ENCRYPTION_KEY is required");
+  const key = Buffer.from(env.ENCRYPTION_KEY, "utf8").slice(0, 32);
   const [ivHex, encrypted] = encryptedText.split(":");
   const iv = Buffer.from(ivHex, "hex");
   const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);

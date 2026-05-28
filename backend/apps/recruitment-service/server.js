@@ -4,6 +4,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const compression = require("compression");
+const morgan = require("morgan");
 const swaggerUi = require("swagger-ui-express");
 require("dotenv").config({
   path: require("path").join(__dirname, "../../.env"),
@@ -15,6 +16,7 @@ const connectDB = require("./src/shared/config/database");
 const { connectRedis } = require("./src/shared/config/redis");
 const { connectCloudinary } = require("./src/shared/config/cloudinary");
 const { initSocket } = require("./src/shared/socket/index");
+const env = require("./src/shared/config/env");
 const logger = require("./src/shared/utils/logger");
 const errorHandler = require("./src/shared/middlewares/errorHandler");
 const notFound = require("./src/shared/middlewares/notFound");
@@ -31,7 +33,7 @@ const adminApplicationRoutes = require("./src/routes/admin/application.routes");
 const adminAnalyticsRoutes = require("./src/routes/admin/analytics.routes");
 const candidateApplicationRoutes = require("./src/routes/candidate/application.routes");
 
-const PORT = parseInt(process.env.RECRUITMENT_SERVICE_PORT) || 5002;
+const PORT = parseInt(process.env.RECRUITMENT_SERVICE_PORT, 10) || 5002;
 
 const app = express();
 
@@ -39,13 +41,14 @@ const app = express();
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: env.CLIENT_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 app.use(compression());
+app.use(morgan(env.isDevelopment ? "dev" : "combined"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -116,6 +119,15 @@ const startServer = async () => {
     console.log(`📋 Recruitment Service: http://localhost:${PORT}`);
     console.log(`   Swagger: http://localhost:${PORT}/api/docs`);
   });
+
+  const shutdown = (signal) => {
+    logger.info(`${signal} received. Shutting down Recruitment Service.`);
+    httpServer.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10000).unref();
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
 startServer().catch((err) => {

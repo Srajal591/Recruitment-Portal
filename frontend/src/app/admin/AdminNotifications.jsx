@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
@@ -46,8 +47,9 @@ const FILTERS = [
 ]
 
 const AdminNotifications = () => {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('unread')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
@@ -68,9 +70,13 @@ const AdminNotifications = () => {
   )
   const unreadCount = data?.unreadCount || 0
 
-  const { mutate: markRead } = useMutation({
+  const { mutateAsync: markRead } = useMutation({
     mutationFn: (id) => adminService.markAdminNotificationRead(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-notifications'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications-count'] })
+    },
   })
 
   const { mutate: markAllRead, isPending: markingAll } = useMutation({
@@ -88,6 +94,18 @@ const AdminNotifications = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-notifications'] })
     },
   })
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification) return
+    if (!notification.isRead) {
+      try {
+        await markRead(notification._id)
+      } catch (_) {}
+    }
+    if (notification.link) {
+      navigate(notification.link)
+    }
+  }
 
   return (
     <AdminLayout title="Notifications">
@@ -159,14 +177,24 @@ const AdminNotifications = () => {
             </div>
           )}
 
+          <div className="max-h-[70vh] overflow-y-auto">
           {notifications.map((n, i) => {
             const cfg = getCfg(n.type)
             const Icon = cfg.icon
             return (
               <div
                 key={n._id}
+                onClick={() => handleNotificationClick(n)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleNotificationClick(n)
+                  }
+                }}
+                role="button"
+                tabIndex={0}
                 className={`flex items-start gap-4 px-5 py-4 border-b border-gray-50 last:border-0 transition-colors ${
-                  !n.isRead ? 'bg-orange-50/50' : 'hover:bg-gray-50/50'
+                  !n.isRead ? 'w-full text-left bg-orange-50/50 hover:bg-orange-100/60' : 'w-full text-left hover:bg-gray-50/50'
                 }`}
               >
                 {/* Icon */}
@@ -200,7 +228,8 @@ const AdminNotifications = () => {
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {!n.isRead && (
                     <button
-                      onClick={() => markRead(n._id)}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); markRead(n._id) }}
                       className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                       title="Mark as read"
                     >
@@ -208,7 +237,8 @@ const AdminNotifications = () => {
                     </button>
                   )}
                   <button
-                    onClick={() => deleteNotif(n._id)}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); deleteNotif(n._id) }}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Delete"
                   >
@@ -218,6 +248,7 @@ const AdminNotifications = () => {
               </div>
             )
           })}
+          </div>
         </div>
 
       </div>

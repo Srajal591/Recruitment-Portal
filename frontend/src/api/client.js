@@ -5,6 +5,31 @@ import { API_BASE_URL, STORAGE_KEYS } from "./config";
 const getStoredToken = () => localStorage.getItem(STORAGE_KEYS.accessToken);
 const getStoredRefreshToken = () =>
   localStorage.getItem(STORAGE_KEYS.refreshToken);
+const isRequestCanceled = (error) =>
+  error?.code === "ERR_CANCELED" || axios.isCancel(error);
+
+let refreshPromise = null;
+
+const clearSession = () => {
+  localStorage.removeItem(STORAGE_KEYS.accessToken);
+  localStorage.removeItem(STORAGE_KEYS.refreshToken);
+  localStorage.removeItem(STORAGE_KEYS.user);
+};
+
+const redirectToLogin = () => {
+  if (typeof window === "undefined") return;
+  if (!window.location.pathname.startsWith("/auth")) {
+    window.location.href = "/auth/candidate-login";
+  }
+};
+
+const resolveErrorMessage = (error) =>
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  (error?.code === "ECONNABORTED"
+    ? "Request timed out. Please confirm backend services are running."
+    : null) ||
+  "Something went wrong. Please try again.";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -19,6 +44,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token = getStoredToken();
   if (token) {
+    config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -30,42 +56,56 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
     const status = error.response?.status;
     const isAuthEndpoint = originalRequest?.url?.startsWith("/auth/");
-    const message =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      (error.code === "ECONNABORTED"
-        ? "Request timed out. Please confirm backend services are running."
-        : null) ||
-      "Something went wrong. Please try again.";
+    const isRefreshEndpoint = originalRequest?.url?.includes("/auth/refresh-token");
+    const message = resolveErrorMessage(error);
 
-    if (status === 401 && !originalRequest?._retry && !isAuthEndpoint) {
+    if (isRequestCanceled(error)) {
+      return Promise.reject({
+        status,
+        message: "Request was canceled.",
+        errors: error.response?.data?.errors || [],
+        raw: error,
+      });
+    }
+
+    if (
+      status === 401 &&
+      !originalRequest?._retry &&
+      !isAuthEndpoint &&
+      !isRefreshEndpoint
+    ) {
       originalRequest._retry = true;
       try {
-        const refreshToken = getStoredRefreshToken();
-        const refreshResponse = await axios.post(
-          `${API_BASE_URL}/auth/refresh-token`,
-          { refreshToken },
-          { withCredentials: true },
-        );
-        const newAccessToken = refreshResponse.data?.data?.accessToken;
-        const newRefreshToken = refreshResponse.data?.data?.refreshToken;
+        if (!refreshPromise) {
+          refreshPromise = axios
+            .post(
+              `${API_BASE_URL}/auth/refresh-token`,
+              { refreshToken: getStoredRefreshToken() },
+              { withCredentials: true },
+            )
+            .then((refreshResponse) => refreshResponse.data?.data || refreshResponse.data)
+            .finally(() => {
+              refreshPromise = null;
+            });
+        }
 
-        if (newAccessToken) {
-          localStorage.setItem(STORAGE_KEYS.accessToken, newAccessToken);
-          if (newRefreshToken) {
-            localStorage.setItem(STORAGE_KEYS.refreshToken, newRefreshToken);
-          }
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return apiClient(originalRequest);
+        const refreshedSession = await refreshPromise;
+        const newAccessToken = refreshedSession?.accessToken;
+        const newRefreshToken = refreshedSession?.refreshToken;
+
+        if (!newAccessToken) {
+          throw new Error("Refresh did not return a new access token.");
         }
+
+        localStorage.setItem(STORAGE_KEYS.accessToken, newAccessToken);
+        if (newRefreshToken) {
+          localStorage.setItem(STORAGE_KEYS.refreshToken, newRefreshToken);
+        }
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return apiClient(originalRequest);
       } catch {
-        // Refresh failed - clear session and redirect to login
-        localStorage.removeItem(STORAGE_KEYS.accessToken);
-        localStorage.removeItem(STORAGE_KEYS.refreshToken);
-        localStorage.removeItem(STORAGE_KEYS.user);
-        if (!window.location.pathname.startsWith("/auth")) {
-          window.location.href = "/auth/candidate-login";
-        }
+        clearSession();
+        redirectToLogin();
       }
     }
 

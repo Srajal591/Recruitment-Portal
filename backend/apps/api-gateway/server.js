@@ -13,19 +13,23 @@ const PORT = parseInt(process.env.API_GATEWAY_PORT) || 5000;
 const ID_PORT = parseInt(process.env.IDENTITY_SERVICE_PORT) || 5001;
 const RC_PORT = parseInt(process.env.RECRUITMENT_SERVICE_PORT) || 5002;
 const CM_PORT = parseInt(process.env.COMMUNICATION_SERVICE_PORT) || 5003;
+const parsedOrigins =
+  process.env.CLIENT_URL?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) || ["http://localhost:5173"];
+const requestTimeoutMs = 15000;
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: parsedOrigins.length > 1 ? parsedOrigins : parsedOrigins[0],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
-app.use(express.json());
-app.use(morgan("dev"));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 // ── Health check ──────────────────────────────────────────────
 app.get("/health", (_req, res) => {
@@ -46,6 +50,9 @@ const proxy = (target, label) =>
   createProxyMiddleware({
     target,
     changeOrigin: true,
+    xfwd: true,
+    proxyTimeout: 15000,
+    timeout: 15000,
     on: {
       error: (err, _req, res) => {
         console.error(`❌ [${label}] ${err.message}`);
@@ -57,6 +64,107 @@ const proxy = (target, label) =>
       },
     },
   });
+
+const serviceUrl = (port, path) => `http://localhost:${port}${path}`;
+
+const callJson = async (url, authorization) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: authorization ? { Authorization: authorization } : {},
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(payload?.message || `Request failed with ${response.status}`);
+    }
+
+    return payload;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+app.get("/api/dashboard/admin", async (req, res) => {
+  try {
+    const authorization = req.headers.authorization || "";
+    const [overview, funnel, topJobs, support, notifications] =
+      await Promise.all([
+        callJson(serviceUrl(RC_PORT, "/api/admin/analytics/overview"), authorization),
+        callJson(serviceUrl(RC_PORT, "/api/admin/analytics/funnel"), authorization),
+        callJson(
+          serviceUrl(RC_PORT, "/api/admin/analytics/top-jobs?limit=5"),
+          authorization,
+        ),
+        callJson(serviceUrl(CM_PORT, "/api/admin/support/stats"), authorization),
+        callJson(
+          serviceUrl(ID_PORT, "/api/admin/notifications?limit=20&isRead=false"),
+          authorization,
+        ),
+      ]);
+
+    res.json({
+      success: true,
+      message: "Dashboard data fetched successfully",
+      data: {
+        overview: overview?.data ?? null,
+        funnel: funnel?.data ?? null,
+        topJobs: topJobs?.data?.topJobs || [],
+        support: support?.data ?? null,
+        notifications: notifications?.data ?? null,
+      },
+    });
+  } catch (error) {
+    console.error("❌ [Dashboard Admin]", error.message);
+    res.status(503).json({
+      success: false,
+      message: "Unable to fetch admin dashboard data",
+    });
+  }
+});
+
+app.get("/api/dashboard/candidate", async (req, res) => {
+  try {
+    const authorization = req.headers.authorization || "";
+    const [applications, notifications, tickets, jobs] = await Promise.all([
+      callJson(
+        serviceUrl(RC_PORT, "/api/candidate/applications?limit=5"),
+        authorization,
+      ),
+      callJson(
+        serviceUrl(CM_PORT, "/api/candidate/notifications?limit=5"),
+        authorization,
+      ),
+      callJson(
+        serviceUrl(CM_PORT, "/api/candidate/support/tickets?limit=5"),
+        authorization,
+      ),
+      callJson(serviceUrl(RC_PORT, "/api/jobs?limit=5"), authorization),
+    ]);
+
+    res.json({
+      success: true,
+      message: "Dashboard data fetched successfully",
+      data: {
+        applications: applications?.data ?? [],
+        notifications: notifications?.data ?? null,
+        tickets: tickets?.data ?? [],
+        jobs: jobs?.data?.jobs || [],
+        meta: applications?.meta || null,
+      },
+    });
+  } catch (error) {
+    console.error("❌ [Dashboard Candidate]", error.message);
+    res.status(503).json({
+      success: false,
+      message: "Unable to fetch candidate dashboard data",
+    });
+  }
+});
 
 // ── Identity Service routes ───────────────────────────────────
 app.use("/api/auth", proxy(`http://localhost:${ID_PORT}`, "Identity"));
@@ -155,5 +263,14 @@ server.listen(PORT, () => {
   console.log(`   Health: http://localhost:${PORT}/health`);
   console.log(`   Docs:   http://localhost:${PORT}/api/docs`);
 });
+
+const shutdown = (signal) => {
+  console.log(`⚠️ ${signal} received. Shutting down API Gateway.`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 module.exports = app;

@@ -92,7 +92,12 @@ export const candidateService = {
     const response = await apiClient.get("/candidate/notifications", {
       params,
     });
-    return unwrapData(response);
+    const data = unwrapData(response);
+    return {
+      notifications: data?.notifications ?? [],
+      unreadCount: data?.unreadCount ?? 0,
+      meta: data?.meta ?? {},
+    };
   },
   async markNotificationRead(id) {
     const response = await apiClient.patch(

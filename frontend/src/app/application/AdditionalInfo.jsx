@@ -53,7 +53,7 @@ const AdditionalInfo = () => {
     queryKey: ["application-additional", applicationId],
     queryFn: () => candidateService.getApplication(applicationId),
     enabled: Boolean(applicationId),
-    staleTime: 0,
+    staleTime: 2 * 60 * 1000,
   });
 
   useEffect(() => {

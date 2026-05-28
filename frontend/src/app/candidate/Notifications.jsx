@@ -97,7 +97,7 @@ const TABS = [
 const Notifications = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("unread");
 
   const { data, isLoading } = useQuery({
     queryKey: ["candidate-notifications"],
@@ -115,10 +115,15 @@ const Notifications = () => {
       ? allNotifications.filter((n) => !n.isRead)
       : allNotifications;
 
-  const { mutate: markRead } = useMutation({
+  const { mutateAsync: markRead } = useMutation({
     mutationFn: (id) => candidateService.markNotificationRead(id),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["candidate-notifications"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidate-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["candidate-dashboard"] });
+      queryClient.invalidateQueries({
+        queryKey: ["candidate-notifications-count"],
+      });
+    },
   });
 
   const { mutate: markAllRead, isPending: markingAll } = useMutation({
@@ -129,9 +134,16 @@ const Notifications = () => {
     },
   });
 
-  const handleClick = (n) => {
-    if (!n.isRead) markRead(n._id);
-    if (n.link) navigate(n.link);
+  const handleClick = async (n) => {
+    if (!n) return;
+    if (!n.isRead) {
+      try {
+        await markRead(n._id);
+      } catch (_) {}
+    }
+    if (n.link) {
+      navigate(n.link);
+    }
   };
 
   return (
@@ -218,16 +230,18 @@ const Notifications = () => {
               </div>
             )}
 
+            <div className="max-h-[70vh] overflow-y-auto">
             {notifications.map((n) => {
               const cfg = getConfig(n.type);
               const Icon = cfg.icon;
               return (
-                <div
+                <button
+                  type="button"
                   key={n._id}
                   onClick={() => handleClick(n)}
                   className={`flex items-start gap-4 p-4 border-b border-gray-100 last:border-0 transition-colors ${
                     n.link ? "cursor-pointer" : "cursor-default"
-                  } ${n.isRead ? "bg-white hover:bg-gray-50" : "bg-orange-50 hover:bg-orange-100"}`}
+                  } ${n.isRead ? "w-full text-left bg-white hover:bg-gray-50" : "w-full text-left bg-orange-50 hover:bg-orange-100"}`}
                 >
                   {/* Icon */}
                   <div
@@ -274,9 +288,10 @@ const Notifications = () => {
                       </span>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
+            </div>
           </CardContent>
         </Card>
       </div>

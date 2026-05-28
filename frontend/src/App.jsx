@@ -10,7 +10,7 @@ function App() {
         <AppRoutes />
         
         {/* Development Navigation - Remove in production */}
-        {process.env.NODE_ENV === 'development' && <DevNavigation />}
+        {import.meta.env.DEV && <DevNavigation />}
         
         <Toaster 
           position="top-right"

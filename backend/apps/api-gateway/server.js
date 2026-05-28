@@ -13,6 +13,12 @@ const PORT = parseInt(process.env.API_GATEWAY_PORT) || 5000;
 const ID_PORT = parseInt(process.env.IDENTITY_SERVICE_PORT) || 5001;
 const RC_PORT = parseInt(process.env.RECRUITMENT_SERVICE_PORT) || 5002;
 const CM_PORT = parseInt(process.env.COMMUNICATION_SERVICE_PORT) || 5003;
+const IDENTITY_URL =
+  process.env.IDENTITY_SERVICE_URL || `http://localhost:${ID_PORT}`;
+const RECRUITMENT_URL =
+  process.env.RECRUITMENT_SERVICE_URL || `http://localhost:${RC_PORT}`;
+const COMMUNICATION_URL =
+  process.env.COMMUNICATION_SERVICE_URL || `http://localhost:${CM_PORT}`;
 const parsedOrigins =
   process.env.CLIENT_URL?.split(",")
     .map((origin) => origin.trim())
@@ -38,9 +44,9 @@ app.get("/health", (_req, res) => {
     message: "API Gateway is running",
     timestamp: new Date().toISOString(),
     services: {
-      identity: `http://localhost:${ID_PORT}`,
-      recruitment: `http://localhost:${RC_PORT}`,
-      communication: `http://localhost:${CM_PORT}`,
+      identity: IDENTITY_URL,
+      recruitment: RECRUITMENT_URL,
+      communication: COMMUNICATION_URL,
     },
   });
 });
@@ -65,7 +71,7 @@ const proxy = (target, label) =>
     },
   });
 
-const serviceUrl = (port, path) => `http://localhost:${port}${path}`;
+const serviceUrl = (baseUrl, path) => `${baseUrl}${path}`;
 
 const callJson = async (url, authorization) => {
   const controller = new AbortController();
@@ -94,15 +100,15 @@ app.get("/api/dashboard/admin", async (req, res) => {
     const authorization = req.headers.authorization || "";
     const [overview, funnel, topJobs, support, notifications] =
       await Promise.all([
-        callJson(serviceUrl(RC_PORT, "/api/admin/analytics/overview"), authorization),
-        callJson(serviceUrl(RC_PORT, "/api/admin/analytics/funnel"), authorization),
+        callJson(serviceUrl(RECRUITMENT_URL, "/api/admin/analytics/overview"), authorization),
+        callJson(serviceUrl(RECRUITMENT_URL, "/api/admin/analytics/funnel"), authorization),
         callJson(
-          serviceUrl(RC_PORT, "/api/admin/analytics/top-jobs?limit=5"),
+          serviceUrl(RECRUITMENT_URL, "/api/admin/analytics/top-jobs?limit=5"),
           authorization,
         ),
-        callJson(serviceUrl(CM_PORT, "/api/admin/support/stats"), authorization),
+        callJson(serviceUrl(COMMUNICATION_URL, "/api/admin/support/stats"), authorization),
         callJson(
-          serviceUrl(ID_PORT, "/api/admin/notifications?limit=20&isRead=false"),
+          serviceUrl(IDENTITY_URL, "/api/admin/notifications?limit=20&isRead=false"),
           authorization,
         ),
       ]);
@@ -132,18 +138,18 @@ app.get("/api/dashboard/candidate", async (req, res) => {
     const authorization = req.headers.authorization || "";
     const [applications, notifications, tickets, jobs] = await Promise.all([
       callJson(
-        serviceUrl(RC_PORT, "/api/candidate/applications?limit=5"),
+        serviceUrl(RECRUITMENT_URL, "/api/candidate/applications?limit=5"),
         authorization,
       ),
       callJson(
-        serviceUrl(CM_PORT, "/api/candidate/notifications?limit=5"),
+        serviceUrl(COMMUNICATION_URL, "/api/candidate/notifications?limit=5"),
         authorization,
       ),
       callJson(
-        serviceUrl(CM_PORT, "/api/candidate/support/tickets?limit=5"),
+        serviceUrl(COMMUNICATION_URL, "/api/candidate/support/tickets?limit=5"),
         authorization,
       ),
-      callJson(serviceUrl(RC_PORT, "/api/jobs?limit=5"), authorization),
+      callJson(serviceUrl(RECRUITMENT_URL, "/api/jobs?limit=5"), authorization),
     ]);
 
     res.json({
@@ -167,66 +173,66 @@ app.get("/api/dashboard/candidate", async (req, res) => {
 });
 
 // ── Identity Service routes ───────────────────────────────────
-app.use("/api/auth", proxy(`http://localhost:${ID_PORT}`, "Identity"));
+app.use("/api/auth", proxy(IDENTITY_URL, "Identity"));
 app.use(
   "/api/admin/employees",
-  proxy(`http://localhost:${ID_PORT}`, "Identity"),
+  proxy(IDENTITY_URL, "Identity"),
 );
-app.use("/api/admin/roles", proxy(`http://localhost:${ID_PORT}`, "Identity"));
+app.use("/api/admin/roles", proxy(IDENTITY_URL, "Identity"));
 app.use(
   "/api/admin/activity-logs",
-  proxy(`http://localhost:${ID_PORT}`, "Identity"),
+  proxy(IDENTITY_URL, "Identity"),
 );
 
 // ── Recruitment Service routes ────────────────────────────────
-app.use("/api/jobs", proxy(`http://localhost:${RC_PORT}`, "Recruitment"));
+app.use("/api/jobs", proxy(RECRUITMENT_URL, "Recruitment"));
 app.use(
   "/api/admin/projects",
-  proxy(`http://localhost:${RC_PORT}`, "Recruitment"),
+  proxy(RECRUITMENT_URL, "Recruitment"),
 );
-app.use("/api/admin/jobs", proxy(`http://localhost:${RC_PORT}`, "Recruitment"));
+app.use("/api/admin/jobs", proxy(RECRUITMENT_URL, "Recruitment"));
 app.use(
   "/api/admin/applications",
-  proxy(`http://localhost:${RC_PORT}`, "Recruitment"),
+  proxy(RECRUITMENT_URL, "Recruitment"),
 );
 app.use(
   "/api/admin/analytics",
-  proxy(`http://localhost:${RC_PORT}`, "Recruitment"),
+  proxy(RECRUITMENT_URL, "Recruitment"),
 );
 app.use(
   "/api/candidate/applications",
-  proxy(`http://localhost:${RC_PORT}`, "Recruitment"),
+  proxy(RECRUITMENT_URL, "Recruitment"),
 );
 
 // ── Communication & Payment Service routes ────────────────────
 app.use(
   "/api/admin/payments",
-  proxy(`http://localhost:${CM_PORT}`, "Communication"),
+  proxy(COMMUNICATION_URL, "Communication"),
 );
 app.use(
   "/api/admin/payment-gateways",
-  proxy(`http://localhost:${CM_PORT}`, "Communication"),
+  proxy(COMMUNICATION_URL, "Communication"),
 );
 app.use(
   "/api/admin/support",
-  proxy(`http://localhost:${CM_PORT}`, "Communication"),
+  proxy(COMMUNICATION_URL, "Communication"),
 );
 app.use(
   "/api/candidate/notifications",
-  proxy(`http://localhost:${CM_PORT}`, "Communication"),
+  proxy(COMMUNICATION_URL, "Communication"),
 );
 app.use(
   "/api/candidate/support",
-  proxy(`http://localhost:${CM_PORT}`, "Communication"),
+  proxy(COMMUNICATION_URL, "Communication"),
 );
 app.use(
   "/api/candidate/payments",
-  proxy(`http://localhost:${CM_PORT}`, "Communication"),
+  proxy(COMMUNICATION_URL, "Communication"),
 );
 
 // ── Swagger redirect ──────────────────────────────────────────
 app.get("/api/docs", (_req, res) => {
-  res.redirect(`http://localhost:${RC_PORT}/api/docs`);
+  res.redirect(`${RECRUITMENT_URL}/api/docs`);
 });
 
 // ── 404 ───────────────────────────────────────────────────────

@@ -80,6 +80,9 @@ services:
       - IDENTITY_SERVICE_PORT=5001
       - RECRUITMENT_SERVICE_PORT=5002
       - COMMUNICATION_SERVICE_PORT=5003
+      - IDENTITY_SERVICE_URL=http://identity-service:5001
+      - RECRUITMENT_SERVICE_URL=http://recruitment-service:5002
+      - COMMUNICATION_SERVICE_URL=http://communication-service:5003
       - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
     depends_on:
       - identity-service
@@ -110,12 +113,14 @@ services:
     environment:
       - NODE_ENV=production
       - IDENTITY_SERVICE_PORT=5001
-      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/recruitment_portal?authSource=admin
+      - MONGODB_URI=mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password123}@mongodb:27017/recruitment_portal?authSource=admin
       - REDIS_URL=redis://redis:6379
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - JWT_ACCESS_EXPIRES_IN=15m
       - JWT_REFRESH_EXPIRES_IN=7d
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -146,13 +151,15 @@ services:
     environment:
       - NODE_ENV=production
       - RECRUITMENT_SERVICE_PORT=5002
-      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/recruitment_portal?authSource=admin
+      - MONGODB_URI=mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password123}@mongodb:27017/recruitment_portal?authSource=admin
       - REDIS_URL=redis://redis:6379
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -183,11 +190,13 @@ services:
     environment:
       - NODE_ENV=production
       - COMMUNICATION_SERVICE_PORT=5003
-      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/recruitment_portal?authSource=admin
+      - MONGODB_URI=mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password123}@mongodb:27017/recruitment_portal?authSource=admin
       - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://admin:password123@rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS:-password123}@rabbitmq:5672
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
     depends_on:
       mongodb:
         condition: service_healthy

@@ -40,15 +40,15 @@ const Dashboard = () => {
     enabled: showProjectSelector,
   })
 
-  const overview = data?.overview?.overview || {}
+  const overview = data?.overview?.overview || data?.overview || {}
   const applicationsByStatus = data?.overview?.applicationsByStatus || []
   const recentApplications = data?.overview?.recentApplications || []
-  const funnel = data?.funnel?.funnel || {}
+  const funnel = data?.funnel?.funnel || data?.funnel || {}
   const topJobs = data?.topJobs || []
   const adminNotifications = data?.notifications?.notifications || []
   const unreadAdminCount = data?.notifications?.unreadCount || adminNotifications.length
 
-  const rawSupport = data?.support || {}
+  const rawSupport = data?.support?.data || data?.support || {}
   const supportStatusStats = rawSupport.statusStats || []
 
   const countSupportByStatus = (name) =>

@@ -119,16 +119,26 @@ const CandidateDashboard = () => {
     staleTime: 30000,
   });
 
-  // Normalize applications — service returns raw array or nested
-  const rawApps = data?.applications;
-  const applications = Array.isArray(rawApps)
-    ? rawApps
-    : rawApps?.applications || rawApps?.data || [];
+  const rawApplications = data?.applications;
+  const applications = Array.isArray(rawApplications)
+    ? rawApplications
+    : rawApplications?.applications ||
+      rawApplications?.data ||
+      data?.data?.applications ||
+      [];
 
-  const jobs = data?.jobs || [];
-  const notifData = data?.notifications;
-  const notifications = notifData?.notifications || [];
-  const unreadCount = notifData?.unreadCount || 0;
+  const jobs = Array.isArray(data?.jobs) ? data.jobs : data?.jobs?.jobs || [];
+  const rawNotifications = data?.notifications;
+  const notifications = Array.isArray(rawNotifications)
+    ? rawNotifications
+    : rawNotifications?.notifications ||
+      rawNotifications?.data?.notifications ||
+      rawNotifications?.data ||
+      [];
+  const unreadCount =
+    rawNotifications?.unreadCount ??
+    rawNotifications?.data?.unreadCount ??
+    0;
   const unreadNotifications = notifications.filter((n) => !n.isRead);
 
   const submittedCount = applications.filter(

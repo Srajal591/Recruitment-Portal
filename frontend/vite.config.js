@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react'
 const IDENTITY_URL      = process.env.VITE_IDENTITY_URL      || 'http://localhost:5001'
 const RECRUITMENT_URL   = process.env.VITE_RECRUITMENT_URL   || 'http://localhost:5002'
 const COMMUNICATION_URL = process.env.VITE_COMMUNICATION_URL || 'http://localhost:5003'
+const GATEWAY_URL       = process.env.VITE_GATEWAY_URL       || 'http://localhost:5000'
 
 export default defineConfig({
   plugins: [react()],
@@ -92,6 +93,12 @@ export default defineConfig({
       },
       '/api/candidate/payments': {
         target: COMMUNICATION_URL,
+        changeOrigin: true,
+      },
+
+      // â”€â”€ API Gateway dashboards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      '/api/dashboard': {
+        target: GATEWAY_URL,
         changeOrigin: true,
       },
     },

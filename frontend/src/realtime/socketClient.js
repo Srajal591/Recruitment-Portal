@@ -1,5 +1,6 @@
 import { io } from "socket.io-client";
 import {
+  REALTIME_ENABLED,
   REALTIME_SOCKET_URLS,
   SERVICE_SOCKET_URLS,
   STORAGE_KEYS,
@@ -38,6 +39,10 @@ export const getRealtimeToken = () =>
   localStorage.getItem(STORAGE_KEYS.accessToken);
 
 export const getRealtimeSocketUrls = () => {
+  if (!REALTIME_ENABLED) {
+    return [];
+  }
+
   if (REALTIME_SOCKET_URLS.length > 0) {
     return REALTIME_SOCKET_URLS;
   }

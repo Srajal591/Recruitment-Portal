@@ -10,6 +10,11 @@ const NORMAL_DISCONNECT_REASONS = new Set([
   "transport close",
 ]);
 
+const parsedOrigins =
+  env.CLIENT_URL?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) || ["http://localhost:5173"];
+
 /**
  * Initialize Socket.IO on the HTTP server.
  * Called once from server.js
@@ -17,7 +22,7 @@ const NORMAL_DISCONNECT_REASONS = new Set([
 const initSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: env.CLIENT_URL,
+      origin: parsedOrigins.length > 1 ? parsedOrigins : parsedOrigins[0],
       methods: ["GET", "POST"],
       credentials: true,
     },

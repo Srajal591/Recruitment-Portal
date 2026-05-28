@@ -33,6 +33,10 @@ const candidateSupportRoutes = require("./src/routes/candidate/support.routes");
 const candidatePaymentRoutes = require("./src/routes/candidate/payment.routes");
 
 const PORT = parseInt(process.env.COMMUNICATION_SERVICE_PORT, 10) || 5003;
+const parsedOrigins =
+  env.CLIENT_URL?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) || ["http://localhost:5173"];
 
 const app = express();
 
@@ -40,7 +44,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: parsedOrigins.length > 1 ? parsedOrigins : parsedOrigins[0],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

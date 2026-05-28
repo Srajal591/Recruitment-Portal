@@ -34,6 +34,10 @@ const adminAnalyticsRoutes = require("./src/routes/admin/analytics.routes");
 const candidateApplicationRoutes = require("./src/routes/candidate/application.routes");
 
 const PORT = parseInt(process.env.RECRUITMENT_SERVICE_PORT, 10) || 5002;
+const parsedOrigins =
+  env.CLIENT_URL?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) || ["http://localhost:5173"];
 
 const app = express();
 
@@ -41,7 +45,7 @@ const app = express();
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: parsedOrigins.length > 1 ? parsedOrigins : parsedOrigins[0],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

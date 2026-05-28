@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Download, FileText, ListChecks } from "lucide-react";
+import { motion } from "framer-motion";
 import { jobService } from "../../services/job.service";
 import {
   EmptyState,
@@ -10,6 +11,15 @@ import {
   ResourceCard,
   StatTile,
 } from "./PublicPageShell";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: "easeOut", delay: i * 0.1 },
+  }),
+};
 
 const Downloads = () => {
   const { data, isLoading, error } = useQuery({
@@ -39,24 +49,24 @@ const Downloads = () => {
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         <div className="grid gap-5 md:grid-cols-3">
-          <ResourceCard
-            icon={ListChecks}
-            title="Document Checklist"
-            description="Review common documents needed for public recruitment applications."
-            to="/how-to-apply"
-          />
-          <ResourceCard
-            icon={FileText}
-            title="Application Guide"
-            description="Step-by-step guide for registration, application, payment, and tracking."
-            to="/how-to-apply"
-          />
-          <ResourceCard
-            icon={Download}
-            title="Latest Job Notices"
-            description="Open active job notices directly from backend-published records."
-            to="/notices"
-          />
+          {[
+            { icon: ListChecks, title: "Document Checklist", description: "Review common documents needed for public recruitment applications.", to: "/how-to-apply" },
+            { icon: FileText, title: "Application Guide", description: "Step-by-step guide for registration, application, payment, and tracking.", to: "/how-to-apply" },
+            { icon: Download, title: "Latest Job Notices", description: "Open active job notices directly from backend-published records.", to: "/notices" },
+          ].map((card, i) => (
+            <motion.div
+              key={card.title}
+              custom={i}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className="h-full"
+            >
+              <ResourceCard icon={card.icon} title={card.title} description={card.description} to={card.to} />
+            </motion.div>
+          ))}
         </div>
 
         {isLoading && <LoadingState label="Loading job resources..." />}

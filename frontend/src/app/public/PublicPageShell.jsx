@@ -129,10 +129,10 @@ export const JobListCard = ({ job, meta, actionLabel = "View Details" }) => (
   </article>
 );
 
-export const ResourceCard = ({ icon: Icon = Download, title, description, to }) => (
+export const ResourceCard = ({ icon: Icon = Download, title, description, to, className = "" }) => (
   <Link
     to={to}
-    className="bg-white border border-[#e0d7cd] rounded-lg p-6 hover:border-orange-300 hover:shadow-sm transition-all"
+    className={`block bg-white border border-[#e0d7cd] rounded-lg p-6 hover:border-orange-300 hover:shadow-sm transition-all h-full ${className}`}
   >
     <Icon className="w-6 h-6 text-orange-600" />
     <h2 className="mt-4 text-lg font-black text-[#1f1d1b]">{title}</h2>

@@ -13,7 +13,17 @@ import {
   HardDrive,
   Zap,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { PageFrame, PageHero, SearchInput, HelpPanel } from "./PublicPageShell";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: "easeOut", delay: i * 0.07 },
+  }),
+};
 
 const TechnicalSupport = () => {
   const [searchQuery, setSearchQuery] = useState("");

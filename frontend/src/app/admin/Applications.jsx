@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import Papa from "papaparse";
+import { saveAs } from "file-saver";
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -183,9 +185,160 @@ const Applications = () => {
     setShowBulkConfirm(false)
   }
 
-  const handleExport = () => {
-    toast.success('Export started — check your downloads')
+  const handleExport = async () => {
+  try {
+    toast.loading("Preparing export...", {
+      id: "export",
+    });
+
+    // STEP 1: get all applications
+    const allAppsResponse =
+      await adminService.getApplications({
+        limit: 999999,
+      });
+
+    const allApplications =
+      allAppsResponse?.applications || [];
+
+    // STEP 2: fetch full details one by one
+    const detailedApplications =
+      await Promise.all(
+        allApplications.map(async (app) => {
+          try {
+            const res =
+              await adminService.getApplication(
+                app._id
+              );
+
+            return res?.application || res;
+          } catch (err) {
+            console.error(
+              "Failed app",
+              app._id
+            );
+
+            return null;
+          }
+        })
+      );
+
+    // remove failed
+    const validApps =
+      detailedApplications.filter(Boolean);
+
+    // STEP 3: flatten data
+    const exportData = validApps.map(
+      (app) => ({
+        "Application ID":
+          app.applicationId || "",
+
+        "Candidate Name":
+          app.personalDetails?.fullName ||
+          app.candidateId?.fullName ||
+          "",
+
+        Email:
+          app.candidateId?.email || "",
+
+        Mobile:
+          app.personalDetails
+            ?.registeredMobile || "",
+
+        Gender:
+          app.personalDetails?.gender || "",
+
+        Category:
+          app.personalDetails?.category || "",
+
+        DOB:
+          app.personalDetails?.dateOfBirth
+            ? new Date(
+                app.personalDetails.dateOfBirth
+              ).toLocaleDateString("en-IN")
+            : "",
+
+        Religion:
+          app.personalDetails?.religion || "",
+
+        "10th Percentage":
+          app.education?.tenth
+            ?.percentage || "",
+
+        "12th Percentage":
+          app.education?.twelfth
+            ?.percentage || "",
+
+        Graduation:
+          app.education?.graduation
+            ?.degree || "",
+
+        Department:
+          app.jobId?.department || "",
+
+        "Job Title":
+          app.jobId?.title || "",
+
+        Status: app.status || "",
+
+        "Payment Status":
+          app.paymentStatus || "",
+
+        Fee: app.totalFee || "",
+
+        TransactionID:
+          app.transactionId || "",
+
+        State:
+          app.address?.permanent?.state ||
+          "",
+
+        District:
+          app.address?.permanent
+            ?.district || "",
+
+        Pincode:
+          app.address?.permanent
+            ?.pincode || "",
+
+        SubmittedAt:
+          app.submittedAt
+            ? new Date(
+                app.submittedAt
+              ).toLocaleDateString("en-IN")
+            : "",
+      })
+    );
+
+    // STEP 4: convert to CSV
+    const csv =
+      Papa.unparse(exportData);
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    saveAs(
+      blob,
+      `applications-${Date.now()}.csv`
+    );
+
+    toast.success(
+      "CSV downloaded successfully",
+      {
+        id: "export",
+      }
+    );
+  } catch (error) {
+    console.error(error);
+
+    toast.error(
+      "Failed to export applications",
+      {
+        id: "export",
+      }
+    );
   }
+};
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId)
@@ -230,7 +383,7 @@ const Applications = () => {
             className="flex items-center gap-2 border-gray-300 hover:border-orange-400 hover:text-orange-600 transition-colors"
           >
             <Download className="w-4 h-4" />
-            Export CSV
+            Export
           </Button>
         </div>
 
@@ -309,7 +462,7 @@ const Applications = () => {
                   {selected.length} selected
                 </span>
                 <select
-                  className="text-sm border border-orange-300 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  className="admin-select text-sm !py-1.5 !px-2 !rounded-md border-orange-300"
                   value={bulkAction}
                   onChange={(e) => setBulkAction(e.target.value)}
                 >

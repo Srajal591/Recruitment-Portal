@@ -1,11 +1,21 @@
 import { Link } from "react-router-dom";
 import { CheckCircle2, CreditCard, FileCheck2, UserPlus } from "lucide-react";
+import { motion } from "framer-motion";
 import {
   HelpPanel,
   PageFrame,
   PageHero,
   ResourceCard,
 } from "./PublicPageShell";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut", delay: i * 0.1 },
+  }),
+};
 
 const steps = [
   {
@@ -46,8 +56,13 @@ const HowToApply = () => (
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           {steps.map((step, index) => (
-            <div
+            <motion.div
               key={step.title}
+              custom={index}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
               className="bg-white border border-[#e0d7cd] rounded-lg p-6 flex gap-5"
             >
               <div className="w-12 h-12 rounded bg-orange-100 text-orange-700 flex items-center justify-center shrink-0">
@@ -64,23 +79,47 @@ const HowToApply = () => (
                   {step.description}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
         <aside className="space-y-5">
-          <ResourceCard
-            title="Browse Active Jobs"
-            description="Start from the dynamic job listing and select the recruitment you want to apply for."
-            to="/jobs"
-          />
-          <HelpPanel />
-          <Link
-            to="/auth/register"
-            className="flex h-12 items-center justify-center rounded bg-[#e46a1d] text-white text-xs uppercase tracking-[0.12em] font-black hover:bg-[#cb5d16]"
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            className="h-full"
           >
-            Register Now
-          </Link>
+            <ResourceCard
+              title="Browse Active Jobs"
+              description="Start from the dynamic job listing and select the recruitment you want to apply for."
+              to="/jobs"
+            />
+          </motion.div>
+          <motion.div
+            variants={fadeUp}
+            custom={1}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <HelpPanel />
+          </motion.div>
+          <motion.div
+            variants={fadeUp}
+            custom={2}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <Link
+              to="/auth/register"
+              className="flex h-12 items-center justify-center rounded bg-[#e46a1d] text-white text-xs uppercase tracking-[0.12em] font-black hover:bg-[#cb5d16] transition-colors"
+            >
+              Register Now
+            </Link>
+          </motion.div>
         </aside>
       </div>
     </section>

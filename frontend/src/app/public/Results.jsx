@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Award, BarChart3 } from "lucide-react";
+import { motion } from "framer-motion";
 import { jobService } from "../../services/job.service";
 import {
   EmptyState,
@@ -12,6 +13,15 @@ import {
   StatTile,
   formatDate,
 } from "./PublicPageShell";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: "easeOut", delay: i * 0.07 },
+  }),
+};
 
 const Results = () => {
   const { data, isLoading, error } = useQuery({
@@ -52,13 +62,21 @@ const Results = () => {
         )}
 
         <div className="space-y-4">
-          {jobs.map((job) => (
-            <JobListCard
+          {jobs.map((job, i) => (
+            <motion.div
               key={job._id}
-              job={job}
-              meta={`Exam conducted/scheduled on ${formatDate(job.examDate)}. Login as a candidate for application-specific result updates.`}
-              actionLabel="Open Recruitment"
-            />
+              custom={i}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
+            >
+              <JobListCard
+                job={job}
+                meta={`Exam conducted/scheduled on ${formatDate(job.examDate)}. Login as a candidate for application-specific result updates.`}
+                actionLabel="Open Recruitment"
+              />
+            </motion.div>
           ))}
         </div>
 

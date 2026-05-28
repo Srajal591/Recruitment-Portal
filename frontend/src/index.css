@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import 'react-datepicker/dist/react-datepicker.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -28,6 +29,61 @@
   
   .input-field {
     @apply w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+  }
+
+  /* ── Styled native select ── */
+  .admin-select {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-800 bg-white
+           focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+           transition-colors cursor-pointer appearance-none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e46a1d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+  }
+  .admin-select:hover {
+    @apply border-orange-400;
+  }
+
+  /* ── React DatePicker custom theme ── */
+  .react-datepicker-wrapper {
+    @apply w-full;
+  }
+  .react-datepicker__input-container input {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-800 bg-white
+           focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+           transition-colors cursor-pointer;
+  }
+  .react-datepicker {
+    @apply border border-gray-200 shadow-xl rounded-xl overflow-hidden font-sans;
+    font-family: 'Inter', sans-serif !important;
+  }
+  .react-datepicker__header {
+    @apply bg-orange-600 border-b-0 rounded-none;
+  }
+  .react-datepicker__current-month,
+  .react-datepicker__day-name {
+    @apply text-white font-bold;
+  }
+  .react-datepicker__navigation-icon::before {
+    border-color: white !important;
+  }
+  .react-datepicker__day--selected,
+  .react-datepicker__day--keyboard-selected {
+    @apply bg-orange-600 text-white rounded-full;
+  }
+  .react-datepicker__day--selected:hover,
+  .react-datepicker__day--keyboard-selected:hover {
+    @apply bg-orange-700;
+  }
+  .react-datepicker__day:hover {
+    @apply bg-orange-100 rounded-full;
+  }
+  .react-datepicker__day--today {
+    @apply font-bold text-orange-600;
+  }
+  .react-datepicker__triangle {
+    display: none !important;
   }
 
   .animate-slide-in-left {

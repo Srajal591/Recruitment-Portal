@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import {
   Briefcase,
   Calendar,
@@ -460,7 +461,7 @@ const Jobs = () => {
                   Department
                 </label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="admin-select text-sm"
                   value={department}
                   onChange={(e) => {
                     setDepartment(e.target.value);
@@ -501,7 +502,11 @@ const Jobs = () => {
               ))}
             </div>
           ) : jobs.length === 0 ? (
-            <div className="bg-white border border-[#e0d7cd] rounded-2xl p-12 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white border border-[#e0d7cd] rounded-2xl p-12 text-center"
+            >
               <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-600 font-semibold">No jobs found</p>
               <p className="text-gray-400 text-sm mt-1">
@@ -520,19 +525,26 @@ const Jobs = () => {
                   Clear filters
                 </button>
               )}
-            </div>
+            </motion.div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {jobs.map((job) => (
-                <JobCard
+              {jobs.map((job, index) => (
+                <motion.div
                   key={job._id}
-                  job={job}
-                  existingApp={appliedMap[job._id]}
-                  isLoggedIn={isLoggedIn}
-                  isCandidate={isCandidate}
-                  applyingId={applyingId}
-                  onApply={handleApply}
-                />
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut", delay: index * 0.06 }}
+                  whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                >
+                  <JobCard
+                    job={job}
+                    existingApp={appliedMap[job._id]}
+                    isLoggedIn={isLoggedIn}
+                    isCandidate={isCandidate}
+                    applyingId={applyingId}
+                    onApply={handleApply}
+                  />
+                </motion.div>
               ))}
             </div>
           )}

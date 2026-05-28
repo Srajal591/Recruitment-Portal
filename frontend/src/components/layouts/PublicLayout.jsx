@@ -331,7 +331,7 @@ const PublicLayout = ({ children }) => {
 
           <div className="mt-14 pt-8 border-t border-white/10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <p className="text-white/50 text-[13px]">
-              © 2024 Bihar State Recruitment Board. All Rights Reserved.
+              © 2026 Bihar State Recruitment Board. All Rights Reserved.
             </p>
 
             <div className="flex items-center gap-6 text-white/40 text-[12px]">

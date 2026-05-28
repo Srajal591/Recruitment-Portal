@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   PageFrame,
   PageHero,
@@ -20,6 +21,15 @@ import {
   ResourceCard,
   HelpPanel,
 } from "./PublicPageShell";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: "easeOut", delay: i * 0.08 },
+  }),
+};
 
 const HelpCenter = () => {
   const navigate = useNavigate();
@@ -229,8 +239,13 @@ const HelpCenter = () => {
                   const hasArticles = category.articles.length > 0;
 
                   return (
-                    <div
+                    <motion.div
                       key={category.id}
+                      custom={index}
+                      variants={fadeUp}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true, amount: 0.1 }}
                       className="bg-white border border-[#e0d7cd] rounded-lg overflow-hidden"
                     >
                       <button
@@ -295,7 +310,7 @@ const HelpCenter = () => {
                           No articles found
                         </div>
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -309,8 +324,13 @@ const HelpCenter = () => {
 
               <div className="space-y-3">
                 {filteredFaqs.map((faq, index) => (
-                  <details
+                  <motion.details
                     key={index}
+                    custom={index}
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.1 }}
                     className="group bg-white border border-[#e0d7cd] rounded-lg p-5"
                   >
                     <summary className="flex cursor-pointer items-center justify-between gap-4 font-black text-[#1f1d1b]">
@@ -320,7 +340,7 @@ const HelpCenter = () => {
                     <p className="mt-4 text-sm leading-6 text-[#6d6761]">
                       {faq.answer}
                     </p>
-                  </details>
+                  </motion.details>
                 ))}
               </div>
 

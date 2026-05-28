@@ -280,7 +280,7 @@ const Home = () => {
 
               <div className="flex flex-wrap items-center gap-6 text-white/80">
                 <span>
-                  Admit Card for Assistant Manager Exam 2024 now available
+                  Admit Card for Assistant Manager Exam 2026 now available
                 </span>
 
                 <span>

@@ -228,7 +228,7 @@ const EligibleJobs = () => {
                   onChange={(e) =>
                     handleFilterChange("qualification", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                  className="admin-select"
                 >
                   <option value="">All Levels</option>
                   <option value="10th">10th Pass</option>
@@ -250,7 +250,7 @@ const EligibleJobs = () => {
                   onChange={(e) => handleFilterChange("age", e.target.value)}
                   min="18"
                   max="65"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
                 />
               </div>
 
@@ -264,7 +264,7 @@ const EligibleJobs = () => {
                   onChange={(e) =>
                     handleFilterChange("category", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                  className="admin-select"
                 >
                   <option value="general">General</option>
                   <option value="obc">OBC</option>
@@ -285,7 +285,7 @@ const EligibleJobs = () => {
                   onChange={(e) =>
                     handleFilterChange("department", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                  className="admin-select"
                 >
                   <option value="">All Departments</option>
                   {departments.map((dept) => (

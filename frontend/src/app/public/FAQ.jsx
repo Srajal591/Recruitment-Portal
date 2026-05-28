@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, HelpCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import { jobService } from "../../services/job.service";
 import {
   ErrorState,
@@ -10,6 +11,15 @@ import {
   SearchInput,
   StatTile,
 } from "./PublicPageShell";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: "easeOut", delay: i * 0.08 },
+  }),
+};
 
 const baseFaqs = [
   {
@@ -80,9 +90,14 @@ const FAQ = () => {
         />
 
         <div className="space-y-3">
-          {faqs.map((faq) => (
-            <details
+          {faqs.map((faq, i) => (
+            <motion.details
               key={faq.question}
+              custom={i}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
               className="group bg-white border border-[#e0d7cd] rounded-lg p-5"
             >
               <summary className="flex cursor-pointer items-center justify-between gap-4 font-black text-[#1f1d1b]">
@@ -92,7 +107,7 @@ const FAQ = () => {
               <p className="mt-4 text-sm leading-6 text-[#6d6761]">
                 {faq.answer}
               </p>
-            </details>
+            </motion.details>
           ))}
         </div>
 

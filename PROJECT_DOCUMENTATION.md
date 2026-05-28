@@ -287,6 +287,7 @@ This creates:
 # ─── Server ───────────────────────────────────────────────
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173
+WEBHOOK_BASE_URL=http://localhost:5173
 
 # ─── Microservices Ports ──────────────────────────────────
 API_GATEWAY_PORT=5000
@@ -331,6 +332,18 @@ SMS_SENDER_ID=RECRUIT
 ADMIN_EMAIL=admin@recruitment.gov.in
 ADMIN_PASSWORD=Admin@123456
 ```
+
+### Frontend `.env` File
+
+```env
+VITE_API_BASE_URL=/api
+```
+
+### Production Notes
+
+- `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` must be set in production.
+- Set `VITE_API_BASE_URL` to the gateway URL when the frontend is deployed separately.
+- Set `WEBHOOK_BASE_URL` to the public callback origin for payment providers.
 
 ---
 

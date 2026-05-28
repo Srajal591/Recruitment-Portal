@@ -8,8 +8,15 @@ import RealtimeProvider from './realtime/RealtimeProvider.jsx'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: (failureCount, error) => {
+        const status = error?.status;
+        if (status && status < 500) return false;
+        return failureCount < 1;
+      },
     },
   },
 })

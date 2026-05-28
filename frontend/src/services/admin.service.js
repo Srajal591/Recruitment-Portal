@@ -181,12 +181,10 @@ export const adminService = {
   // ── Support ───────────────────────────────────────────────
   async getSupportTickets(params = {}) {
     const response = await apiClient.get("/admin/support/tickets", { params });
-    // response is the full body: { success, data: [...tickets], meta: {...} }
-    // unwrapData returns body.data = tickets array
     const tickets = unwrapData(response);
     return {
       tickets: Array.isArray(tickets) ? tickets : tickets?.tickets || [],
-      meta: response?.meta,
+      meta: tickets?.meta || response?.meta || {},
     };
   },
   async getSupportStats() {
@@ -242,7 +240,12 @@ export const adminService = {
   // ── Admin Notifications ───────────────────────────────────
   async getAdminNotifications(params = {}) {
     const response = await apiClient.get("/admin/notifications", { params });
-    return { notifications: response?.data?.notifications ?? [], unreadCount: response?.data?.unreadCount ?? 0, meta: response?.meta ?? {} };
+    const data = unwrapData(response);
+    return {
+      notifications: data?.notifications ?? [],
+      unreadCount: data?.unreadCount ?? 0,
+      meta: data?.meta ?? {},
+    };
   },
   async markAdminNotificationRead(id) {
     const response = await apiClient.patch(`/admin/notifications/${id}/read`);

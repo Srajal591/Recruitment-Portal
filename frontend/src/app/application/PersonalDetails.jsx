@@ -59,7 +59,7 @@ const PersonalDetails = () => {
     queryKey: ["application-personal", applicationId],
     queryFn: () => candidateService.getApplication(applicationId),
     enabled: Boolean(applicationId),
-    staleTime: 0,
+    staleTime: 2 * 60 * 1000,
   });
 
   // Populate form with existing data once loaded

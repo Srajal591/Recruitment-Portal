@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   AlertTriangle,
@@ -11,8 +11,7 @@ import {
   FolderOpen,
   Plus,
   Users,
-  Activity,
-  BellRing,
+  Bell,
   Clock3,
   Sparkles,
   XCircle,
@@ -27,6 +26,7 @@ import { adminService } from '../../services/admin.service'
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [showProjectSelector, setShowProjectSelector] = useState(false)
 
   const { data, isLoading } = useQuery({
@@ -45,6 +45,8 @@ const Dashboard = () => {
   const recentApplications = data?.overview?.recentApplications || []
   const funnel = data?.funnel?.funnel || {}
   const topJobs = data?.topJobs || []
+  const adminNotifications = data?.notifications?.notifications || []
+  const unreadAdminCount = data?.notifications?.unreadCount || adminNotifications.length
 
   const rawSupport = data?.support || {}
   const supportStatusStats = rawSupport.statusStats || []
@@ -99,9 +101,38 @@ const Dashboard = () => {
 
   const projects = projectsData?.projects || []
 
+  const notificationTypeStyles = {
+    payment_success: { icon: CheckCircle, border: 'border-emerald-100', bg: 'bg-emerald-50', iconColor: 'text-emerald-600', titleColor: 'text-emerald-700', bodyColor: 'text-emerald-600' },
+    payment_failed: { icon: XCircle, border: 'border-red-100', bg: 'bg-red-50', iconColor: 'text-red-500', titleColor: 'text-red-700', bodyColor: 'text-red-600' },
+    document_rejected: { icon: AlertTriangle, border: 'border-red-100', bg: 'bg-red-50', iconColor: 'text-red-500', titleColor: 'text-red-700', bodyColor: 'text-red-600' },
+    document_verified: { icon: CheckCircle, border: 'border-emerald-100', bg: 'bg-emerald-50', iconColor: 'text-emerald-600', titleColor: 'text-emerald-700', bodyColor: 'text-emerald-600' },
+    application_submitted: { icon: FileText, border: 'border-blue-100', bg: 'bg-blue-50', iconColor: 'text-blue-500', titleColor: 'text-blue-700', bodyColor: 'text-blue-600' },
+    new_job_posted: { icon: Briefcase, border: 'border-orange-100', bg: 'bg-orange-50', iconColor: 'text-orange-500', titleColor: 'text-orange-700', bodyColor: 'text-orange-600' },
+    general: { icon: Bell, border: 'border-gray-100', bg: 'bg-gray-50', iconColor: 'text-gray-500', titleColor: 'text-gray-700', bodyColor: 'text-gray-600' },
+  }
+
+  const { mutateAsync: markNotificationRead } = useMutation({
+    mutationFn: (id) => adminService.markAdminNotificationRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications-count'] })
+    },
+  })
+
   const handleProjectSelect = (projectId) => {
     setShowProjectSelector(false)
     navigate(`/admin/jobs/create/basic-info?project=${projectId}`)
+  }
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification) return
+    if (!notification.isRead) {
+      try {
+        await markNotificationRead(notification._id)
+      } catch (_) {}
+    }
+    navigate(notification.link || '/admin/notifications')
   }
 
   return (
@@ -559,7 +590,7 @@ const Dashboard = () => {
               </Button>
             </div>
 
-            {/* ALERTS */}
+            {/* NOTIFICATIONS */}
             <div className="
               rounded-[22px]
               bg-white/90 backdrop-blur-xl
@@ -572,59 +603,54 @@ const Dashboard = () => {
 
                 <div>
                   <h3 className="text-xl font-black text-[#1f2937]">
-                    Critical Alerts
+                    Notifications
                   </h3>
 
                   <p className="text-xs text-gray-500 mt-1">
-                    System notifications
+                    Unread updates
                   </p>
                 </div>
 
-                <Badge variant="error">
-                  3 NEW
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="error">
+                    {unreadAdminCount} NEW
+                  </Badge>
+                  <Link to="/admin/notifications" className="text-xs text-orange-600 font-semibold hover:underline">
+                    View All
+                  </Link>
+                </div>
               </div>
 
-              <div className="space-y-3">
-
-                <div className="
-                  rounded-2xl border border-red-100
-                  bg-red-50 p-3
-                ">
-                  <div className="flex gap-3">
-                    <BellRing className="w-4 h-4 text-red-500 mt-1" />
-
-                    <div>
-                      <h4 className="font-bold text-sm text-red-700">
-                        Payment Gateway Spike
-                      </h4>
-
-                      <p className="text-xs text-red-600 mt-1">
-                        High transaction latency detected.
-                      </p>
-                    </div>
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                {adminNotifications.length === 0 && (
+                  <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500">
+                    No unread notifications.
                   </div>
-                </div>
-
-                <div className="
-                  rounded-2xl border border-yellow-100
-                  bg-yellow-50 p-3
-                ">
-                  <div className="flex gap-3">
-                    <Activity className="w-4 h-4 text-yellow-600 mt-1" />
-
-                    <div>
-                      <h4 className="font-bold text-sm text-yellow-700">
-                        Document Buffer Full
-                      </h4>
-
-                      <p className="text-xs text-yellow-600 mt-1">
-                        Upload queue nearing capacity.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
+                )}
+                {adminNotifications.map((notification) => {
+                  const style = notificationTypeStyles[notification.type] || notificationTypeStyles.general
+                  const Icon = style.icon
+                  return (
+                    <button
+                      key={notification._id}
+                      type="button"
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`w-full text-left rounded-2xl border ${style.border} ${style.bg} p-3 hover:shadow-sm transition-all`}
+                    >
+                      <div className="flex gap-3">
+                        <Icon className={`w-4 h-4 mt-1 ${style.iconColor}`} />
+                        <div className="min-w-0">
+                          <h4 className={`font-bold text-sm truncate ${style.titleColor}`}>
+                            {notification.title}
+                          </h4>
+                          <p className={`text-xs mt-1 line-clamp-2 ${style.bodyColor}`}>
+                            {notification.message}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

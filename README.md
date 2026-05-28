@@ -90,6 +90,7 @@ The `.env` file is already configured in `backend/.env`. Update if needed:
 NODE_ENV=development
 PORT=5000
 CLIENT_URL=http://localhost:5173
+WEBHOOK_BASE_URL=http://localhost:5173
 
 # MongoDB
 MONGODB_URI=mongodb://admin:password123@localhost:27017/recruitment_portal?authSource=admin
@@ -110,6 +111,12 @@ RABBITMQ_URL=amqp://admin:password123@localhost:5672
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+```
+
+Frontend builds should also define:
+
+```env
+VITE_API_BASE_URL=/api
 ```
 
 6. **Start the backend server**

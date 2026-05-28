@@ -2,8 +2,18 @@ require("dotenv").config({
   path: require("path").join(__dirname, "../../../../.env"),
 });
 
+const envName = process.env.NODE_ENV || "development";
+
+const requireProductionValue = (name, fallback) => {
+  const value = process.env[name] || fallback;
+  if (envName === "production" && !process.env[name]) {
+    throw new Error(`${name} is required in production.`);
+  }
+  return value;
+};
+
 const env = {
-  NODE_ENV: process.env.NODE_ENV || "development",
+  NODE_ENV: envName,
   PORT: parseInt(process.env.PORT, 10) || 5000,
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
 
@@ -12,11 +22,20 @@ const env = {
     process.env.MONGODB_URI || "mongodb://localhost:27017/recruitment_portal",
 
   // JWT
-  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || "fallback_access_secret",
-  JWT_REFRESH_SECRET:
-    process.env.JWT_REFRESH_SECRET || "fallback_refresh_secret",
+  JWT_ACCESS_SECRET: requireProductionValue(
+    "JWT_ACCESS_SECRET",
+    "dev_access_secret_change_in_prod",
+  ),
+  JWT_REFRESH_SECRET: requireProductionValue(
+    "JWT_REFRESH_SECRET",
+    "dev_refresh_secret_change_in_prod",
+  ),
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || "15m",
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
+  WEBHOOK_BASE_URL: requireProductionValue(
+    "WEBHOOK_BASE_URL",
+    process.env.CLIENT_URL || "http://localhost:5173",
+  ),
 
   // Redis
   REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379",
@@ -42,7 +61,10 @@ const env = {
   RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
 
   // Encryption
-  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+  ENCRYPTION_KEY: requireProductionValue(
+    "ENCRYPTION_KEY",
+    "dev_encryption_key_change_in_prod_32b",
+  ),
 
   get isProduction() {
     return this.NODE_ENV === "production";

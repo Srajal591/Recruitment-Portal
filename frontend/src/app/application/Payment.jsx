@@ -84,7 +84,7 @@ const Payment = () => {
     queryKey: ["application-payment", applicationId],
     queryFn: () => candidateService.getApplication(applicationId),
     enabled: Boolean(applicationId),
-    staleTime: 0,
+    staleTime: 2 * 60 * 1000,
   });
 
   const application = appData?.application || appData;
@@ -133,14 +133,7 @@ const Payment = () => {
       // ── RAZORPAY ──────────────────────────────────────────
       if (gateway === "razorpay" || !gateway) {
         if (!gatewayOrderId || !gatewayKeyId) {
-          // Dev fallback — no credentials configured
-          await candidateService.verifyPayment({ transactionId, status: "success" });
-          const draft = JSON.parse(sessionStorage.getItem(APP_KEY) || "{}");
-          await candidateService.finalizeApplication(applicationId, transactionId, draft.declaration || "");
-          sessionStorage.removeItem(APP_KEY);
-          toast.success("Payment successful! Application submitted.");
-          navigate("/application/success", { state: { applicationId, paymentSuccess: true, amount: grandTotal, transactionId, submittedAt: new Date().toISOString() } });
-          return;
+          throw new Error("Payment gateway configuration is unavailable.");
         }
 
         const prefillMethod = getRazorpayMethod();

@@ -161,7 +161,7 @@ const Documents = () => {
     queryKey: ["application-documents", applicationId],
     queryFn: () => candidateService.getApplication(applicationId),
     enabled: Boolean(applicationId),
-    staleTime: 0,
+    staleTime: 2 * 60 * 1000,
   });
 
   const app = appData?.application || appData;

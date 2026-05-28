@@ -9,6 +9,7 @@ const { paginationMeta } = require("../utils/ApiResponse");
 const { emitToCandidate, emitToAdmins, SOCKET_EVENTS } = require("../socket/index");
 const { sendPaymentSuccessEmail } = require("./email.service");
 const { notifyAdmins } = require("../utils/notifyAdmins");
+const env = require("../config/env");
 
 // ─────────────────────────────────────────────────────────────
 // GATEWAY CONFIG HELPERS
@@ -112,9 +113,9 @@ const createPhonePeOrder = async (config, amount, transactionId, candidateId) =>
     merchantTransactionId: transactionId,
     merchantUserId:        `USER_${candidateId}`,
     amount:                amount * 100, // paise
-    redirectUrl:           `${process.env.CLIENT_URL}/application/payment-callback?gateway=phonepe&txn=${transactionId}`,
+    redirectUrl:           `${env.CLIENT_URL}/application/payment-callback?gateway=phonepe&txn=${transactionId}`,
     redirectMode:          "REDIRECT",
-    callbackUrl:           `${process.env.WEBHOOK_BASE_URL || process.env.CLIENT_URL}/api/candidate/payments/phonepe/webhook`,
+    callbackUrl:           `${env.WEBHOOK_BASE_URL}/api/candidate/payments/phonepe/webhook`,
     paymentInstrument:     { type: "PAY_PAGE" },
   };
 
@@ -178,7 +179,7 @@ const createPaytmOrder = async (config, amount, orderId, candidateId) => {
       mid:           config.merchantId,
       websiteName:   config.mode === "Live" ? "WEBPROD" : "WEBSTAGING",
       orderId,
-      callbackUrl:   `${process.env.WEBHOOK_BASE_URL || process.env.CLIENT_URL}/api/candidate/payments/paytm/webhook`,
+      callbackUrl:   `${env.WEBHOOK_BASE_URL}/api/candidate/payments/paytm/webhook`,
       txnAmount:     { value: amount.toString(), currency: "INR" },
       userInfo:      { custId: candidateId.toString() },
     },
@@ -315,46 +316,43 @@ const verifyPayment = async ({ transactionId, gatewayOrderId, gatewayPaymentId, 
   if (payment.status === "success") throw new ApiError(400, "Payment already verified");
 
   let verified = false;
+  const requireGatewayConfig = (config, gatewayName) => {
+    if (!config) {
+      throw new ApiError(503, `${gatewayName} gateway is not configured`);
+    }
+    return config;
+  };
 
   try {
     if (payment.gateway === "razorpay" && gatewayPaymentId && gatewaySignature) {
-      const config = await getActiveGatewayConfig("Razorpay").catch(() => null);
-      if (config?.secretKey) {
-        const orderId = gatewayOrderId || payment.gatewayOrderId;
-        verified = verifyRazorpaySignature(orderId, gatewayPaymentId, gatewaySignature, config.secretKey);
-        if (!verified) {
-          payment.status = "failed";
-          payment.failureReason = "Signature verification failed";
-          await payment.save();
-          throw new ApiError(400, "Payment signature verification failed");
-        }
-      } else {
-        verified = status === "success"; // dev fallback
+      const config = requireGatewayConfig(await getActiveGatewayConfig("Razorpay").catch(() => null), "Razorpay");
+      const orderId = gatewayOrderId || payment.gatewayOrderId;
+      verified = verifyRazorpaySignature(orderId, gatewayPaymentId, gatewaySignature, config.secretKey);
+      if (!verified) {
+        payment.status = "failed";
+        payment.failureReason = "Signature verification failed";
+        await payment.save();
+        throw new ApiError(400, "Payment signature verification failed");
       }
     } else if (payment.gateway === "cashfree") {
       // Verify by fetching order status from Cashfree
-      const config = await getActiveGatewayConfig("Cashfree").catch(() => null);
-      if (config?.apiKey && payment.gatewayOrderId) {
-        verified = await verifyCashfreePayment(config, payment.gatewayOrderId);
-      } else {
-        verified = status === "success";
+      const config = requireGatewayConfig(await getActiveGatewayConfig("Cashfree").catch(() => null), "Cashfree");
+      if (!payment.gatewayOrderId) {
+        throw new ApiError(400, "Cashfree order id missing");
       }
+      verified = await verifyCashfreePayment(config, payment.gatewayOrderId);
     } else if (payment.gateway === "phonepe") {
-      const config = await getActiveGatewayConfig("PhonePe").catch(() => null);
-      if (config?.apiKey && config?.merchantId) {
-        verified = await verifyPhonePePayment(config, transactionId);
-      } else {
-        verified = status === "success";
-      }
+      const config = requireGatewayConfig(await getActiveGatewayConfig("PhonePe").catch(() => null), "PhonePe");
+      verified = await verifyPhonePePayment(config, transactionId);
     } else if (payment.gateway === "paytm") {
       // Paytm: trust status from callback (checksum verified in webhook)
       verified = status === "success";
     } else {
-      verified = status === "success";
+      throw new ApiError(400, `Unsupported gateway: ${payment.gateway}`);
     }
   } catch (err) {
-    if (err.statusCode === 400) throw err;
-    verified = status === "success"; // fallback on config errors
+    if (err.statusCode) throw err;
+    throw new ApiError(500, err.message || "Payment verification failed");
   }
 
   payment.gatewayPaymentId = gatewayPaymentId;

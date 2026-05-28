@@ -1,6 +1,12 @@
-// All API calls go to /api/... — Vite's dev proxy (vite.config.js) routes each
-// prefix to the correct microservice, so no CORS issues and no gateway path-stripping.
-export const API_BASE_URL = "/api";
+const envApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
+if (!envApiBaseUrl && import.meta.env.PROD) {
+  throw new Error("VITE_API_BASE_URL is required for production builds.");
+}
+
+// All API calls go through the gateway. In development this defaults to /api so
+// Vite can proxy requests without extra CORS setup.
+export const API_BASE_URL = envApiBaseUrl || "/api";
 
 // Webhook base URL — used for displaying webhook URLs in admin panel
 // Defaults to current origin if not specified in environment

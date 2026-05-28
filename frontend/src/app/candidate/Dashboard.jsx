@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   Briefcase,
@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { dashboardService } from "../../services/dashboard.service";
+import { candidateService } from "../../services/candidate.service";
 import { getStoredUser } from "../../services/auth.service";
 import {
   getRouteForApplicationStep,
@@ -109,6 +110,7 @@ const Stat = ({ icon: Icon, label, value, color = "text-orange-600", sub }) => (
 
 const CandidateDashboard = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = getStoredUser();
 
   const { data, isLoading } = useQuery({
@@ -127,12 +129,24 @@ const CandidateDashboard = () => {
   const notifData = data?.notifications;
   const notifications = notifData?.notifications || [];
   const unreadCount = notifData?.unreadCount || 0;
+  const unreadNotifications = notifications.filter((n) => !n.isRead);
 
   const submittedCount = applications.filter(
     (a) => a.status !== "draft",
   ).length;
   const draftCount = applications.filter((a) => a.status === "draft").length;
   const completionPct = user?.profileCompletionPercentage || 0;
+
+  const { mutateAsync: markNotificationRead } = useMutation({
+    mutationFn: (id) => candidateService.markNotificationRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidate-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["candidate-notifications"] });
+      queryClient.invalidateQueries({
+        queryKey: ["candidate-notifications-count"],
+      });
+    },
+  });
 
   const handleAppAction = (app) => {
     persistApplicationDraft({ applicationId: app._id, jobId: app.jobId?._id });
@@ -143,6 +157,20 @@ const CandidateDashboard = () => {
     } else {
       // Navigate to the dedicated application status page
       navigate(`/candidate/applications/${app._id}`);
+    }
+  };
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification) return;
+    if (!notification.isRead) {
+      try {
+        await markNotificationRead(notification._id);
+      } catch (_) {}
+    }
+    if (notification.link) {
+      navigate(notification.link);
+    } else {
+      navigate("/candidate/notifications");
     }
   };
 
@@ -424,48 +452,46 @@ const CandidateDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                {notifications.length === 0 && (
+                {unreadNotifications.length === 0 && (
                   <p className="text-sm text-gray-500 px-4 pb-4">
-                    No notifications yet.
+                    No unread notifications.
                   </p>
                 )}
-                {notifications.slice(0, 4).map((n) => {
+                <div className="max-h-80 overflow-y-auto">
+                {unreadNotifications.map((n) => {
                   const Icon = NOTIF_ICONS[n.type] || Bell;
                   return (
-                    <Link
+                    <button
+                      type="button"
                       key={n._id}
-                      to="/candidate/notifications"
+                      onClick={() => handleNotificationClick(n)}
                       className={`flex items-start gap-3 px-4 py-3 border-b border-gray-100 last:border-0 transition-colors ${
-                        n.isRead
-                          ? "hover:bg-gray-50"
-                          : "bg-orange-50 hover:bg-orange-100"
+                        "w-full text-left bg-orange-50 hover:bg-orange-100"
                       }`}
                     >
                       <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          n.isRead ? "bg-gray-100" : "bg-orange-100"
-                        }`}
+                        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-orange-100"
                       >
                         <Icon
-                          className={`w-3.5 h-3.5 ${n.isRead ? "text-gray-400" : "text-orange-600"}`}
+                          className="w-3.5 h-3.5 text-orange-600"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-xs font-semibold truncate ${n.isRead ? "text-gray-600" : "text-gray-900"}`}
-                        >
+                        <p className="text-xs font-semibold truncate text-gray-900">
                           {n.title}
                         </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                          {n.message}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
                           {formatDate(n.createdAt)}
                         </p>
                       </div>
-                      {!n.isRead && (
-                        <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1.5" />
-                      )}
-                    </Link>
+                      <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1.5" />
+                    </button>
                   );
                 })}
+                </div>
               </CardContent>
             </Card>
 

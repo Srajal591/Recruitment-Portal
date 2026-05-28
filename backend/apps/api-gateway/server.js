@@ -58,6 +58,7 @@ const proxy = (target, label) =>
     changeOrigin: true,
     xfwd: true,
     ws: true,
+    pathRewrite: (path, req) => `${req.baseUrl}${path}`,
     proxyTimeout: 15000,
     timeout: 15000,
     on: {
@@ -205,6 +206,10 @@ app.use(
 app.use("/api/admin/roles", proxy(IDENTITY_URL, "Identity"));
 app.use(
   "/api/admin/activity-logs",
+  proxy(IDENTITY_URL, "Identity"),
+);
+app.use(
+  "/api/admin/notifications",
   proxy(IDENTITY_URL, "Identity"),
 );
 

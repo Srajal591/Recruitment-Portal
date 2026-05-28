@@ -53,12 +53,36 @@ const disconnectActiveSockets = () => {
   activeSockets = [];
 };
 
+const getSocketEndpoint = (url) => {
+  try {
+    const parsedUrl = new URL(url);
+    const pathPrefix = parsedUrl.pathname.replace(/\/$/, "");
+
+    if (!pathPrefix) {
+      return { origin: parsedUrl.origin };
+    }
+
+    parsedUrl.pathname = "/";
+    parsedUrl.search = "";
+    parsedUrl.hash = "";
+
+    return {
+      origin: parsedUrl.origin,
+      path: `${pathPrefix}/socket.io`,
+    };
+  } catch {
+    return { origin: url };
+  }
+};
+
 const createSocketConnections = (token) => {
   activeToken = token;
 
   activeSockets = getRealtimeSocketUrls().map((url) => {
-    const socket = io(url, {
+    const endpoint = getSocketEndpoint(url);
+    const socket = io(endpoint.origin, {
       auth: token ? { token } : {},
+      path: endpoint.path,
       withCredentials: true,
       transports: ["websocket", "polling"],
       reconnection: true,

@@ -121,6 +121,7 @@ services:
       - JWT_REFRESH_EXPIRES_IN=7d
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -160,6 +161,7 @@ services:
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -197,6 +199,7 @@ services:
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
     depends_on:
       mongodb:
         condition: service_healthy

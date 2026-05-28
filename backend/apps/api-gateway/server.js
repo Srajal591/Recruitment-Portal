@@ -57,6 +57,7 @@ const proxy = (target, label) =>
     target,
     changeOrigin: true,
     xfwd: true,
+    ws: true,
     proxyTimeout: 15000,
     timeout: 15000,
     on: {
@@ -66,6 +67,29 @@ const proxy = (target, label) =>
           res
             .status(503)
             .json({ success: false, message: `${label} unavailable` });
+        }
+      },
+    },
+  });
+
+const socketProxy = (target, label, routePrefix) =>
+  createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    xfwd: true,
+    ws: true,
+    proxyTimeout: 15000,
+    timeout: 15000,
+    pathRewrite: {
+      [`^${routePrefix}/socket.io`]: "/socket.io",
+    },
+    on: {
+      error: (err, _req, res) => {
+        console.error(`âŒ [${label} Socket] ${err.message}`);
+        if (res && !res.headersSent) {
+          res
+            .status(503)
+            .json({ success: false, message: `${label} socket unavailable` });
         }
       },
     },
@@ -228,6 +252,20 @@ app.use(
 app.use(
   "/api/candidate/payments",
   proxy(COMMUNICATION_URL, "Communication"),
+);
+
+// â”€â”€ Socket.IO routes through gateway â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+app.use(
+  "/realtime/identity",
+  socketProxy(IDENTITY_URL, "Identity", "/realtime/identity"),
+);
+app.use(
+  "/realtime/recruitment",
+  socketProxy(RECRUITMENT_URL, "Recruitment", "/realtime/recruitment"),
+);
+app.use(
+  "/realtime/communication",
+  socketProxy(COMMUNICATION_URL, "Communication", "/realtime/communication"),
 );
 
 // ── Swagger redirect ──────────────────────────────────────────

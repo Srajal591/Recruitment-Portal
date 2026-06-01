@@ -13,6 +13,9 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  Edit3,
+  CreditCard,
+  ExternalLink,
 } from "lucide-react";
 import AdminLayout from "../../components/layouts/AdminLayout";
 import Button from "../../components/ui/Button";
@@ -84,6 +87,36 @@ const SupportTicketDetails = () => {
     onError: (err) => toast.error(err.message || "Failed to send reply"),
   });
 
+  const { mutate: requestCorrection, isPending: isRequestingCorrection } =
+    useMutation({
+      mutationFn: () =>
+        adminService.requestTicketCorrection(id, {
+          note: replyText.trim() || undefined,
+        }),
+      onSuccess: () => {
+        toast.success("Correction requested");
+        setReplyText("");
+        queryClient.invalidateQueries({ queryKey: ["admin-support-ticket", id] });
+        queryClient.invalidateQueries({ queryKey: ["admin-support-tickets"] });
+      },
+      onError: (err) =>
+        toast.error(err.message || "Failed to request correction"),
+    });
+
+  const { mutate: verifyPayment, isPending: isVerifyingPayment } = useMutation({
+    mutationFn: () =>
+      adminService.verifyTicketPayment(id, {
+        note: replyText.trim() || undefined,
+      }),
+    onSuccess: () => {
+      toast.success("Payment verified");
+      setReplyText("");
+      queryClient.invalidateQueries({ queryKey: ["admin-support-ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-support-tickets"] });
+    },
+    onError: (err) => toast.error(err.message || "Failed to verify payment"),
+  });
+
   const handleStatusChange = (newStatus) => {
     updateTicket({ status: newStatus });
   };
@@ -135,6 +168,9 @@ const SupportTicketDetails = () => {
 
   const replies = ticket.replies || ticket.messages || [];
   const candidate = ticket.raisedBy || ticket.candidateId || {};
+  const linkedApplication = ticket.linkedApplication;
+  const linkedPayment = ticket.linkedPayment;
+  const action = ticket.resolutionAction || {};
 
   return (
     <AdminLayout title="Ticket Details">
@@ -188,6 +224,22 @@ const SupportTicketDetails = () => {
                 <p className="text-gray-600 text-sm leading-relaxed">
                   {ticket.description}
                 </p>
+                {ticket.attachments?.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {ticket.attachments.map((attachment, index) => (
+                      <a
+                        key={attachment}
+                        href={attachment}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:border-orange-300 hover:text-orange-700"
+                      >
+                        <Paperclip className="w-3.5 h-3.5" />
+                        Attachment {index + 1}
+                      </a>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
                   <div>
                     <p className="text-xs text-gray-500">Category</p>
@@ -425,6 +477,135 @@ const SupportTicketDetails = () => {
                     <option value="Critical">Critical</option>
                   </select>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Linked Application */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800">
+                    Linked Application
+                  </h3>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {linkedApplication ? (
+                  <>
+                    <div>
+                      <p className="text-xs text-gray-500">Application ID</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {linkedApplication.applicationId}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Status</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {linkedApplication.status}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Payment</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {linkedApplication.paymentStatus}
+                        </p>
+                      </div>
+                    </div>
+                    {action.type === "application_correction" && (
+                      <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2">
+                        <p className="text-xs font-medium text-orange-800">
+                          Correction: {action.status?.replaceAll("_", " ")}
+                        </p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() =>
+                          navigate(`/admin/applications/${linkedApplication._id}`)
+                        }
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        View
+                      </Button>
+                      <Button
+                        onClick={() => requestCorrection()}
+                        disabled={
+                          isRequestingCorrection ||
+                          action.status === "candidate_action_required"
+                        }
+                        className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isRequestingCorrection ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Request Correction"
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    No application linked. Ask the candidate to include an
+                    Application ID when creating the ticket.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Payment */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800">
+                    Payment Information
+                  </h3>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {linkedPayment ? (
+                  <>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-xs text-gray-500">Amount</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        ₹{Number(linkedPayment.amount || 0).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-xs text-gray-500">Transaction</span>
+                      <span className="text-xs font-mono text-gray-800">
+                        {linkedPayment.transactionId}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-xs text-gray-500">Status</span>
+                      <span className="text-sm font-semibold text-green-700">
+                        {linkedPayment.status}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => verifyPayment()}
+                      disabled={isVerifyingPayment || linkedPayment.status === "success"}
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      {isVerifyingPayment ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <CreditCard className="w-4 h-4 mr-2" />
+                      )}
+                      Verify Payment
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    No payment linked. Payment tickets should include the
+                    transaction ID.
+                  </p>
+                )}
               </CardContent>
             </Card>
 

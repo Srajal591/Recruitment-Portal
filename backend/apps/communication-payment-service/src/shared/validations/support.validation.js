@@ -14,6 +14,9 @@ const createTicketSchema = z.object({
     "Application",
   ]),
   priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
+  linkedApplicationId: z.string().optional(),
+  transactionId: z.string().optional(),
+  attachments: z.array(z.string().url()).max(5).optional(),
 });
 
 const updateTicketSchema = z.object({
@@ -26,4 +29,13 @@ const addReplySchema = z.object({
   message: z.string().min(1, "Reply message is required").max(2000),
 });
 
-module.exports = { createTicketSchema, updateTicketSchema, addReplySchema };
+const ticketActionSchema = z.object({
+  note: z.string().max(1000).optional(),
+});
+
+module.exports = {
+  createTicketSchema,
+  updateTicketSchema,
+  addReplySchema,
+  ticketActionSchema,
+};

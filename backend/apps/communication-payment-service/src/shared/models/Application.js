@@ -186,6 +186,18 @@ const applicationSchema = new mongoose.Schema(
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Employee" },
     reviewedAt: { type: Date },
     rejectionReason: { type: String },
+    correction: {
+      status: {
+        type: String,
+        enum: ["none", "requested", "in_progress", "submitted"],
+        default: "none",
+      },
+      requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Employee" },
+      requestedAt: { type: Date },
+      submittedAt: { type: Date },
+      supportTicket: { type: mongoose.Schema.Types.ObjectId, ref: "SupportTicket" },
+      note: { type: String },
+    },
 
     // ── Timestamps ────────────────────────────────────────
     submittedAt: { type: Date },

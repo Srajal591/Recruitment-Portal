@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, Plus, Eye, Loader2, X, MessageSquare } from "lucide-react";
+import {
+  HelpCircle,
+  Plus,
+  Eye,
+  Loader2,
+  X,
+  MessageSquare,
+  Paperclip,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import CandidateLayout from "../../components/layouts/CandidateLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
@@ -41,8 +49,11 @@ const Support = () => {
     category: "General",
     description: "",
     priority: "Medium",
+    linkedApplicationId: "",
+    transactionId: "",
   });
   const [formErrors, setFormErrors] = useState({});
+  const [attachmentFile, setAttachmentFile] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["candidate-tickets"],
@@ -53,6 +64,27 @@ const Support = () => {
   const tickets = Array.isArray(data)
     ? data
     : data?.tickets || data?.data || [];
+
+  const { data: applicationsData, isLoading: isLoadingApplications } = useQuery(
+    {
+      queryKey: ["candidate-applications-for-support"],
+      queryFn: () => candidateService.getMyApplications({ limit: 100 }),
+    },
+  );
+  const { data: paymentsData, isLoading: isLoadingPayments } = useQuery({
+    queryKey: ["candidate-payments-for-support"],
+    queryFn: () => candidateService.getMyPayments({ limit: 100 }),
+  });
+
+  // Filter out draft applications - only show submitted/completed applications
+  const allApplications = Array.isArray(applicationsData)
+    ? applicationsData
+    : applicationsData?.applications || applicationsData?.data || [];
+  const applications = allApplications.filter((app) => app.status !== "draft");
+
+  const payments = Array.isArray(paymentsData)
+    ? paymentsData
+    : paymentsData?.payments || paymentsData?.data || [];
 
   const { mutate: createTicket, isPending } = useMutation({
     mutationFn: (payload) => candidateService.createTicket(payload),
@@ -65,29 +97,50 @@ const Support = () => {
         category: "General",
         description: "",
         priority: "Medium",
+        linkedApplicationId: "",
+        transactionId: "",
       });
       setFormErrors({});
+      setAttachmentFile(null);
     },
     onError: (err) => toast.error(err.message || "Failed to create ticket"),
   });
 
+  const { mutateAsync: uploadAttachment, isPending: isUploadingAttachment } =
+    useMutation({
+      mutationFn: (file) => candidateService.uploadSupportAttachment(file),
+      onError: (err) =>
+        toast.error(err.message || "Failed to upload attachment"),
+    });
+
   const validate = () => {
     const e = {};
     if (!form.title.trim()) e.title = "Subject is required";
-    else if (form.title.trim().length < 5) e.title = "Subject must be at least 5 characters";
+    else if (form.title.trim().length < 5)
+      e.title = "Subject must be at least 5 characters";
     if (!form.description.trim()) e.description = "Description is required";
-    else if (form.description.trim().length < 10) e.description = "Description must be at least 10 characters";
+    else if (form.description.trim().length < 10)
+      e.description = "Description must be at least 10 characters";
     setFormErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
+    let attachments = [];
+    if (attachmentFile) {
+      const uploaded = await uploadAttachment(attachmentFile);
+      const attachmentUrl = uploaded?.url || uploaded?.attachment?.url;
+      if (attachmentUrl) attachments = [attachmentUrl];
+    }
     createTicket({
       title: form.title.trim(),
       category: form.category,
       description: form.description.trim(),
       priority: form.priority,
+      linkedApplicationId: form.linkedApplicationId || undefined,
+      transactionId: form.transactionId || undefined,
+      attachments,
     });
   };
 
@@ -224,6 +277,94 @@ const Support = () => {
                   </div>
                 </div>
 
+                {(form.category === "Application" ||
+                  form.category === "Document" ||
+                  form.category === "Payment") && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Linked Application{" "}
+                      {form.category === "Payment" && "(Optional)"}
+                    </label>
+                    <select
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      value={form.linkedApplicationId}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          linkedApplicationId: e.target.value,
+                        }))
+                      }
+                      disabled={isLoadingApplications}
+                    >
+                      <option value="">
+                        {isLoadingApplications
+                          ? "Loading applications..."
+                          : applications.length === 0
+                            ? "No submitted applications found"
+                            : "Select application (optional)"}
+                      </option>
+                      {applications.map((app) => (
+                        <option key={app._id} value={app._id}>
+                          {app.applicationId} - {app.status}
+                        </option>
+                      ))}
+                    </select>
+                    {!isLoadingApplications && applications.length === 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Only submitted applications can be linked. Complete and
+                        submit your draft applications first.
+                      </p>
+                    )}
+                    {!isLoadingApplications && applications.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Select the application related to your issue for faster
+                        resolution.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {form.category === "Payment" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Transaction ID (Optional)
+                    </label>
+                    <select
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      value={form.transactionId}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          transactionId: e.target.value,
+                        }))
+                      }
+                      disabled={isLoadingPayments}
+                    >
+                      <option value="">
+                        {isLoadingPayments
+                          ? "Loading transactions..."
+                          : payments.length === 0
+                            ? "No transactions found"
+                            : "Select transaction (optional)"}
+                      </option>
+                      {payments.map((payment) => (
+                        <option
+                          key={payment._id || payment.transactionId}
+                          value={payment.transactionId}
+                        >
+                          {payment.transactionId} - ₹{payment.amount} -{" "}
+                          {payment.status}
+                        </option>
+                      ))}
+                    </select>
+                    {!isLoadingPayments && payments.length === 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        You haven't made any payments yet.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Description <span className="text-red-500">*</span>
@@ -243,6 +384,35 @@ const Support = () => {
                     </p>
                   )}
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Attachment
+                  </label>
+                  <label className="flex items-center justify-between gap-3 px-4 py-3 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 hover:bg-orange-50">
+                    <span className="flex items-center gap-2 text-sm text-gray-600 min-w-0">
+                      <Paperclip className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                      <span className="truncate">
+                        {attachmentFile?.name ||
+                          "Upload screenshot or PDF proof"}
+                      </span>
+                    </span>
+                    <span className="text-xs font-medium text-orange-700">
+                      Browse
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf"
+                      className="hidden"
+                      onChange={(e) =>
+                        setAttachmentFile(e.target.files?.[0] || null)
+                      }
+                    />
+                  </label>
+                  <p className="text-xs text-gray-400 mt-1">
+                    JPG, PNG, or PDF up to 500KB.
+                  </p>
+                </div>
               </div>
               <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
                 <Button
@@ -256,13 +426,13 @@ const Support = () => {
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={isPending}
+                  disabled={isPending || isUploadingAttachment}
                   className="bg-orange-600 hover:bg-orange-700 text-white"
                 >
-                  {isPending ? (
+                  {isPending || isUploadingAttachment ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Submitting...
+                      {isUploadingAttachment ? "Uploading..." : "Submitting..."}
                     </>
                   ) : (
                     "Submit Ticket"

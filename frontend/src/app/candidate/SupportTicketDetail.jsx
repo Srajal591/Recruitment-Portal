@@ -14,12 +14,19 @@ import {
   AlertCircle,
   User,
   Shield,
+  Edit3,
+  CreditCard,
+  Paperclip,
 } from "lucide-react";
 import CandidateLayout from "../../components/layouts/CandidateLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
+import {
+  getFirstApplicationRoute,
+  persistApplicationDraft,
+} from "../../utils/applicationFlow";
 
 const STATUS_COLORS = {
   Open: "bg-red-100 text-red-700",
@@ -95,6 +102,17 @@ const SupportTicketDetail = () => {
     onError: (err) => toast.error(err.message || "Failed to close ticket"),
   });
 
+  const { mutate: completeAction, isPending: isCompletingAction } = useMutation({
+    mutationFn: () => candidateService.completeTicketAction(id),
+    onSuccess: () => {
+      toast.success("Support team notified");
+      queryClient.invalidateQueries({ queryKey: ["candidate-ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["candidate-tickets"] });
+    },
+    onError: (err) =>
+      toast.error(err.message || "Failed to complete support action"),
+  });
+
   const handleSend = () => {
     const msg = replyText.trim();
     if (!msg) return;
@@ -138,6 +156,21 @@ const SupportTicketDetail = () => {
   const replies = ticket.replies || [];
   const isClosed = ticket.status === "Closed";
   const isResolved = ticket.status === "Resolved";
+  const linkedApplication = ticket.linkedApplication;
+  const linkedPayment = ticket.linkedPayment;
+  const action = ticket.resolutionAction || {};
+  const canCorrectApplication =
+    action.type === "application_correction" &&
+    action.status === "candidate_action_required" &&
+    linkedApplication;
+
+  const openApplicationCorrection = () => {
+    persistApplicationDraft({
+      applicationId: linkedApplication._id,
+      jobId: linkedApplication.jobId?._id || linkedApplication.jobId,
+    });
+    navigate(getFirstApplicationRoute(linkedApplication));
+  };
 
   return (
     <CandidateLayout title="Support Ticket">
@@ -198,6 +231,22 @@ const SupportTicketDetail = () => {
                 <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
                   {ticket.description}
                 </p>
+                {ticket.attachments?.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {ticket.attachments.map((attachment, index) => (
+                      <a
+                        key={attachment}
+                        href={attachment}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:border-orange-300 hover:text-orange-700"
+                      >
+                        <Paperclip className="w-3.5 h-3.5" />
+                        Attachment {index + 1}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -420,6 +469,87 @@ const SupportTicketDetail = () => {
                 )}
               </CardContent>
             </Card>
+
+            {(linkedApplication || linkedPayment) && (
+              <Card>
+                <CardHeader>
+                  <h3 className="font-semibold text-gray-800">
+                    Resolution Action
+                  </h3>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {linkedApplication && (
+                    <div className="rounded-lg border border-gray-200 p-3">
+                      <div className="flex items-start gap-2">
+                        <Edit3 className="w-4 h-4 text-orange-600 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-500 uppercase font-medium">
+                            Application
+                          </p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {linkedApplication.applicationId}
+                          </p>
+                          {action.type === "application_correction" && (
+                            <p className="text-xs text-orange-700 mt-1 capitalize">
+                              {action.status?.replaceAll("_", " ")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {linkedPayment && (
+                    <div className="rounded-lg border border-gray-200 p-3">
+                      <div className="flex items-start gap-2">
+                        <CreditCard className="w-4 h-4 text-green-600 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-500 uppercase font-medium">
+                            Payment
+                          </p>
+                          <p className="text-xs font-mono text-gray-900 truncate">
+                            {linkedPayment.transactionId}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {linkedPayment.status}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {canCorrectApplication && (
+                    <>
+                      <Button
+                        onClick={openApplicationCorrection}
+                        className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        Edit Application
+                      </Button>
+                      <Button
+                        onClick={() => completeAction()}
+                        disabled={isCompletingAction}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {isCompletingAction ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                        )}
+                        I Have Updated It
+                      </Button>
+                    </>
+                  )}
+                  {action.status === "candidate_completed" && (
+                    <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2">
+                      <p className="text-xs font-medium text-green-800">
+                        Your update was sent to the support team for review.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Timeline */}
             <Card>

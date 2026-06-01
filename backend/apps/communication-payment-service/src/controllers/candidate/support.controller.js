@@ -3,6 +3,7 @@ const supportService = require("../../shared/services/support.service");
 const { ApiResponse } = require("../../shared/utils/ApiResponse");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const ApiError = require("../../shared/utils/ApiError");
+const { uploadToCloudinary } = require("../../shared/services/upload.service");
 
 // Import at top level so mongoose registers these models before any populate calls
 const User = require("../../shared/models/User");
@@ -88,10 +89,42 @@ const closeTicket = asyncHandler(async (req, res) => {
     );
 });
 
+const uploadAttachment = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "No file uploaded");
+  }
+
+  const result = await uploadToCloudinary(req.file.buffer, {
+    folder: `recruitment_portal/support/${req.user.id}`,
+    public_id: `support_${Date.now()}`,
+  });
+
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Attachment uploaded", {
+      url: result.secure_url,
+      publicId: result.public_id,
+      originalName: req.file.originalname,
+      sizeKB: Math.round(req.file.size / 1024),
+    }),
+  );
+});
+
+const completeAction = asyncHandler(async (req, res) => {
+  const ticket = await supportService.completeCandidateAction(
+    req.params.id,
+    req.user.id,
+  );
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Support action completed", { ticket }),
+  );
+});
+
 module.exports = {
   getMyTickets,
   createTicket,
   getTicket,
   addReply,
   closeTicket,
+  uploadAttachment,
+  completeAction,
 };

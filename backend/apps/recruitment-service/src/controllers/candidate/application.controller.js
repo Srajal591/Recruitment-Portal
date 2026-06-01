@@ -313,11 +313,17 @@ const getApplication = asyncHandler(async (req, res) => {
 const getOwnDraftApplication = async (id, candidateId) => {
   const app = await Application.findOne({ _id: id, candidateId });
   if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
-  if (app.status !== "draft")
+  const correctionOpen = ["requested", "in_progress"].includes(
+    app.correction?.status,
+  );
+  if (app.status !== "draft" && !correctionOpen)
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      "Cannot update a submitted application",
+      "Cannot update this application unless correction is requested",
     );
+  if (correctionOpen && app.correction.status === "requested") {
+    app.correction.status = "in_progress";
+  }
   return app;
 };
 
@@ -627,11 +633,17 @@ const uploadDocument = asyncHandler(async (req, res) => {
     candidateId: req.user.id,
   });
   if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
-  if (app.paymentStatus === "paid") {
+  const correctionOpen = ["requested", "in_progress"].includes(
+    app.correction?.status,
+  );
+  if (app.paymentStatus === "paid" && !correctionOpen) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       "Cannot upload documents after payment is completed",
     );
+  }
+  if (correctionOpen && app.correction.status === "requested") {
+    app.correction.status = "in_progress";
   }
   const docType = req.params.type;
   await app.populate("jobId");
@@ -762,11 +774,17 @@ const updatePostSelection = asyncHandler(async (req, res) => {
   if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
 
   // Block only if payment is already done
-  if (app.paymentStatus === "paid") {
+  const correctionOpen = ["requested", "in_progress"].includes(
+    app.correction?.status,
+  );
+  if (app.paymentStatus === "paid" && !correctionOpen) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       "Cannot update post selection after payment is completed",
     );
+  }
+  if (correctionOpen && app.correction.status === "requested") {
+    app.correction.status = "in_progress";
   }
 
   await app.populate("jobId");

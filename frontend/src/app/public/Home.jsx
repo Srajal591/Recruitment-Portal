@@ -19,6 +19,7 @@ import PublicLayout from "../../components/layouts/PublicLayout";
 import heroBg from "../../assets/herobg.jpg";
 import { jobService } from "../../services/job.service";
 import { getStoredUser } from "../../services/auth.service";
+import CustomSelect from "../../components/ui/CustomSelect";
 
 // Reusable fade-up variant for scroll sections
 const fadeUp = {
@@ -183,22 +184,21 @@ const Home = () => {
                       Qualification
                     </label>
 
-                    <select
+                    <CustomSelect
                       value={eligibilityForm.qualification}
-                      onChange={(e) =>
-                        setEligibilityForm({
-                          ...eligibilityForm,
-                          qualification: e.target.value,
-                        })
+                      onChange={(val) =>
+                        setEligibilityForm({ ...eligibilityForm, qualification: val })
                       }
-                      className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="">Any Qualification</option>
-                      <option value="10th">10th Pass</option>
-                      <option value="12th">12th Pass</option>
-                      <option value="Graduation">Graduation / Degree</option>
-                      <option value="Post Graduation">Post Graduation</option>
-                    </select>
+                      options={[
+                        { value: "", label: "Any Qualification" },
+                        { value: "10th", label: "10th Pass" },
+                        { value: "12th", label: "12th Pass" },
+                        { value: "Graduation", label: "Graduation / Degree" },
+                        { value: "Post Graduation", label: "Post Graduation" },
+                      ]}
+                      placeholder="Any Qualification"
+                      className="rounded-[4px]"
+                    />
                   </div>
 
                   {/* GRID */}
@@ -234,23 +234,22 @@ const Home = () => {
                         Category
                       </label>
 
-                      <select
+                      <CustomSelect
                         value={eligibilityForm.category}
-                        onChange={(e) =>
-                          setEligibilityForm({
-                            ...eligibilityForm,
-                            category: e.target.value,
-                          })
+                        onChange={(val) =>
+                          setEligibilityForm({ ...eligibilityForm, category: val })
                         }
-                        className="w-full h-[48px] rounded-[4px] border border-[#d7cfc6] bg-white px-4 text-[13px] text-[#272421] outline-none focus:ring-2 focus:ring-orange-500"
-                      >
-                        <option value="general">General</option>
-                        <option value="obc">OBC</option>
-                        <option value="sc">SC</option>
-                        <option value="st">ST</option>
-                        <option value="ews">EWS</option>
-                        <option value="pwd">PwD</option>
-                      </select>
+                        options={[
+                          { value: "general", label: "General" },
+                          { value: "obc", label: "OBC" },
+                          { value: "sc", label: "SC" },
+                          { value: "st", label: "ST" },
+                          { value: "ews", label: "EWS" },
+                          { value: "pwd", label: "PwD" },
+                        ]}
+                        placeholder="Select Category"
+                        className="rounded-[4px]"
+                      />
                     </div>
                   </div>
 

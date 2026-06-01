@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import AdminLayout from "../../components/layouts/AdminLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import AppDatePicker from "../../components/ui/AppDatePicker";
 import JobStepProgress from "./JobStepProgress";
 import {
   ArrowRight,
@@ -246,11 +247,11 @@ const JobPayment = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Payment Deadline
                     </label>
-                    <input
-                      type="datetime-local"
+                    <AppDatePicker
                       value={config.paymentDeadline}
-                      onChange={(e) => set("paymentDeadline", e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                      onChange={(val) => set("paymentDeadline", val)}
+                      placeholder="Select payment deadline"
+                      showTimeSelect={true}
                     />
                   </div>
                   <div>

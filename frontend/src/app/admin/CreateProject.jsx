@@ -19,6 +19,8 @@ import {
 } from '../../components/ui/Card'
 
 import Button from '../../components/ui/Button'
+import CustomSelect from '../../components/ui/CustomSelect'
+import AppDatePicker from '../../components/ui/AppDatePicker'
 import { adminService } from '../../services/admin.service'
 
 const STATES = [
@@ -233,33 +235,12 @@ const CreateProject = () => {
                       State
                     </label>
 
-                    <select
+                    <CustomSelect
                       value={formData.state}
-                      onChange={(e) =>
-                        handleChange(
-                          'state',
-                          e.target.value
-                        )
-                      }
-                      className="
-                        w-full h-12 px-4
-                        rounded-2xl
-                        border border-gray-200
-                        bg-[#fafafa]
-                        focus:outline-none
-                        focus:ring-2
-                        focus:ring-orange-500
-                      "
-                    >
-                      {STATES.map((s) => (
-                        <option
-                          key={s}
-                          value={s}
-                        >
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => handleChange('state', val)}
+                      options={STATES}
+                      placeholder="Select State"
+                    />
                   </div>
 
                   <div>
@@ -395,21 +376,10 @@ const CreateProject = () => {
                     Start Date
                   </label>
 
-                  <input
-                    type="date"
+                  <AppDatePicker
                     value={formData.startDate}
-                    onChange={(e) =>
-                      handleChange(
-                        'startDate',
-                        e.target.value
-                      )
-                    }
-                    className="
-                      w-full h-11 px-4
-                      rounded-2xl
-                      border border-gray-200
-                      bg-[#fafafa]
-                    "
+                    onChange={(val) => handleChange('startDate', val)}
+                    placeholder="Select start date"
                   />
                 </div>
 
@@ -418,22 +388,15 @@ const CreateProject = () => {
                     End Date
                   </label>
 
-                  <input
-                    type="date"
+                  <AppDatePicker
                     value={formData.endDate}
-                    onChange={(e) =>
-                      handleChange(
-                        'endDate',
-                        e.target.value
-                      )
-                    }
-                    className="
-                      w-full h-11 px-4
-                      rounded-2xl
-                      border border-gray-200
-                      bg-[#fafafa]
-                    "
+                    onChange={(val) => handleChange('endDate', val)}
+                    placeholder="Select end date"
+                    minDate={formData.startDate ? new Date(formData.startDate) : undefined}
                   />
+                  {errors.endDate && (
+                    <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>
+                  )}
                 </div>
 
               </CardContent>

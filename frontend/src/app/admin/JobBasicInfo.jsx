@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import AdminLayout from "../../components/layouts/AdminLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import CustomSelect from "../../components/ui/CustomSelect";
+import AppDatePicker from "../../components/ui/AppDatePicker";
 import JobStepProgress from "./JobStepProgress";
 import {
   ArrowRight,
@@ -383,16 +385,17 @@ const JobBasicInfo = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Category
                       </label>
-                      <select
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      <CustomSelect
                         value={formData.category}
-                        onChange={(e) => set("category", e.target.value)}
-                      >
-                        <option value="General">General</option>
-                        <option value="Technical">Technical</option>
-                        <option value="Administrative">Administrative</option>
-                        <option value="Teaching">Teaching</option>
-                      </select>
+                        onChange={(val) => set("category", val)}
+                        options={[
+                          { value: "General", label: "General" },
+                          { value: "Technical", label: "Technical" },
+                          { value: "Administrative", label: "Administrative" },
+                          { value: "Teaching", label: "Teaching" },
+                        ]}
+                        placeholder="Select Category"
+                      />
                     </div>
                   </div>
                   <div>
@@ -438,15 +441,16 @@ const JobBasicInfo = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Job Type
                       </label>
-                      <select
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      <CustomSelect
                         value={formData.jobType}
-                        onChange={(e) => set("jobType", e.target.value)}
-                      >
-                        <option value="Permanent">Permanent</option>
-                        <option value="Contract">Contract</option>
-                        <option value="Temporary">Temporary</option>
-                      </select>
+                        onChange={(val) => set("jobType", val)}
+                        options={[
+                          { value: "Permanent", label: "Permanent" },
+                          { value: "Contract", label: "Contract" },
+                          { value: "Temporary", label: "Temporary" },
+                        ]}
+                        placeholder="Select Job Type"
+                      />
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -745,24 +749,20 @@ const JobBasicInfo = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Application Deadline
                     </label>
-                    <input
-                      type="date"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    <AppDatePicker
                       value={formData.applicationDeadline}
-                      onChange={(e) =>
-                        set("applicationDeadline", e.target.value)
-                      }
+                      onChange={(val) => set("applicationDeadline", val)}
+                      placeholder="Select deadline"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tentative Exam Date
                     </label>
-                    <input
-                      type="date"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    <AppDatePicker
                       value={formData.examDate}
-                      onChange={(e) => set("examDate", e.target.value)}
+                      onChange={(val) => set("examDate", val)}
+                      placeholder="Select exam date"
                     />
                   </div>
                 </CardContent>

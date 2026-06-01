@@ -5,6 +5,8 @@ import toast from 'react-hot-toast'
 import { Loader2, Eye, EyeOff, User, Briefcase, Lock, Shield, X, Save } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { adminService } from '../../services/admin.service'
+import CustomSelect from '../../components/ui/CustomSelect'
+import AppDatePicker from '../../components/ui/AppDatePicker'
 
 const DEPARTMENTS = [
   'Administration','Public Works','Healthcare','Education','Finance',
@@ -169,8 +171,12 @@ const EditEmployee = () => {
             </div>
             <div>
               <Label>Date of Birth</Label>
-              <input type="date" className={inp(errors.dateOfBirth)}
-                value={formData.dateOfBirth} onChange={e => set('dateOfBirth', e.target.value)} />
+              <AppDatePicker
+                value={formData.dateOfBirth}
+                onChange={(val) => set('dateOfBirth', val)}
+                placeholder="Select date of birth"
+                maxDate={new Date()}
+              />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -204,10 +210,13 @@ const EditEmployee = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <Label>Department</Label>
-              <select className={inp(errors.department)} value={formData.department} onChange={e => set('department', e.target.value)}>
-                <option value="">Select Department</option>
-                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <CustomSelect
+                value={formData.department}
+                onChange={(val) => set('department', val)}
+                options={DEPARTMENTS}
+                placeholder="Select Department"
+                error={!!errors.department}
+              />
               <Err msg={errors.department} />
             </div>
             <div>
@@ -224,8 +233,12 @@ const EditEmployee = () => {
             </div>
             <div>
               <Label>Date of Joining</Label>
-              <input type="date" className={inp(errors.dateOfJoining)}
-                value={formData.dateOfJoining} onChange={e => set('dateOfJoining', e.target.value)} />
+              <AppDatePicker
+                value={formData.dateOfJoining}
+                onChange={(val) => set('dateOfJoining', val)}
+                placeholder="Select joining date"
+                error={!!errors.dateOfJoining}
+              />
               <Err msg={errors.dateOfJoining} />
             </div>
           </div>

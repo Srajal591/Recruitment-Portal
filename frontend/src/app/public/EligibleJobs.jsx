@@ -9,28 +9,85 @@ import {
   MapPin,
   Calendar,
   Users,
-  DollarSign,
+  IndianRupee,
   ArrowRight,
   AlertCircle,
   Loader,
+  X,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import PublicLayout from "../../components/layouts/PublicLayout";
+import CustomSelect from "../../components/ui/CustomSelect";
 import { jobService } from "../../services/job.service";
 import { getStoredUser } from "../../services/auth.service";
 
+// ── Indian states list ────────────────────────────────────────────────────────
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya",
+  "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim",
+  "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand",
+  "West Bengal",
+];
+
+const QUALIFICATION_OPTIONS = [
+  { value: "", label: "All Levels" },
+  { value: "10th", label: "10th Pass" },
+  { value: "12th", label: "12th Pass" },
+  { value: "Graduation", label: "Graduation" },
+  { value: "Post Graduation", label: "Post Graduation" },
+];
+
+const CATEGORY_OPTIONS = [
+  { value: "general", label: "General" },
+  { value: "obc", label: "OBC" },
+  { value: "sc", label: "SC" },
+  { value: "st", label: "ST" },
+  { value: "ews", label: "EWS" },
+  { value: "pwd", label: "PWD" },
+];
+
+const STATE_OPTIONS = [
+  { value: "", label: "All States" },
+  ...INDIAN_STATES.map((s) => ({ value: s, label: s })),
+];
+
+// ── Animation variants ────────────────────────────────────────────────────────
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
+
+// ── Helper: days-left badge colour ───────────────────────────────────────────
+const deadlineBadge = (daysLeft) => {
+  if (daysLeft === null || daysLeft === undefined)
+    return { bg: "bg-gray-100", text: "text-gray-500", label: "No deadline" };
+  if (daysLeft <= 0)
+    return { bg: "bg-red-100", text: "text-red-600", label: "Closed" };
+  if (daysLeft <= 7)
+    return { bg: "bg-amber-100", text: "text-amber-700", label: `${daysLeft}d left` };
+  return { bg: "bg-emerald-100", text: "text-emerald-700", label: `${daysLeft}d left` };
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
 const EligibleJobs = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Get filter criteria from Home page or use defaults
   const initialFilters = location.state || {};
 
-  // ── Filter State ──────────────────────────────────────────
   const [filters, setFilters] = useState({
     qualification: initialFilters.qualification || "",
     age: initialFilters.age || "",
     category: initialFilters.category || "general",
+    state: "",
     department: "",
     search: "",
     page: 1,
@@ -39,12 +96,11 @@ const EligibleJobs = () => {
 
   const [showFilters, setShowFilters] = useState(false);
 
-  // ── Fetch eligible jobs ───────────────────────────────────
+  // ── Fetch eligible jobs ───────────────────────────────────────────────────
   const {
     data: jobsData,
     isLoading,
     error,
-    refetch,
   } = useQuery({
     queryKey: ["eligible-jobs", filters],
     queryFn: () =>
@@ -54,35 +110,33 @@ const EligibleJobs = () => {
         age: filters.age ? String(filters.age) : undefined,
         candidateCategory: filters.category,
         department: filters.department || undefined,
+        state: filters.state || undefined,
         page: filters.page,
         limit: filters.limit,
       }),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     keepPreviousData: true,
   });
 
-  // ── Fetch departments for filter dropdown ─────────────────
+  // ── Fetch departments ─────────────────────────────────────────────────────
   const { data: departmentsData } = useQuery({
     queryKey: ["departments"],
     queryFn: () => jobService.getDepartments(),
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 30 * 60 * 1000,
   });
 
   const jobs = jobsData?.jobs || [];
   const pagination = jobsData?.pagination || {};
   const departments = departmentsData?.departments || [];
 
-  // ── Handlers ──────────────────────────────────────────────
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value,
-      page: 1, // Reset to first page on filter change
-    }));
-  };
+  const departmentOptions = [
+    { value: "", label: "All Departments" },
+    ...departments.map((d) => ({ value: d, label: d })),
+  ];
 
-  const handleSearch = (value) => {
-    handleFilterChange("search", value);
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
   const handleApplyNow = (jobId) => {
@@ -110,6 +164,7 @@ const EligibleJobs = () => {
       qualification: "",
       age: "",
       category: "general",
+      state: "",
       department: "",
       search: "",
       page: 1,
@@ -117,407 +172,385 @@ const EligibleJobs = () => {
     });
   };
 
-  // ── Computed values ───────────────────────────────────────
-  const hasActiveFilters = useMemo(() => {
-    return (
+  // ── Computed ──────────────────────────────────────────────────────────────
+  const hasActiveFilters = useMemo(
+    () =>
       filters.qualification ||
       filters.age ||
       filters.category !== "general" ||
+      filters.state ||
       filters.department ||
-      filters.search
-    );
-  }, [filters]);
+      filters.search,
+    [filters],
+  );
 
   const totalPages = pagination.totalPages || 1;
   const currentPage = pagination.currentPage || 1;
 
-  // ── Animations ────────────────────────────────────────────
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.3 },
-    },
-  };
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <PublicLayout>
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* ── Header ─────────────────────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Eligible Jobs for You
-            </h1>
-            <p className="text-lg text-gray-600">
-              {jobs.length > 0
-                ? `Found ${pagination.totalItems} job${pagination.totalItems !== 1 ? "s" : ""} matching your criteria`
-                : "No jobs found matching your criteria"}
-            </p>
-          </motion.div>
+      <div className="min-h-screen bg-[#f3efe8]">
 
-          {/* ── Filter Section ─────────────────────────────────── */}
+        {/* ── Page Header ──────────────────────────────────────────────────── */}
+        <div className="bg-[#1f1d1b] text-white py-10">
+          <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <p className="text-[10px] font-black tracking-[0.2em] text-orange-400 mb-2 uppercase">
+                Smart Eligibility Filter
+              </p>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+                Eligible Jobs for You
+              </h1>
+              <p className="mt-2 text-white/60 text-sm">
+                {isLoading
+                  ? "Searching matching opportunities..."
+                  : jobs.length > 0
+                    ? `Found ${pagination.totalItems ?? jobs.length} job${(pagination.totalItems ?? jobs.length) !== 1 ? "s" : ""} matching your criteria`
+                    : "No jobs found — try adjusting your filters"}
+              </p>
+            </motion.div>
+          </div>
+        </div>
+
+        <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+          {/* ── Filter Panel ─────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 bg-white rounded-lg shadow-md p-6"
+            transition={{ duration: 0.4 }}
+            className="bg-white rounded-[12px] border border-[#e0d7cd] shadow-sm mb-8 overflow-hidden"
           >
-            {/* Filter Toggle Button (Mobile) */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="md:hidden w-full flex items-center justify-between bg-primary text-white px-4 py-2 rounded-lg mb-4"
-            >
-              <span className="flex items-center gap-2">
-                <Filter size={18} />
-                Filters
-              </span>
-              <ChevronDown
-                size={18}
-                className={`transform transition-transform ${
-                  showFilters ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {/* Filters Grid */}
-            <div
-              className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 ${
-                !showFilters ? "hidden md:grid" : ""
-              }`}
-            >
-              {/* Search */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search
-                </label>
-                <div className="relative">
-                  <Search
-                    size={18}
-                    className="absolute left-3 top-3 text-gray-400"
+            {/* Filter header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#ebe2d8]">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-orange-500" />
+                <span className="text-sm font-bold text-[#1f1d1b]">Filters</span>
+                {hasActiveFilters && (
+                  <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                    Active
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {hasActiveFilters && (
+                  <button
+                    onClick={handleResetFilters}
+                    className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Reset
+                  </button>
+                )}
+                {/* Mobile toggle */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="md:hidden flex items-center gap-1.5 text-xs font-semibold text-orange-600 border border-orange-200 px-3 py-1.5 rounded-lg"
+                >
+                  <Filter size={14} />
+                  {showFilters ? "Hide" : "Show"}
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform ${showFilters ? "rotate-180" : ""}`}
                   />
+                </button>
+              </div>
+            </div>
+
+            {/* Filter grid */}
+            <div className={`p-5 ${!showFilters ? "hidden md:block" : ""}`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+
+                {/* Search */}
+                <div className="xl:col-span-2">
+                  <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-gray-500 mb-1.5">
+                    Search
+                  </label>
+                  <div className="relative">
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Job title, post code..."
+                      value={filters.search}
+                      onChange={(e) => handleFilterChange("search", e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Qualification */}
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-gray-500 mb-1.5">
+                    Qualification
+                  </label>
+                  <CustomSelect
+                    value={filters.qualification}
+                    onChange={(val) => handleFilterChange("qualification", val)}
+                    options={QUALIFICATION_OPTIONS}
+                    placeholder="All Levels"
+                  />
+                </div>
+
+                {/* Age */}
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-gray-500 mb-1.5">
+                    Your Age
+                  </label>
                   <input
-                    type="text"
-                    placeholder="Job title, code..."
-                    value={filters.search}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                    type="number"
+                    placeholder="e.g. 28"
+                    value={filters.age}
+                    onChange={(e) => handleFilterChange("age", e.target.value)}
+                    min="18"
+                    max="65"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition bg-white"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-gray-500 mb-1.5">
+                    Category
+                  </label>
+                  <CustomSelect
+                    value={filters.category}
+                    onChange={(val) => handleFilterChange("category", val)}
+                    options={CATEGORY_OPTIONS}
+                    placeholder="Select Category"
+                  />
+                </div>
+
+                {/* State */}
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-gray-500 mb-1.5">
+                    State
+                  </label>
+                  <CustomSelect
+                    value={filters.state}
+                    onChange={(val) => handleFilterChange("state", val)}
+                    options={STATE_OPTIONS}
+                    placeholder="All States"
+                  />
+                </div>
+
+              </div>
+
+              {/* Second row — Department */}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.12em] font-black text-gray-500 mb-1.5">
+                    Department
+                  </label>
+                  <CustomSelect
+                    value={filters.department}
+                    onChange={(val) => handleFilterChange("department", val)}
+                    options={departmentOptions}
+                    placeholder="All Departments"
                   />
                 </div>
               </div>
-
-              {/* Qualification */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Qualification
-                </label>
-                <select
-                  value={filters.qualification}
-                  onChange={(e) =>
-                    handleFilterChange("qualification", e.target.value)
-                  }
-                  className="admin-select"
-                >
-                  <option value="">All Levels</option>
-                  <option value="10th">10th Pass</option>
-                  <option value="12th">12th Pass</option>
-                  <option value="Graduation">Graduation</option>
-                  <option value="Post Graduation">Post Graduation</option>
-                </select>
-              </div>
-
-              {/* Age */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Age
-                </label>
-                <input
-                  type="number"
-                  placeholder="Your age"
-                  value={filters.age}
-                  onChange={(e) => handleFilterChange("age", e.target.value)}
-                  min="18"
-                  max="65"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
-                <select
-                  value={filters.category}
-                  onChange={(e) =>
-                    handleFilterChange("category", e.target.value)
-                  }
-                  className="admin-select"
-                >
-                  <option value="general">General</option>
-                  <option value="obc">OBC</option>
-                  <option value="sc">SC</option>
-                  <option value="st">ST</option>
-                  <option value="ews">EWS</option>
-                  <option value="pwd">PWD</option>
-                </select>
-              </div>
-
-              {/* Department */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Department
-                </label>
-                <select
-                  value={filters.department}
-                  onChange={(e) =>
-                    handleFilterChange("department", e.target.value)
-                  }
-                  className="admin-select"
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
-
-            {/* Reset Button */}
-            {hasActiveFilters && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                onClick={handleResetFilters}
-                className="mt-4 px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition"
-              >
-                Reset Filters
-              </motion.button>
-            )}
           </motion.div>
 
-          {/* ── Loading State ──────────────────────────────────── */}
+          {/* ── Loading ───────────────────────────────────────────────────── */}
           {isLoading && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Loader size={48} className="text-primary animate-spin mb-4" />
-              <p className="text-gray-600">Loading eligible jobs...</p>
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader size={40} className="text-orange-500 animate-spin mb-4" />
+              <p className="text-[#6d6761] text-sm font-medium">Loading eligible jobs...</p>
             </div>
           )}
 
-          {/* ── Error State ────────────────────────────────────── */}
+          {/* ── Error ─────────────────────────────────────────────────────── */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 border border-red-200 rounded-lg p-6 flex items-start gap-4"
+              className="bg-red-50 border border-red-200 rounded-[12px] p-6 flex items-start gap-4"
             >
-              <AlertCircle size={24} className="text-red-600 flex-shrink-0" />
+              <AlertCircle size={22} className="text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-red-900 mb-1">
-                  Error Loading Jobs
-                </h3>
-                <p className="text-red-700">
-                  {error.message ||
-                    "Failed to load eligible jobs. Please try again."}
+                <h3 className="font-bold text-red-900 mb-1">Error Loading Jobs</h3>
+                <p className="text-red-700 text-sm">
+                  {error.message || "Failed to load eligible jobs. Please try again."}
                 </p>
               </div>
             </motion.div>
           )}
 
-          {/* ── Empty State ────────────────────────────────────── */}
+          {/* ── Empty State ───────────────────────────────────────────────── */}
           {!isLoading && !error && jobs.length === 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-md p-12 text-center"
+              className="bg-white rounded-[12px] border border-[#e0d7cd] p-14 text-center"
             >
-              <AlertCircle size={48} className="mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No Jobs Found
-              </h3>
-              <p className="text-gray-600 mb-6">
-                We couldn't find any jobs matching your criteria. Try adjusting
-                your filters or check back later.
+              <AlertCircle size={44} className="mx-auto text-gray-300 mb-4" />
+              <h3 className="text-xl font-black text-[#1f1d1b] mb-2">No Jobs Found</h3>
+              <p className="text-[#6d6761] text-sm mb-6 max-w-sm mx-auto">
+                We couldn't find any jobs matching your criteria. Try adjusting your filters or check back later.
               </p>
               <button
                 onClick={handleResetFilters}
-                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                className="px-6 py-2.5 bg-[#e46a1d] hover:bg-[#cb5d16] text-white text-sm font-bold rounded-[6px] transition-colors"
               >
                 Clear Filters
               </button>
             </motion.div>
           )}
 
-          {/* ── Jobs Grid ──────────────────────────────────────── */}
+          {/* ── Jobs Grid ─────────────────────────────────────────────────── */}
           {!isLoading && !error && jobs.length > 0 && (
             <>
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8"
               >
-                {jobs.map((job) => (
-                  <motion.div
-                    key={job._id}
-                    variants={itemVariants}
-                    className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group"
-                  >
-                    {/* Card Header */}
-                    <div className="bg-gradient-to-r from-primary to-primary-dark p-4 text-white">
-                      <h3 className="text-lg font-bold mb-1 group-hover:underline">
-                        {job.title}
-                      </h3>
-                      <p className="text-sm opacity-90">{job.postCode}</p>
-                    </div>
-
-                    {/* Card Body */}
-                    <div className="p-4 space-y-3">
-                      {/* Department & Category */}
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">
-                          <strong>Dept:</strong> {job.department}
-                        </span>
-                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                          {job.category}
-                        </span>
-                      </div>
-
-                      {/* Location */}
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <MapPin
-                          size={16}
-                          className="text-primary flex-shrink-0"
-                        />
-                        <span className="text-sm">
-                          {job.workLocation || "Not specified"}
-                        </span>
-                      </div>
-
-                      {/* Vacancies */}
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Users
-                          size={16}
-                          className="text-primary flex-shrink-0"
-                        />
-                        <span className="text-sm">
-                          <strong>{job.totalPosts}</strong> Vacancies
-                        </span>
-                      </div>
-
-                      {/* Salary */}
-                      {job.salaryRange?.min && job.salaryRange?.max && (
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <DollarSign
-                            size={16}
-                            className="text-primary flex-shrink-0"
-                          />
-                          <span className="text-sm">
-                            ₹{job.salaryRange.min.toLocaleString()} - ₹
-                            {job.salaryRange.max.toLocaleString()}
+                {jobs.map((job) => {
+                  const badge = deadlineBadge(job.daysLeft);
+                  return (
+                    <motion.div
+                      key={job._id}
+                      variants={itemVariants}
+                      className="bg-white rounded-[10px] border border-[#e0d7cd] hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col"
+                    >
+                      {/* Card header */}
+                      <div className="bg-gradient-to-r from-[#1f1d1b] to-[#3a3530] p-4 text-white">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3 className="text-[15px] font-black leading-tight line-clamp-2">
+                            {job.title}
+                          </h3>
+                          <span className={`flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${badge.bg} ${badge.text}`}>
+                            {badge.label}
                           </span>
                         </div>
-                      )}
-
-                      {/* Application Fee */}
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <DollarSign
-                          size={16}
-                          className="text-primary flex-shrink-0"
-                        />
-                        <span className="text-sm">
-                          Fee: ₹{job.applicableFee || 0}
-                        </span>
+                        <p className="text-[11px] text-white/60 font-medium">{job.postCode}</p>
                       </div>
 
-                      {/* Deadline */}
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Calendar
-                          size={16}
-                          className="text-primary flex-shrink-0"
-                        />
-                        <span className="text-sm">
-                          {job.daysLeft !== null ? (
-                            <>
-                              <strong>{job.daysLeft}</strong> days left
-                            </>
-                          ) : (
-                            "Deadline passed"
-                          )}
-                        </span>
-                      </div>
-                    </div>
+                      {/* Card body */}
+                      <div className="p-4 space-y-2.5 flex-1">
+                        {/* Dept + category */}
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[#6d6761] font-medium truncate max-w-[60%]">
+                            {job.department}
+                          </span>
+                          <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold">
+                            {job.category}
+                          </span>
+                        </div>
 
-                    {/* Card Footer */}
-                    <div className="bg-gray-50 px-4 py-3 flex gap-2">
-                      <button
-                        onClick={() => handleViewDetails(job._id)}
-                        className="flex-1 px-3 py-2 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition text-sm font-medium flex items-center justify-center gap-2"
-                      >
-                        Details
-                        <ArrowRight size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleApplyNow(job._id)}
-                        disabled={job.daysLeft <= 0}
-                        className="flex-1 px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Apply Now
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
+                        {/* Location */}
+                        <div className="flex items-center gap-1.5 text-[#6d6761]">
+                          <MapPin size={13} className="text-orange-500 flex-shrink-0" />
+                          <span className="text-xs truncate">{job.workLocation || "Not specified"}</span>
+                        </div>
+
+                        {/* Vacancies */}
+                        <div className="flex items-center gap-1.5 text-[#6d6761]">
+                          <Users size={13} className="text-orange-500 flex-shrink-0" />
+                          <span className="text-xs">
+                            <strong className="text-[#1f1d1b]">{job.totalPosts}</strong> Vacancies
+                          </span>
+                        </div>
+
+                        {/* Salary */}
+                        {job.salaryRange?.min && job.salaryRange?.max && (
+                          <div className="flex items-center gap-1.5 text-[#6d6761]">
+                            <IndianRupee size={13} className="text-orange-500 flex-shrink-0" />
+                            <span className="text-xs">
+                              ₹{job.salaryRange.min.toLocaleString("en-IN")} –{" "}
+                              ₹{job.salaryRange.max.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Fee */}
+                        <div className="flex items-center gap-1.5">
+                          <IndianRupee size={13} className="text-orange-500 flex-shrink-0" />
+                          <span className="text-xs">
+                            Fee:{" "}
+                            <strong className={job.applicableFee === 0 ? "text-emerald-600" : "text-[#1f1d1b]"}>
+                              {job.applicableFee === 0 ? "Free" : `₹${job.applicableFee}`}
+                            </strong>
+                          </span>
+                        </div>
+
+                        {/* Deadline */}
+                        <div className="flex items-center gap-1.5 text-[#6d6761]">
+                          <Calendar size={13} className="text-orange-500 flex-shrink-0" />
+                          <span className="text-xs">
+                            {job.daysLeft !== null && job.daysLeft > 0 ? (
+                              <>
+                                <strong className="text-[#1f1d1b]">{job.daysLeft}</strong> days left
+                              </>
+                            ) : (
+                              "Deadline passed"
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card footer */}
+                      <div className="px-4 pb-4 flex gap-2">
+                        <button
+                          onClick={() => handleViewDetails(job._id)}
+                          className="flex-1 h-9 border border-[#e0d7cd] hover:bg-[#f6f1ea] text-[#1f1d1b] rounded-[6px] text-[11px] uppercase tracking-[0.1em] font-black transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          Details
+                          <ArrowRight size={12} />
+                        </button>
+                        <button
+                          onClick={() => handleApplyNow(job._id)}
+                          disabled={job.daysLeft <= 0}
+                          className="flex-1 h-9 bg-[#e46a1d] hover:bg-[#cb5d16] text-white rounded-[6px] text-[11px] uppercase tracking-[0.1em] font-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Apply Now
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
 
-              {/* ── Pagination ─────────────────────────────────── */}
+              {/* ── Pagination ──────────────────────────────────────────── */}
               {totalPages > 1 && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center justify-center gap-2 mb-8"
+                  className="flex items-center justify-center gap-2 mb-10"
                 >
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="px-4 py-2 border border-[#e0d7cd] rounded-[6px] text-sm font-semibold text-[#1f1d1b] hover:bg-[#f6f1ea] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
                   </button>
 
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 rounded-lg transition ${
-                          page === currentPage
-                            ? "bg-primary text-white"
-                            : "border border-gray-300 hover:bg-gray-50"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ),
-                  )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`w-9 h-9 rounded-[6px] text-sm font-bold transition-colors ${
+                        page === currentPage
+                          ? "bg-[#e46a1d] text-white"
+                          : "border border-[#e0d7cd] text-[#1f1d1b] hover:bg-[#f6f1ea]"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
 
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="px-4 py-2 border border-[#e0d7cd] rounded-[6px] text-sm font-semibold text-[#1f1d1b] hover:bg-[#f6f1ea] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                   </button>

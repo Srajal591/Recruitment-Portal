@@ -7,6 +7,7 @@ const validate = require("../../shared/middlewares/validate");
 const {
   updateTicketSchema,
   addReplySchema,
+  ticketActionSchema,
 } = require("../../shared/validations/support.validation");
 
 router.use(authenticate, authorize("admin", "employee"));
@@ -24,6 +25,16 @@ router.post(
   "/tickets/:id/reply",
   validate(addReplySchema),
   supportController.addReply,
+);
+router.post(
+  "/tickets/:id/request-correction",
+  validate(ticketActionSchema),
+  supportController.requestCorrection,
+);
+router.post(
+  "/tickets/:id/verify-payment",
+  validate(ticketActionSchema),
+  supportController.verifyPayment,
 );
 
 module.exports = router;

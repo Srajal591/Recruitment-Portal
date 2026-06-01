@@ -2,6 +2,8 @@ const SupportTicket = require("../models/SupportTicket");
 // Must be imported so mongoose has User and Employee registered before populate runs
 const User = require("../models/User");
 const Employee = require("../models/Employee");
+const Application = require("../models/Application");
+const Payment = require("../models/Payment");
 const ApiError = require("../utils/ApiError");
 const { getPaginationParams } = require("../utils/helpers");
 const { paginationMeta } = require("../utils/ApiResponse");
@@ -16,13 +18,40 @@ const {
   sendTicketResolvedEmail,
 } = require("./email.service");
 const { notify } = require("../utils/notify");
+const { notifyAdmins } = require("../utils/notifyAdmins");
 
 let ticketCounter = 1000;
 const generateTicketId = () => `TKT-${Date.now()}-${++ticketCounter}`;
 
 const createTicket = async (data, candidateId, email) => {
+  const ticketData = { ...data };
+  delete ticketData.linkedApplicationId;
+  delete ticketData.transactionId;
+
+  if (data.linkedApplicationId) {
+    const appQuery = data.linkedApplicationId.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: data.linkedApplicationId }
+      : { applicationId: data.linkedApplicationId };
+    const application = await Application.findOne({
+      ...appQuery,
+      candidateId,
+    }).select("_id");
+    if (!application) throw new ApiError(400, "Linked application not found");
+    ticketData.linkedApplication = application._id;
+  }
+
+  if (data.transactionId) {
+    const payment = await Payment.findOne({
+      transactionId: data.transactionId,
+      candidateId,
+    }).select("_id applicationId");
+    if (!payment) throw new ApiError(400, "Linked payment not found");
+    ticketData.linkedPayment = payment._id;
+    ticketData.linkedApplication ||= payment.applicationId;
+  }
+
   const ticket = await SupportTicket.create({
-    ...data,
+    ...ticketData,
     ticketId: generateTicketId(),
     raisedBy: candidateId,
     raisedByEmail: email,
@@ -64,6 +93,8 @@ const getTicketById = async (id) => {
   const ticket = await SupportTicket.findById(id)
     .populate("raisedBy", "fullName email registeredMobile")
     .populate("assignedTo", "fullName employeeId")
+    .populate("linkedApplication", "applicationId status paymentStatus correction personalDetails totalFee transactionId")
+    .populate("linkedPayment", "transactionId amount status gateway paidAt applicationId")
     .populate("replies.sentBy", "fullName");
   if (!ticket) throw new ApiError(404, "Ticket not found");
   return ticket;
@@ -141,6 +172,176 @@ const addReply = async (ticketId, message, sentBy, sentByModel, sentByName) => {
   return ticket;
 };
 
+const requestApplicationCorrection = async (ticketId, adminId, note) => {
+  const ticket = await SupportTicket.findById(ticketId).populate(
+    "linkedApplication",
+  );
+  if (!ticket) throw new ApiError(404, "Ticket not found");
+  if (!ticket.linkedApplication) {
+    throw new ApiError(400, "Link an application before requesting correction");
+  }
+
+  const application = await Application.findById(ticket.linkedApplication._id);
+  if (!application) throw new ApiError(404, "Linked application not found");
+
+  application.correction = {
+    status: "requested",
+    requestedBy: adminId,
+    requestedAt: new Date(),
+    supportTicket: ticket._id,
+    note: note || undefined,
+  };
+  await application.save();
+
+  ticket.status = "In Progress";
+  ticket.resolutionAction = {
+    type: "application_correction",
+    status: "candidate_action_required",
+    requestedBy: adminId,
+    requestedAt: new Date(),
+    note: note || undefined,
+  };
+  ticket.replies.push({
+    message:
+      note ||
+      "We have opened your application for correction. Please update the application and confirm once done.",
+    sentBy: adminId,
+    sentByModel: "Employee",
+    sentByName: "Support Team",
+  });
+  await ticket.save();
+
+  await notify({
+    recipientId: ticket.raisedBy,
+    type: "general",
+    title: "Application Correction Requested",
+    message: `Correction has been requested for application ${application.applicationId}. Please update it from your support ticket.`,
+    link: `/candidate/support/${ticket._id}`,
+    metadata: { ticketId: ticket.ticketId, applicationId: application.applicationId },
+  });
+
+  emitToCandidate(ticket.raisedBy.toString(), SOCKET_EVENTS.NEW_NOTIFICATION, {
+    type: "application_correction_requested",
+    ticketId: ticket.ticketId,
+    applicationId: application.applicationId,
+  });
+
+  return getTicketById(ticketId);
+};
+
+const completeCandidateAction = async (ticketId, candidateId) => {
+  const ticket = await SupportTicket.findOne({ _id: ticketId, raisedBy: candidateId });
+  if (!ticket) throw new ApiError(404, "Ticket not found");
+  if (ticket.resolutionAction?.type !== "application_correction") {
+    throw new ApiError(400, "No correction action is pending for this ticket");
+  }
+  if (ticket.resolutionAction.status !== "candidate_action_required") {
+    throw new ApiError(400, "Correction action is not awaiting candidate");
+  }
+
+  if (ticket.linkedApplication) {
+    await Application.findByIdAndUpdate(ticket.linkedApplication, {
+      "correction.status": "submitted",
+      "correction.submittedAt": new Date(),
+    });
+  }
+
+  ticket.resolutionAction.status = "candidate_completed";
+  ticket.resolutionAction.completedBy = candidateId;
+  ticket.resolutionAction.completedByModel = "User";
+  ticket.resolutionAction.completedAt = new Date();
+  ticket.replies.push({
+    message: "Candidate has completed the requested application correction.",
+    sentBy: candidateId,
+    sentByModel: "User",
+    sentByName: "Candidate",
+  });
+  await ticket.save();
+
+  notifyAdmins({
+    type: "general",
+    title: "Application Correction Submitted",
+    message: `Candidate completed correction for support ticket ${ticket.ticketId}. Please review and update the ticket status.`,
+    link: `/admin/support/ticket/${ticket._id}`,
+    metadata: { ticketId: ticket.ticketId },
+  });
+
+  emitToAdmins(SOCKET_EVENTS.TICKET_REPLY, {
+    ticketId: ticket.ticketId,
+    message: "Candidate completed the requested correction.",
+  });
+
+  return getTicketById(ticketId);
+};
+
+const verifyPaymentForTicket = async (ticketId, adminId, note) => {
+  const ticket = await SupportTicket.findById(ticketId)
+    .populate("linkedPayment")
+    .populate("linkedApplication");
+  if (!ticket) throw new ApiError(404, "Ticket not found");
+
+  let payment = ticket.linkedPayment;
+  if (!payment && ticket.linkedApplication) {
+    payment = await Payment.findOne({ applicationId: ticket.linkedApplication._id })
+      .sort({ createdAt: -1 });
+  }
+  if (!payment) throw new ApiError(400, "Link a payment before verification");
+
+  payment.status = "success";
+  payment.failureReason = undefined;
+  payment.paidAt = payment.paidAt || new Date();
+  await payment.save();
+
+  const application = await Application.findById(payment.applicationId);
+  if (application) {
+    application.paymentStatus = "paid";
+    application.transactionId = payment.transactionId;
+    application.status = "submitted";
+    application.submittedAt = application.submittedAt || new Date();
+    await application.save();
+  }
+
+  ticket.linkedPayment = payment._id;
+  ticket.linkedApplication ||= payment.applicationId;
+  ticket.status = "Resolved";
+  ticket.resolvedAt = new Date();
+  ticket.resolutionAction = {
+    type: "payment_verification",
+    status: "admin_completed",
+    requestedBy: adminId,
+    requestedAt: new Date(),
+    completedBy: adminId,
+    completedByModel: "Employee",
+    completedAt: new Date(),
+    note: note || undefined,
+  };
+  ticket.replies.push({
+    message:
+      note ||
+      `Payment ${payment.transactionId} has been verified and your application payment status is updated.`,
+    sentBy: adminId,
+    sentByModel: "Employee",
+    sentByName: "Support Team",
+  });
+  await ticket.save();
+
+  await notify({
+    recipientId: ticket.raisedBy,
+    type: "payment_success",
+    title: "Payment Verified",
+    message: `Your payment ${payment.transactionId} has been verified successfully.`,
+    link: `/candidate/support/${ticket._id}`,
+    metadata: { ticketId: ticket.ticketId, transactionId: payment.transactionId },
+  });
+
+  emitToCandidate(ticket.raisedBy.toString(), SOCKET_EVENTS.PAYMENT_SUCCESS, {
+    transactionId: payment.transactionId,
+    applicationId: application?.applicationId,
+  });
+
+  return getTicketById(ticketId);
+};
+
 const getCandidateTickets = async (candidateId, query) => {
   const { page, limit, skip } = getPaginationParams(query);
   const filter = { raisedBy: candidateId };
@@ -164,5 +365,8 @@ module.exports = {
   getTicketById,
   updateTicket,
   addReply,
+  requestApplicationCorrection,
+  completeCandidateAction,
+  verifyPaymentForTicket,
   getCandidateTickets,
 };

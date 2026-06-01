@@ -58,6 +58,32 @@ const addReply = asyncHandler(async (req, res) => {
     .json(new ApiResponse(StatusCodes.OK, "Reply added", { ticket }));
 });
 
+const requestCorrection = asyncHandler(async (req, res) => {
+  const ticket = await supportService.requestApplicationCorrection(
+    req.params.id,
+    req.user.id,
+    req.body.note,
+  );
+  await saveAuditLog(req, `Requested correction for ticket ${ticket.ticketId}`);
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Correction requested", { ticket }),
+  );
+});
+
+const verifyPayment = asyncHandler(async (req, res) => {
+  const ticket = await supportService.verifyPaymentForTicket(
+    req.params.id,
+    req.user.id,
+    req.body.note,
+  );
+  await saveAuditLog(req, `Verified payment from support ticket ${ticket.ticketId}`);
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Payment verified and ticket resolved", {
+      ticket,
+    }),
+  );
+});
+
 const getStats = asyncHandler(async (req, res) => {
   const [statusStats, priorityStats, categoryStats, recentTickets] =
     await Promise.all([
@@ -92,5 +118,7 @@ module.exports = {
   getTicketById,
   updateTicket,
   addReply,
+  requestCorrection,
+  verifyPayment,
   getStats,
 };

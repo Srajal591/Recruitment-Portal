@@ -125,6 +125,16 @@ export const candidateService = {
     const response = await apiClient.post("/candidate/support/tickets", data);
     return unwrapData(response);
   },
+  async uploadSupportAttachment(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiClient.post(
+      "/candidate/support/attachments",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return unwrapData(response);
+  },
   async replyToTicket(id, data) {
     const response = await apiClient.post(
       `/candidate/support/tickets/${id}/reply`,
@@ -138,10 +148,16 @@ export const candidateService = {
     );
     return unwrapData(response);
   },
+  async completeTicketAction(id) {
+    const response = await apiClient.patch(
+      `/candidate/support/tickets/${id}/complete-action`,
+    );
+    return unwrapData(response);
+  },
 
   // ── Payments ──────────────────────────────────────────────
   async getMyPayments(params = {}) {
-    const response = await apiClient.get("/candidate/payments", { params });
+    const response = await apiClient.get("/candidate/payments/history", { params });
     return unwrapData(response);
   },
   async initiatePayment(applicationId, gateway = "razorpay") {

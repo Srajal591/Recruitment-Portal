@@ -50,6 +50,44 @@ const supportTicketSchema = new mongoose.Schema(
       default: null,
     },
 
+    linkedApplication: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Application",
+      default: null,
+    },
+    linkedPayment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Payment",
+      default: null,
+    },
+    resolutionAction: {
+      type: {
+        type: String,
+        enum: ["none", "application_correction", "payment_verification"],
+        default: "none",
+      },
+      status: {
+        type: String,
+        enum: [
+          "not_required",
+          "requested",
+          "candidate_action_required",
+          "candidate_completed",
+          "admin_completed",
+        ],
+        default: "not_required",
+      },
+      requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Employee" },
+      requestedAt: { type: Date },
+      completedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        refPath: "resolutionAction.completedByModel",
+      },
+      completedByModel: { type: String, enum: ["User", "Employee"] },
+      completedAt: { type: Date },
+      note: { type: String },
+    },
+
     replies: [replySchema],
     attachments: [String],
 

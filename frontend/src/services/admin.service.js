@@ -206,6 +206,20 @@ export const adminService = {
     );
     return unwrapData(response);
   },
+  async requestTicketCorrection(id, data = {}) {
+    const response = await apiClient.post(
+      `/admin/support/tickets/${id}/request-correction`,
+      data,
+    );
+    return unwrapData(response);
+  },
+  async verifyTicketPayment(id, data = {}) {
+    const response = await apiClient.post(
+      `/admin/support/tickets/${id}/verify-payment`,
+      data,
+    );
+    return unwrapData(response);
+  },
 
   // ── Payments ──────────────────────────────────────────────
   async getPayments(params = {}) {

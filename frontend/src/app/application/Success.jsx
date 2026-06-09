@@ -10,6 +10,7 @@ import {
   FileText,
   Loader2,
   LayoutDashboard,
+  X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -86,6 +87,8 @@ const Success = () => {
     window.setTimeout(() => window.print(), 120);
   };
 
+  const closeAcknowledgement = () => setShowAcknowledgement(false);
+
   const handleBackToTicket = () => {
     if (draft.supportTicketId) {
       navigate(`/candidate/support/${draft.supportTicketId}`);
@@ -154,36 +157,22 @@ const Success = () => {
                         <Button
                           variant="outline"
                           className="border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                          onClick={() => setShowAcknowledgement((c) => !c)}
+                          onClick={() => setShowAcknowledgement(true)}
                         >
                           <Eye className="mr-2 h-4 w-4" />
-                          {showAcknowledgement ? "Hide" : "View"}{" "}
-                          Acknowledgement
+                          View Acknowledgement
                         </Button>
                         <Button
                           className="bg-emerald-700 hover:bg-emerald-800"
-                          onClick={() => {
-                            setShowAcknowledgement(true);
-                            window.setTimeout(() => window.print(), 120);
-                          }}
+                          onClick={handleDownloadAcknowledgement}
                         >
                           <Download className="mr-2 h-4 w-4" />
-                          Download
+                          Download Acknowledgement
                         </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              )}
-
-              {app && showAcknowledgement && (
-                <div className="mb-8">
-                  <ApplicationAcknowledgement
-                    application={app}
-                    transactionId={transactionId}
-                    amount={totalAmount}
-                  />
-                </div>
               )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -203,6 +192,15 @@ const Success = () => {
                   View All Applications
                 </Button>
               </div>
+
+              <AcknowledgementModal
+                isOpen={showAcknowledgement}
+                application={app}
+                transactionId={transactionId}
+                amount={totalAmount}
+                onClose={closeAcknowledgement}
+                onDownload={handleDownloadAcknowledgement}
+              />
             </>
           )}
         </main>
@@ -359,12 +357,10 @@ const Success = () => {
                       <Button
                         variant="outline"
                         className="border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                        onClick={() =>
-                          setShowAcknowledgement((current) => !current)
-                        }
+                        onClick={() => setShowAcknowledgement(true)}
                       >
                         <Eye className="mr-2 h-4 w-4" />
-                        {showAcknowledgement ? "Hide" : "View"} Acknowledgement
+                        View Acknowledgement
                       </Button>
                       <Button
                         className="bg-emerald-700 hover:bg-emerald-800"
@@ -377,16 +373,6 @@ const Success = () => {
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            {app && showAcknowledgement && (
-              <div className="mb-8">
-                <ApplicationAcknowledgement
-                  application={app}
-                  transactionId={transactionId}
-                  amount={amount}
-                />
-              </div>
             )}
 
             <div className="no-print mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -445,9 +431,72 @@ const Success = () => {
                 </ul>
               </CardContent>
             </Card>
+
+            <AcknowledgementModal
+              isOpen={showAcknowledgement}
+              application={app}
+              transactionId={transactionId}
+              amount={totalAmount}
+              onClose={closeAcknowledgement}
+              onDownload={handleDownloadAcknowledgement}
+            />
           </>
         )}
       </main>
+    </div>
+  );
+};
+
+const AcknowledgementModal = ({
+  isOpen,
+  application,
+  transactionId,
+  amount,
+  onClose,
+  onDownload,
+}) => {
+  if (!isOpen || !application) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm print:static print:block print:bg-transparent print:p-0 print:backdrop-blur-0">
+      <div className="flex max-h-[94vh] w-full max-w-[920px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-white/20 print:max-h-none print:max-w-none print:overflow-visible print:rounded-none print:bg-transparent print:shadow-none print:ring-0">
+        <div className="no-print flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
+              Application Acknowledgement
+            </p>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Official application summary
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+              onClick={onDownload}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </Button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Close acknowledgement preview"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div className="overflow-auto bg-slate-100 p-4 print:overflow-visible print:bg-white print:p-0">
+          <ApplicationAcknowledgement
+            application={application}
+            transactionId={transactionId}
+            amount={amount}
+          />
+        </div>
+      </div>
     </div>
   );
 };

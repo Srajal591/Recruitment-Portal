@@ -13,6 +13,7 @@ import {
   SearchInput,
   StatTile,
   formatDate,
+  publicContainer,
 } from "./PublicPageShell";
 
 const fadeUp = {
@@ -53,7 +54,7 @@ const Notices = () => {
         </div>
       </PageHero>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-5">
+      <section className={`${publicContainer} py-10 space-y-5`}>
         <SearchInput
           value={search}
           onChange={setSearch}

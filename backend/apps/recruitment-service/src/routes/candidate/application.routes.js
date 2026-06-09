@@ -44,10 +44,7 @@ router.put(
   validate(addressSchema),
   applicationController.updateAddress,
 );
-router.put(
-  "/:id/form-responses",
-  applicationController.updateFormResponses,
-);
+router.put("/:id/form-responses", applicationController.updateFormResponses);
 router.post(
   "/:id/documents/:type",
   upload.single("file"),
@@ -64,5 +61,6 @@ router.post(
   applicationController.submitApplication,
 );
 router.post("/:id/finalize", applicationController.finalizeApplication);
+router.post("/:id/submit-correction", applicationController.submitCorrection);
 
 module.exports = router;

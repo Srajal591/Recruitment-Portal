@@ -5,11 +5,14 @@ import { motion } from "framer-motion";
 import { jobService } from "../../services/job.service";
 import {
   ErrorState,
+  HelpPanel,
   LoadingState,
   PageFrame,
   PageHero,
+  ResourceCard,
   SearchInput,
   StatTile,
+  publicContainer,
 } from "./PublicPageShell";
 
 const fadeUp = {
@@ -79,44 +82,63 @@ const FAQ = () => {
         </div>
       </PageHero>
 
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-5">
-        {isLoading && <LoadingState />}
-        {error && <ErrorState message={error.message} />}
+      <section className={`${publicContainer} py-10`}>
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+          <div className="space-y-5">
+            {isLoading && <LoadingState />}
+            {error && <ErrorState message={error.message} />}
 
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Search questions..."
-        />
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search questions..."
+            />
 
-        <div className="space-y-3">
-          {faqs.map((faq, i) => (
-            <motion.details
-              key={faq.question}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.1 }}
-              className="group bg-white border border-[#e0d7cd] rounded-lg p-5"
-            >
-              <summary className="flex cursor-pointer items-center justify-between gap-4 font-black text-[#1f1d1b]">
-                <span>{faq.question}</span>
-                <ChevronDown className="w-5 h-5 text-orange-600 group-open:rotate-180 transition-transform" />
-              </summary>
-              <p className="mt-4 text-sm leading-6 text-[#6d6761]">
-                {faq.answer}
-              </p>
-            </motion.details>
-          ))}
-        </div>
+            <div className="space-y-3">
+              {faqs.map((faq, i) => (
+                <motion.details
+                  key={faq.question}
+                  custom={i}
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.1 }}
+                  className="group bg-white border border-[#e0d7cd] rounded-lg p-5 shadow-sm transition-all hover:border-orange-300 hover:shadow-md"
+                >
+                  <summary className="flex cursor-pointer items-center justify-between gap-4 font-black text-[#1f1d1b]">
+                    <span>{faq.question}</span>
+                    <ChevronDown className="w-5 h-5 text-orange-600 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <p className="mt-4 text-sm leading-6 text-[#6d6761]">
+                    {faq.answer}
+                  </p>
+                </motion.details>
+              ))}
+            </div>
 
-        {faqs.length === 0 && (
-          <div className="bg-white border border-[#e0d7cd] rounded-lg p-8 text-center">
-            <HelpCircle className="w-10 h-10 text-[#c7bdb3] mx-auto mb-3" />
-            <p className="font-bold text-[#1f1d1b]">No matching questions</p>
+            {faqs.length === 0 && (
+              <div className="bg-white border border-[#e0d7cd] rounded-lg p-8 text-center">
+                <HelpCircle className="w-10 h-10 text-[#c7bdb3] mx-auto mb-3" />
+                <p className="font-bold text-[#1f1d1b]">No matching questions</p>
+              </div>
+            )}
           </div>
-        )}
+
+          <aside className="space-y-5 lg:sticky lg:top-28">
+            <HelpPanel />
+            <ResourceCard
+              icon={HelpCircle}
+              title="Application Guide"
+              description="See the step-by-step application journey from registration to tracking."
+              to="/how-to-apply"
+            />
+            <ResourceCard
+              title="Contact Support"
+              description="Reach the helpdesk for application, payment, and account questions."
+              to="/contact"
+            />
+          </aside>
+        </div>
       </section>
     </PageFrame>
   );

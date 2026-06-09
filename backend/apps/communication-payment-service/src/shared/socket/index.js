@@ -10,10 +10,9 @@ const NORMAL_DISCONNECT_REASONS = new Set([
   "transport close",
 ]);
 
-const parsedOrigins =
-  env.CLIENT_URL?.split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean) || ["http://localhost:5173"];
+const parsedOrigins = env.CLIENT_URL?.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean) || ["http://localhost:5173"];
 
 /**
  * Initialize Socket.IO on the HTTP server.
@@ -139,6 +138,11 @@ const SOCKET_EVENTS = {
   PAYMENT_SUCCESS: "payment:success",
   PAYMENT_FAILED: "payment:failed",
 
+  // Applications
+  APPLICATION_SUBMITTED: "application:submitted",
+  APPLICATION_UPDATED: "application:updated",
+  APPLICATION_STATUS_CHANGED: "application:status_changed",
+
   // Jobs
   JOB_PUBLISHED: "job:published",
   JOB_CLOSED: "job:closed",
@@ -147,6 +151,7 @@ const SOCKET_EVENTS = {
   TICKET_CREATED: "support:ticket:created",
   TICKET_REPLY: "support:ticket:reply",
   TICKET_RESOLVED: "support:ticket:resolved",
+  TICKET_UPDATED: "support:ticket:updated",
 
   // Notifications
   NEW_NOTIFICATION: "notification:new",

@@ -8,7 +8,11 @@ import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
-import { buildApplicationSteps } from "../../utils/applicationFlow";
+import {
+  buildApplicationSteps,
+  isCorrectionMode,
+  readApplicationDraft,
+} from "../../utils/applicationFlow";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
@@ -67,10 +71,17 @@ const PostSelection = () => {
 
   const app = appData?.application || appData;
   const job = app?.jobId;
+  const correctionMode =
+    isCorrectionMode(app) || readApplicationDraft().correctionMode === true;
   const steps = buildApplicationSteps(job, app);
-  const postStep = steps.find((step) => step.type === "post-selection")?.id || 1;
+  const postStep =
+    steps.find((step) => step.type === "post-selection")?.id || 1;
   const previousStep = steps.find((step) => step.id === postStep - 1);
-  const nextStep = steps.find((step) => step.id === postStep + 1);
+  // In correction mode always go to Review after post selection (skip payment)
+  const reviewStep = steps.find((step) => step.type === "review");
+  const nextStep = correctionMode
+    ? reviewStep
+    : steps.find((step) => step.id === postStep + 1);
 
   // Candidate's category from Step 1 personal details
   const candidateCategory = app?.personalDetails?.category || "";
@@ -185,7 +196,10 @@ const PostSelection = () => {
       candidateService.savePostSelection(applicationId, data),
     onSuccess: (result) => {
       toast.success("Post preferences saved");
-      navigate(nextStep?.path || "/application/payment", {
+      const destination = correctionMode
+        ? reviewStep?.path || "/application/review"
+        : nextStep?.path || "/application/payment";
+      navigate(destination, {
         state: {
           applicationId,
           totalFee: result?.totalFee ?? applicationFee,
@@ -467,18 +481,39 @@ const PostSelection = () => {
           <CardContent className="p-4">
             <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
               <Info className="w-4 h-4" />
-              Important Instructions
+              {correctionMode
+                ? "Correction Mode — Post Selection"
+                : "Important Instructions"}
             </h4>
             <ul className="text-sm text-blue-700 space-y-1">
-              <li>• Preference order cannot be changed after final payment</li>
-              <li>
-                • You must meet eligibility criteria for every selected post
-              </li>
-              <li>• Application fee is charged once for this recruitment</li>
-              <li>
-                • Fee is based on your category as filled in Personal Details
-                (Step 1)
-              </li>
+              {correctionMode ? (
+                <>
+                  <li>
+                    • Update your post preferences if needed, then click "Save &
+                    Continue to Review"
+                  </li>
+                  <li>• No additional payment is required for corrections</li>
+                  <li>
+                    • You will review and submit your changes on the next screen
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    • Preference order cannot be changed after final payment
+                  </li>
+                  <li>
+                    • You must meet eligibility criteria for every selected post
+                  </li>
+                  <li>
+                    • Application fee is charged once for this recruitment
+                  </li>
+                  <li>
+                    • Fee is based on your category as filled in Personal
+                    Details (Step 1)
+                  </li>
+                </>
+              )}
             </ul>
           </CardContent>
         </Card>
@@ -504,6 +539,8 @@ const PostSelection = () => {
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Saving...
               </>
+            ) : correctionMode ? (
+              "Save & Continue to Review →"
             ) : (
               "Proceed to Payment →"
             )}

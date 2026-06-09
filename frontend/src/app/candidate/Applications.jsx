@@ -10,6 +10,7 @@ import {
   AlertCircle,
   PlayCircle,
   Loader2,
+  Edit3,
 } from "lucide-react";
 import CandidateLayout from "../../components/layouts/CandidateLayout";
 import { Card, CardContent } from "../../components/ui/Card";
@@ -18,6 +19,7 @@ import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
 import {
   getRouteForApplicationStep,
+  isCorrectionMode,
   persistApplicationDraft,
 } from "../../utils/applicationFlow";
 
@@ -47,6 +49,11 @@ const STATUS_CONFIG = {
     label: "Rejected",
     color: "bg-red-100 text-red-700",
     icon: XCircle,
+  },
+  shortlisted: {
+    label: "Shortlisted",
+    color: "bg-purple-100 text-purple-700",
+    icon: CheckCircle,
   },
 };
 
@@ -93,20 +100,31 @@ const Applications = () => {
     { id: "rejected", label: "Rejected" },
   ];
 
-  const handleAction = (app) => {
-    // Always sync sessionStorage
+  const handleView = (app) => {
     persistApplicationDraft({ applicationId: app._id, jobId: app.jobId?._id });
+    navigate(`/candidate/applications/${app._id}`);
+  };
 
-    if (app.status === "draft") {
-      // Resume from where they left off
-      const route = getRouteForApplicationStep(app, app.currentStep || 1);
-      navigate(route, {
-        state: { applicationId: app._id, jobId: app.jobId?._id },
-      });
-    } else {
-      // View application status page (read-only)
-      navigate(`/candidate/applications/${app._id}`);
-    }
+  const handleResume = (app) => {
+    persistApplicationDraft({ applicationId: app._id, jobId: app.jobId?._id });
+    const route = getRouteForApplicationStep(app, app.currentStep || 1);
+    navigate(route, {
+      state: { applicationId: app._id, jobId: app.jobId?._id },
+    });
+  };
+
+  const handleEditCorrection = (app) => {
+    // Set correction mode in session draft so ApplicationLayout knows
+    persistApplicationDraft({
+      applicationId: app._id,
+      jobId: app.jobId?._id,
+      correctionMode: true,
+    });
+    // Start from step 1 so candidate can freely navigate all steps
+    const route = getRouteForApplicationStep(app, 1);
+    navigate(route, {
+      state: { applicationId: app._id, jobId: app.jobId?._id },
+    });
   };
 
   return (
@@ -176,9 +194,12 @@ const Applications = () => {
             )}
 
             {applications.map((app) => {
-              const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.draft;
+              const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.submitted;
               const StatusIcon = cfg.icon;
               const isDraft = app.status === "draft";
+              const needsCorrection = isCorrectionMode(app);
+              const correctionSubmitted =
+                app.correction?.status === "submitted";
               const stepProgress = Math.round(
                 ((app.currentStep || 1) / 9) * 100,
               );
@@ -186,18 +207,30 @@ const Applications = () => {
               return (
                 <div
                   key={app._id}
-                  className="flex items-center justify-between p-4 border-b border-gray-100 last:border-0 hover:bg-orange-50 transition-colors"
+                  className={`flex items-center justify-between p-4 border-b border-gray-100 last:border-0 transition-colors ${
+                    needsCorrection
+                      ? "bg-orange-50 hover:bg-orange-100"
+                      : "hover:bg-gray-50"
+                  }`}
                 >
                   {/* Left — Job info */}
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div
                       className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        isDraft ? "bg-gray-100" : "bg-orange-100"
+                        needsCorrection
+                          ? "bg-orange-200"
+                          : isDraft
+                            ? "bg-gray-100"
+                            : "bg-orange-100"
                       }`}
                     >
-                      <FileText
-                        className={`w-5 h-5 ${isDraft ? "text-gray-500" : "text-orange-600"}`}
-                      />
+                      {needsCorrection ? (
+                        <Edit3 className="w-5 h-5 text-orange-700" />
+                      ) : (
+                        <FileText
+                          className={`w-5 h-5 ${isDraft ? "text-gray-500" : "text-orange-600"}`}
+                        />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="font-medium text-gray-800 truncate">
@@ -209,6 +242,20 @@ const Applications = () => {
                       <p className="text-xs text-orange-600 mt-0.5 font-mono">
                         {app.applicationId}
                       </p>
+
+                      {/* Correction request banner */}
+                      {needsCorrection && (
+                        <p className="text-xs font-semibold text-orange-700 mt-1 flex items-center gap-1">
+                          <Edit3 className="w-3 h-3" />
+                          Admin requested corrections — action required
+                        </p>
+                      )}
+                      {correctionSubmitted && (
+                        <p className="text-xs font-semibold text-blue-600 mt-1 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Corrections submitted — awaiting admin re-review
+                        </p>
+                      )}
 
                       {/* Draft progress bar */}
                       {isDraft && (
@@ -243,26 +290,43 @@ const Applications = () => {
                       </p>
                     </div>
 
-                    <Badge className={cfg.color}>
-                      <StatusIcon className="w-3 h-3 mr-1 inline" />
-                      {cfg.label}
-                    </Badge>
+                    {/* Correction badge overrides status badge */}
+                    {needsCorrection ? (
+                      <Badge className="bg-orange-100 text-orange-700 border border-orange-300">
+                        <Edit3 className="w-3 h-3 mr-1 inline" />
+                        Correction Needed
+                      </Badge>
+                    ) : (
+                      <Badge className={cfg.color}>
+                        <StatusIcon className="w-3 h-3 mr-1 inline" />
+                        {cfg.label}
+                      </Badge>
+                    )}
 
-                    {/* Context-aware action button */}
+                    {/* Context-aware action buttons */}
                     {isDraft ? (
                       <Button
                         size="sm"
-                        onClick={() => handleAction(app)}
+                        onClick={() => handleResume(app)}
                         className="bg-orange-600 hover:bg-orange-700 text-white gap-1.5 whitespace-nowrap"
                       >
                         <PlayCircle className="w-4 h-4" />
                         Resume
                       </Button>
+                    ) : needsCorrection ? (
+                      <Button
+                        size="sm"
+                        onClick={() => handleEditCorrection(app)}
+                        className="bg-orange-600 hover:bg-orange-700 text-white gap-1.5 whitespace-nowrap"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        Edit Now
+                      </Button>
                     ) : (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleAction(app)}
+                        onClick={() => handleView(app)}
                         className="text-orange-600 hover:bg-orange-50"
                         title="View application"
                       >

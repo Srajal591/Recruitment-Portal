@@ -150,12 +150,13 @@ const DynamicFormFields = () => {
 
   useEffect(() => {
     if (!isLoading && app && formSections.length === 0) {
-      navigate("/application/documents", {
+      const documentsStep = steps.find((step) => step.type === "documents");
+      navigate(documentsStep?.path || "/application/documents", {
         state: { applicationId },
         replace: true,
       });
     }
-  }, [isLoading, app, formSections.length, navigate, applicationId]);
+  }, [isLoading, app, formSections.length, navigate, applicationId, steps]);
 
   const { mutate: saveDynamicForm, isPending } = useMutation({
     mutationFn: (data) =>

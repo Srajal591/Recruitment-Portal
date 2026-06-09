@@ -193,7 +193,7 @@ const applicationSchema = new mongoose.Schema(
     lastSavedAt: { type: Date, default: Date.now },
 
     // ── Current step (for draft tracking) ─────────────────
-    currentStep: { type: Number, default: 1, min: 1, max: 9 },
+    currentStep: { type: Number, default: 1, min: 1, max: 30 },
   },
   { timestamps: true },
 );

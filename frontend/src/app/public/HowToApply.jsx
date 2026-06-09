@@ -6,6 +6,7 @@ import {
   PageFrame,
   PageHero,
   ResourceCard,
+  publicContainer,
 } from "./PublicPageShell";
 
 const fadeUp = {
@@ -52,8 +53,8 @@ const HowToApply = () => (
       description="Follow the official application flow from registration to final submission. The same steps are used by every active job published on this portal."
     />
 
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+    <section className={`${publicContainer} py-10`}>
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           {steps.map((step, index) => (
             <motion.div
@@ -83,13 +84,12 @@ const HowToApply = () => (
           ))}
         </div>
 
-        <aside className="space-y-5">
+        <aside className="space-y-5 lg:sticky lg:top-28">
           <motion.div
             variants={fadeUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
-            className="h-full"
           >
             <ResourceCard
               title="Browse Active Jobs"

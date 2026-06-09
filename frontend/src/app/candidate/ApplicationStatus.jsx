@@ -2,17 +2,11 @@
  * ApplicationStatus.jsx
  *
  * Read-only view of a submitted/reviewed application.
- * Shown when candidate clicks "View Application" / "Track Status" / "Applied".
- *
- * Flow:
- *  - draft      → redirect to form (should not land here)
- *  - submitted  → show submitted confirmation + timeline
- *  - under_review → show review in progress
- *  - verified   → show approved
- *  - rejected   → show rejection reason
+ * Also handles correction mode — shows a banner with "Edit Application" CTA
+ * when admin has requested corrections.
  */
 
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -23,15 +17,11 @@ import {
   FileText,
   User,
   GraduationCap,
-  MapPin,
-  CreditCard,
   Loader2,
-  PlayCircle,
   ChevronRight,
   Building2,
-  Calendar,
-  IndianRupee,
   Shield,
+  Edit3,
 } from "lucide-react";
 import CandidateLayout from "../../components/layouts/CandidateLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
@@ -40,6 +30,7 @@ import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
 import {
   getRouteForApplicationStep,
+  isCorrectionMode,
   persistApplicationDraft,
 } from "../../utils/applicationFlow";
 
@@ -127,23 +118,9 @@ const Row = ({ label, value }) =>
 
 // ── Timeline ──────────────────────────────────────────────────
 
-const TIMELINE_STEPS = [
-  { key: "started", label: "Application Started", icon: FileText },
-  { key: "submitted", label: "Application Submitted", icon: CheckCircle },
-  { key: "under_review", label: "Under Review", icon: AlertCircle },
-  { key: "verified", label: "Verified / Approved", icon: Shield },
-];
-
 const Timeline = ({ app }) => {
-  const statusOrder = [
-    "draft",
-    "submitted",
-    "under_review",
-    "verified",
-    "approved",
-    "rejected",
-  ];
-  const currentIdx = statusOrder.indexOf(app.status);
+  const correctionStatus = app.correction?.status;
+  const showCorrectionStep = correctionStatus && correctionStatus !== "none";
 
   const steps = [
     { label: "Application Started", date: app.createdAt, done: true },
@@ -165,6 +142,24 @@ const Timeline = ({ app }) => {
         app.status,
       ),
     },
+    ...(showCorrectionStep
+      ? [
+          {
+            label:
+              correctionStatus === "submitted"
+                ? "Corrections Submitted"
+                : correctionStatus === "in_progress"
+                  ? "Correction In Progress"
+                  : "Correction Requested",
+            date:
+              correctionStatus === "submitted"
+                ? app.correction?.submittedAt
+                : app.correction?.requestedAt,
+            done: true,
+            correction: true,
+          },
+        ]
+      : []),
     {
       label: app.status === "rejected" ? "Rejected" : "Verified / Approved",
       date: app.reviewedAt,
@@ -177,20 +172,23 @@ const Timeline = ({ app }) => {
     <div className="space-y-0">
       {steps.map((step, i) => (
         <div key={i} className="flex gap-4">
-          {/* Line + dot */}
           <div className="flex flex-col items-center">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border-2 ${
                 step.done
                   ? step.rejected
                     ? "bg-red-100 border-red-400"
-                    : "bg-green-100 border-green-400"
+                    : step.correction
+                      ? "bg-orange-100 border-orange-400"
+                      : "bg-green-100 border-green-400"
                   : "bg-gray-100 border-gray-300"
               }`}
             >
               {step.done ? (
                 step.rejected ? (
                   <XCircle className="w-4 h-4 text-red-600" />
+                ) : step.correction ? (
+                  <Edit3 className="w-4 h-4 text-orange-600" />
                 ) : (
                   <CheckCircle className="w-4 h-4 text-green-600" />
                 )
@@ -204,14 +202,15 @@ const Timeline = ({ app }) => {
               />
             )}
           </div>
-          {/* Content */}
           <div className="pb-6 flex-1">
             <p
               className={`text-sm font-semibold ${
                 step.done
                   ? step.rejected
                     ? "text-red-700"
-                    : "text-gray-900"
+                    : step.correction
+                      ? "text-orange-700"
+                      : "text-gray-900"
                   : "text-gray-400"
               }`}
             >
@@ -284,13 +283,20 @@ const ApplicationStatus = () => {
     return null;
   }
 
+  const correctionNeeded = isCorrectionMode(app);
+  const correctionSubmitted = app.correction?.status === "submitted";
+  const correctionNote = app.correction?.note;
+
   const cfg = STATUS[app.status] || STATUS.submitted;
   const StatusIcon = cfg.icon;
   const personal = app.personalDetails || {};
   const education = app.education || {};
   const address = app.address || {};
   const documents = app.documents || [];
-  const formResponses = app.formResponses || {};
+  const formResponses =
+    app.formResponses instanceof Map
+      ? Object.fromEntries(app.formResponses)
+      : app.formResponses || {};
   const fieldLabelMap = {};
   (app.jobId?.formSections || []).forEach((section) => {
     (section.fields || []).forEach((field) => {
@@ -298,6 +304,18 @@ const ApplicationStatus = () => {
     });
   });
   const fee = app.totalFee || 0;
+
+  const handleEditCorrection = () => {
+    persistApplicationDraft({
+      applicationId: app._id,
+      jobId: app.jobId?._id,
+      correctionMode: true,
+    });
+    // Navigate to step 1 — sidebar is fully unlocked in correction mode
+    navigate(getRouteForApplicationStep(app, 1), {
+      state: { applicationId: app._id, jobId: app.jobId?._id },
+    });
+  };
 
   return (
     <CandidateLayout title="Application Status">
@@ -316,6 +334,67 @@ const ApplicationStatus = () => {
             {app.applicationId}
           </span>
         </div>
+
+        {/* Correction required banner — highest priority, shown above status */}
+        {correctionNeeded && (
+          <div className="rounded-xl border-2 border-orange-400 bg-orange-50 p-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                <Edit3 className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-orange-900">
+                  Action Required — Corrections Requested
+                </h2>
+                <p className="text-sm text-orange-700 mt-1">
+                  The admin has reviewed your application and is requesting
+                  corrections. Please edit your application and resubmit.
+                </p>
+                {correctionNote && (
+                  <div className="mt-3 bg-white border border-orange-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-orange-800 mb-1">
+                      Admin Note:
+                    </p>
+                    <p className="text-sm text-orange-700">{correctionNote}</p>
+                  </div>
+                )}
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button
+                    onClick={handleEditCorrection}
+                    className="bg-orange-600 hover:bg-orange-700 text-white gap-2"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Edit Application Now
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-orange-300 text-orange-700 hover:bg-orange-100"
+                    onClick={() => navigate("/candidate/support")}
+                  >
+                    View Support Ticket
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Corrections submitted — waiting for re-review */}
+        {correctionSubmitted && (
+          <div className="rounded-xl border border-blue-300 bg-blue-50 p-4 flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-blue-800 text-sm">
+                Corrections Submitted — Awaiting Re-Review
+              </p>
+              <p className="text-blue-700 text-sm mt-0.5">
+                Your corrections have been submitted on{" "}
+                {formatDate(app.correction?.submittedAt)}. The admin will review
+                shortly.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Status banner */}
         <div className={`rounded-xl border p-5 ${cfg.banner}`}>
@@ -361,7 +440,7 @@ const ApplicationStatus = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-6">
           {/* Left — Application details */}
           <div className="lg:col-span-2 space-y-5">
             {/* Job info */}
@@ -396,7 +475,7 @@ const ApplicationStatus = () => {
               </CardContent>
             </Card>
 
-            {/* Personal details */}
+            {/* Dynamic form responses */}
             {Object.keys(formResponses).length > 0 && (
               <Card>
                 <CardHeader>
@@ -678,6 +757,17 @@ const ApplicationStatus = () => {
                 <h3 className="font-semibold text-gray-800">Actions</h3>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Primary CTA in correction mode */}
+                {correctionNeeded && (
+                  <Button
+                    className="w-full justify-start gap-2 bg-orange-600 hover:bg-orange-700 text-white"
+                    onClick={handleEditCorrection}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Edit Application
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   className="w-full justify-start gap-2 text-gray-700"
@@ -692,7 +782,9 @@ const ApplicationStatus = () => {
                   onClick={() => navigate("/candidate/support")}
                 >
                   <AlertCircle className="w-4 h-4" />
-                  Raise Support Ticket
+                  {correctionNeeded
+                    ? "View Support Ticket"
+                    : "Raise Support Ticket"}
                 </Button>
                 {app.jobId?._id && (
                   <Button

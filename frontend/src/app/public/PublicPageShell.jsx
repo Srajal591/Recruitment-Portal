@@ -15,6 +15,18 @@ import {
 } from "lucide-react";
 import PublicLayout from "../../components/layouts/PublicLayout";
 
+export const publicContainer =
+  "max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8";
+
+export const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: "easeOut", delay: i * 0.08 },
+  }),
+};
+
 export const formatDate = (date) =>
   date
     ? new Date(date).toLocaleDateString("en-IN", {
@@ -32,7 +44,7 @@ export const getFee = (job) =>
 
 export const PageHero = ({ eyebrow, title, description, children }) => (
   <section className="bg-[#201d1a] text-white">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+    <div className={`${publicContainer} py-12 lg:py-16`}>
       <p className="text-[11px] uppercase tracking-[0.16em] font-black text-orange-300">
         {eyebrow}
       </p>
@@ -58,7 +70,7 @@ export const PageFrame = ({ children }) => (
 );
 
 export const LoadingState = ({ label = "Loading latest data..." }) => (
-  <div className="bg-white border border-[#e0d7cd] rounded-lg p-8 flex items-center justify-center gap-3 text-[#6d6761]">
+  <div className="bg-white border border-[#e0d7cd] rounded-lg p-8 flex items-center justify-center gap-3 text-[#6d6761] shadow-sm">
     <Loader2 className="w-5 h-5 animate-spin text-orange-600" />
     <span className="text-sm font-semibold">{label}</span>
   </div>
@@ -73,7 +85,7 @@ export const ErrorState = ({ message }) => (
 );
 
 export const EmptyState = ({ icon: Icon = FileText, title, description }) => (
-  <div className="bg-white border border-[#e0d7cd] rounded-lg p-10 text-center">
+  <div className="bg-white border border-[#e0d7cd] rounded-lg p-10 text-center shadow-sm">
     <Icon className="w-12 h-12 text-[#c7bdb3] mx-auto mb-4" />
     <h2 className="text-lg font-black text-[#1f1d1b]">{title}</h2>
     <p className="mt-2 max-w-xl mx-auto text-sm leading-6 text-[#6d6761]">
@@ -92,7 +104,7 @@ export const StatTile = ({ label, value }) => (
 );
 
 export const JobListCard = ({ job, meta, actionLabel = "View Details" }) => (
-  <article className="bg-white border border-[#e0d7cd] rounded-lg p-5">
+  <article className="bg-white border border-[#e0d7cd] rounded-lg p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.12em] font-black text-orange-700">
@@ -132,7 +144,7 @@ export const JobListCard = ({ job, meta, actionLabel = "View Details" }) => (
 export const ResourceCard = ({ icon: Icon = Download, title, description, to, className = "" }) => (
   <Link
     to={to}
-    className={`block bg-white border border-[#e0d7cd] rounded-lg p-6 hover:border-orange-300 hover:shadow-sm transition-all h-full ${className}`}
+    className={`block bg-white border border-[#e0d7cd] rounded-lg p-6 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md transition-all ${className}`}
   >
     <Icon className="w-6 h-6 text-orange-600" />
     <h2 className="mt-4 text-lg font-black text-[#1f1d1b]">{title}</h2>
@@ -141,7 +153,7 @@ export const ResourceCard = ({ icon: Icon = Download, title, description, to, cl
 );
 
 export const HelpPanel = () => (
-  <div className="bg-[#e46a1d] text-white rounded-lg p-6">
+  <div className="bg-[#e46a1d] text-white rounded-lg p-6 shadow-md shadow-orange-200">
     <HelpCircle className="w-7 h-7" />
     <h2 className="mt-4 text-xl font-black">Need Assistance?</h2>
     <div className="mt-4 space-y-3 text-sm text-orange-50">

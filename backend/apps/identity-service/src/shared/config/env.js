@@ -58,7 +58,9 @@ const env = {
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS:
     parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 900000,
-  RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
+  RATE_LIMIT_MAX:
+    parseInt(process.env.RATE_LIMIT_MAX, 10) ||
+    (envName === "production" ? 100 : 1000),
 
   // Encryption
   ENCRYPTION_KEY: requireProductionValue(

@@ -9,6 +9,7 @@ const isRequestCanceled = (error) =>
   error?.code === "ERR_CANCELED" || axios.isCancel(error);
 
 let refreshPromise = null;
+let rateLimitToastUntil = 0;
 
 const clearSession = () => {
   localStorage.removeItem(STORAGE_KEYS.accessToken);
@@ -109,7 +110,13 @@ apiClient.interceptors.response.use(
       }
     }
 
-    if (status !== 401 && status !== 404 && status !== 409) {
+    if (status === 429) {
+      const now = Date.now();
+      if (now > rateLimitToastUntil) {
+        toast.error("Too many requests. Please wait a moment and try again.");
+        rateLimitToastUntil = now + 15000;
+      }
+    } else if (status !== 401 && status !== 404 && status !== 409) {
       toast.error(message);
     }
 

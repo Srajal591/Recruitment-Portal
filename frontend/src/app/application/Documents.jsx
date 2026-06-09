@@ -5,11 +5,10 @@ import toast from "react-hot-toast";
 import {
   Loader2,
   CheckCircle,
-  XCircle,
-  Clock,
   Upload,
   Eye,
   RefreshCw,
+  FileCheck2,
 } from "lucide-react";
 import ApplicationLayout from "../../components/layouts/ApplicationLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
@@ -28,89 +27,6 @@ const getAppId = () => {
     return null;
   }
 };
-
-const DOC_TYPES = [
-  {
-    id: "passport_photo",
-    name: "Passport Photo",
-    description: "JPEG/JPG only, Max 100KB",
-    required: true,
-    accept: "image/jpeg,image/jpg",
-    maxKB: 100,
-  },
-  {
-    id: "signature",
-    name: "Signature",
-    description: "JPEG/JPG, scanned on white background",
-    required: true,
-    accept: "image/jpeg,image/jpg",
-    maxKB: 100,
-  },
-  {
-    id: "tenth_certificate",
-    name: "10th Certificate",
-    description: "PDF/JPG, Max 500KB",
-    required: true,
-    accept: "application/pdf,image/jpeg,image/jpg",
-    maxKB: 500,
-  },
-  {
-    id: "twelfth_certificate",
-    name: "12th Certificate",
-    description: "PDF/JPG, Max 500KB",
-    required: true,
-    accept: "application/pdf,image/jpeg,image/jpg",
-    maxKB: 500,
-  },
-  {
-    id: "graduation_certificate",
-    name: "Graduation Certificate",
-    description: "PDF/JPG, Max 500KB",
-    required: false,
-    accept: "application/pdf,image/jpeg,image/jpg",
-    maxKB: 500,
-  },
-  {
-    id: "category_certificate",
-    name: "Category Certificate",
-    description: "PDF/JPG, Max 500KB",
-    required: false,
-    accept: "application/pdf,image/jpeg,image/jpg",
-    maxKB: 500,
-  },
-  {
-    id: "aadhar_card",
-    name: "Aadhar Card (ID Proof)",
-    description: "PDF/JPG, Max 500KB",
-    required: true,
-    accept: "application/pdf,image/jpeg,image/jpg",
-    maxKB: 500,
-  },
-  {
-    id: "driving_license",
-    name: "Driving License",
-    description: "PDF/JPG, Max 500KB",
-    required: false,
-    accept: "application/pdf,image/jpeg,image/jpg",
-    maxKB: 500,
-  },
-  {
-    id: "computer_certificate",
-    name: "Computer Certificate",
-    description: "PDF/JPG, Max 500KB",
-    required: false,
-    accept: "application/pdf,image/jpeg,image/jpg",
-    maxKB: 500,
-  },
-  {
-    id: "domicile_certificate",
-    name: "Bihar Domicile Certificate",
-    description: "PDF/JPG, Max 500KB",
-    required: false,
-    accept: "application/pdf,image/jpeg,image/jpg",
-    maxKB: 500,
-  },
-];
 
 const slugify = (value) =>
   String(value || "")
@@ -167,19 +83,16 @@ const Documents = () => {
   const app = appData?.application || appData;
   const job = app?.jobId;
   const adminDocuments = getJobDocumentRequirements(job);
-  const docTypes =
-    adminDocuments.length > 0
-      ? adminDocuments.map((doc) => ({
-          id: slugify(doc.name),
-          name: doc.name,
-          description:
-            doc.description ||
-            `${(doc.formats || []).join(", ") || "PDF/JPG/PNG"} accepted`,
-          required: doc.required !== false,
-          accept: acceptFromFormats(doc.formats),
-          maxKB: doc.maxSizeKB || 500,
-        }))
-      : DOC_TYPES;
+  const docTypes = adminDocuments.map((doc) => ({
+    id: slugify(doc.name),
+    name: doc.name,
+    description:
+      doc.description ||
+      `${(doc.formats || []).join(", ") || "PDF/JPG/PNG"} accepted`,
+    required: doc.required !== false,
+    accept: acceptFromFormats(doc.formats),
+    maxKB: doc.maxSizeKB || 500,
+  }));
   const steps = buildApplicationSteps(job, app);
   const currentStep = steps.find((step) => step.type === "documents")?.id || 1;
   const previousStep = steps.find((step) => step.id === currentStep - 1);
@@ -287,7 +200,7 @@ const Documents = () => {
                   Document Upload
                 </h2>
                 <p className="text-gray-600">
-                  Upload all required documents to proceed.
+                  Upload the documents configured for this job.
                 </p>
               </div>
               <div className="text-right">
@@ -315,6 +228,19 @@ const Documents = () => {
               <div className="flex items-center gap-2 text-gray-500 py-4">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Loading uploaded documents...</span>
+              </div>
+            )}
+
+            {!isLoading && docTypes.length === 0 && (
+              <div className="rounded-xl border border-dashed border-green-300 bg-green-50 p-6 text-center">
+                <FileCheck2 className="mx-auto mb-3 h-10 w-10 text-green-600" />
+                <h3 className="font-semibold text-green-900">
+                  No documents required for this job
+                </h3>
+                <p className="mt-1 text-sm text-green-700">
+                  The administrator has not added document uploads for this
+                  recruitment. You can continue to the next step.
+                </p>
               </div>
             )}
 

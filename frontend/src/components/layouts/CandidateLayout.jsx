@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query'
 import { authService, getStoredUser } from '../../services/auth.service'
 import { candidateService } from '../../services/candidate.service'
 import LogoutModal from '../ui/LogoutModal'
+import { REALTIME_ENABLED } from '../../api/config'
 
 const navItems = [
   { to: '/candidate/dashboard',     label: 'Dashboard',     icon: Home       },
@@ -47,8 +48,8 @@ const CandidateLayout = ({ children, title = 'Candidate Portal' }) => {
   const { data: notifData } = useQuery({
     queryKey: ['candidate-notifications-count'],
     queryFn: () => candidateService.getNotifications({ limit: 1 }),
-    refetchInterval: 30000,
-    staleTime: 15000,
+    refetchInterval: REALTIME_ENABLED ? false : 60000,
+    staleTime: 60000,
   })
   const unreadCount = notifData?.unreadCount || 0
 
@@ -149,7 +150,7 @@ const CandidateLayout = ({ children, title = 'Candidate Portal' }) => {
       </header>
 
       {/* ── Body ── */}
-      <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 px-3 sm:px-4 lg:px-6 py-5">
+      <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[220px_1fr] items-start gap-6 px-3 sm:px-4 lg:px-6 py-5">
 
         {/* ── Sidebar ── */}
         <aside className="h-fit sticky top-[57px]">

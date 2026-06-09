@@ -61,22 +61,14 @@ const getNextStepNumber = (job, currentStepType) => {
     stepNum += formSections.length;
   }
 
-  // Add documents step if configured
-  const documentRequirements = Array.isArray(job?.documentRequirements)
-    ? job.documentRequirements.filter((d) => d?.name)
-    : [];
-  if (documentRequirements.length > 0) {
-    stepNum += 1;
-  }
+  // Documents step is always part of the candidate journey. The documents
+  // shown inside that step are still controlled by the selected job.
+  stepNum += 1;
 
   // Review is always next
   stepNum += 1;
 
-  // Add post selection if multiple posts
-  const hasMultiplePosts = Array.isArray(job?.posts) && job.posts.length > 1;
-  if (hasMultiplePosts) {
-    stepNum += 1;
-  }
+  stepNum += 1;
 
   // Payment and Submit are always last
   // stepNum += 2; (will be added by caller if needed)
@@ -297,7 +289,12 @@ const getApplication = asyncHandler(async (req, res) => {
   const application = await Application.findOne({
     _id: req.params.id,
     candidateId: req.user.id,
-  }).populate("jobId");
+  })
+    .populate("jobId")
+    .populate(
+      "candidateId",
+      "fullName email registeredMobile dateOfBirth gender category fatherName motherName",
+    );
 
   if (!application)
     throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
@@ -648,12 +645,21 @@ const uploadDocument = asyncHandler(async (req, res) => {
   const docType = req.params.type;
   await app.populate("jobId");
 
-  const requirements = app.jobId?.documentRequirements || [];
+  const requirements = (app.jobId?.documentRequirements || []).filter(
+    (doc) => doc?.name,
+  );
+  if (requirements.length === 0) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "No document uploads are configured for this job",
+    );
+  }
+
   const requirementMap = new Map(
     requirements.map((doc) => [slugify(doc.name), doc]),
   );
   const selectedRequirement = requirementMap.get(docType);
-  if (requirements.length > 0 && !selectedRequirement) {
+  if (!selectedRequirement) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       "This document is not required for this job",
@@ -710,12 +716,7 @@ const uploadDocument = asyncHandler(async (req, res) => {
       const formSectionsCount = (app.jobId?.formSections || []).filter(
         (s) => Array.isArray(s.fields) && s.fields.length > 0,
       ).length;
-      const hasDocRequirements =
-        (app.jobId?.documentRequirements || []).filter((d) => d?.name).length >
-        0;
-      // Documents step = 4 (fixed) + formSectionsCount + 1 (documents itself)
-      // After saving documents, advance to next step (review)
-      return 4 + formSectionsCount + (hasDocRequirements ? 1 : 0) + 1;
+      return 4 + formSectionsCount + 1 + 1;
     })(),
   );
   app.lastSavedAt = new Date();
@@ -868,17 +869,7 @@ const updatePostSelection = asyncHandler(async (req, res) => {
   const formSectionsCountPS = (app.jobId?.formSections || []).filter(
     (s) => Array.isArray(s.fields) && s.fields.length > 0,
   ).length;
-  const hasDocRequirementsPS =
-    (app.jobId?.documentRequirements || []).filter((d) => d?.name).length > 0;
-  const hasMultiplePostsPS =
-    Array.isArray(app.jobId?.posts) && app.jobId.posts.length > 1;
-  // Post-selection step = 4 + formSections + (1 if docs) + 1 (review) + (1 if post-selection)
-  const postSelectionStepNum =
-    4 +
-    formSectionsCountPS +
-    (hasDocRequirementsPS ? 1 : 0) +
-    1 +
-    (hasMultiplePostsPS ? 1 : 0);
+  const postSelectionStepNum = 4 + formSectionsCountPS + 1 + 1 + 1;
   app.currentStep = Math.max(app.currentStep, postSelectionStepNum);
   app.lastSavedAt = new Date();
   await app.save();
@@ -953,11 +944,7 @@ const submitApplication = asyncHandler(async (req, res) => {
   const formSectionsCount = (app.jobId?.formSections || []).filter(
     (s) => Array.isArray(s.fields) && s.fields.length > 0,
   ).length;
-  const hasDocRequirements =
-    (app.jobId?.documentRequirements || []).filter((d) => d?.name).length > 0;
-  // Review step = 4 + formSections + (1 if docs) + 1 (review itself)
-  const reviewStepNum =
-    4 + formSectionsCount + (hasDocRequirements ? 1 : 0) + 1;
+  const reviewStepNum = 4 + formSectionsCount + 1 + 1;
   // Always keep as draft — finalize handles the actual submission
   app.currentStep = Math.max(app.currentStep, reviewStepNum);
   app.lastSavedAt = new Date();
@@ -1035,7 +1022,10 @@ const finalizeApplication = asyncHandler(async (req, res) => {
   app.paymentStatus = "paid";
   app.status = "submitted";
   app.submittedAt = new Date();
-  app.currentStep = 9;
+  const formSectionsCount = (app.jobId?.formSections || []).filter(
+    (section) => Array.isArray(section.fields) && section.fields.length > 0,
+  ).length;
+  app.currentStep = 9 + formSectionsCount;
   if (req.body.transactionId) app.transactionId = req.body.transactionId;
   if (req.body.declaration) app.declaration = req.body.declaration;
   await app.save();
@@ -1109,6 +1099,128 @@ const finalizeApplication = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Submit corrections after admin requested edits.
+ * Updates the SAME application in place, transitions correction.status → "submitted",
+ * puts application back to "under_review", and notifies admins for re-review.
+ *
+ * POST /api/candidate/applications/:id/submit-correction
+ */
+const submitCorrection = asyncHandler(async (req, res) => {
+  const app = await Application.findOne({
+    _id: req.params.id,
+    candidateId: req.user.id,
+  }).populate("jobId");
+
+  if (!app) throw new ApiError(StatusCodes.NOT_FOUND, "Application not found");
+
+  const correctionOpen = ["requested", "in_progress"].includes(
+    app.correction?.status,
+  );
+  if (!correctionOpen) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "No correction is pending for this application",
+    );
+  }
+
+  // Validate that all required fields/documents are present
+  assertApplicationCompleteForJob(app);
+
+  // Save declaration if provided
+  if (req.body.declaration) {
+    app.declaration = req.body.declaration;
+  }
+
+  // Remember the linked support ticket before saving so we can use it in
+  // the admin notification link (direct deep-link into the support ticket).
+  const linkedTicketId = app.correction?.supportTicket;
+
+  // Mark correction as submitted and set application back to under_review
+  app.correction.status = "submitted";
+  app.correction.submittedAt = new Date();
+  app.status = "under_review";
+  app.submittedAt = app.submittedAt || new Date(); // keep original submit date
+
+  const formSectionsCount = (app.jobId?.formSections || []).filter(
+    (section) => Array.isArray(section.fields) && section.fields.length > 0,
+  ).length;
+  app.currentStep = 9 + formSectionsCount;
+  app.lastSavedAt = new Date();
+  await app.save();
+
+  const candidate = await User.findById(req.user.id).select(
+    "fullName email registeredMobile",
+  );
+
+  // Admin notification link — go straight to the support ticket if one exists,
+  // otherwise fall back to the application detail page.
+  const adminLink = linkedTicketId
+    ? `/admin/support/tickets/${linkedTicketId}`
+    : `/admin/applications/${app._id}`;
+
+  // Notify candidate
+  await notify({
+    recipientId: req.user.id,
+    type: "general",
+    title: "Corrections Submitted",
+    message: `Your corrections for application ${app.applicationId} have been submitted. Admin will review shortly.`,
+    link: `/candidate/applications/${app._id}`,
+    metadata: { applicationId: app.applicationId },
+  });
+
+  // Notify all admins with candidate details + deep-link to support ticket
+  notifyAdmins({
+    type: "application_updated",
+    title: "Application Corrections Submitted",
+    message: `${candidate?.fullName || "A candidate"} (${candidate?.email || ""}) submitted corrections for application ${app.applicationId} — "${app.jobId?.title || ""}". Please review and resolve.`,
+    link: adminLink,
+    metadata: {
+      applicationId: app.applicationId,
+      applicationDbId: String(app._id),
+      candidateName: candidate?.fullName || "",
+      candidateEmail: candidate?.email || "",
+      ...(linkedTicketId && { supportTicketId: String(linkedTicketId) }),
+      correctionSubmittedAt: new Date().toISOString(),
+    },
+  });
+
+  try {
+    emitToAdmins(SOCKET_EVENTS.APPLICATION_UPDATED, {
+      type: "correction_submitted",
+      message: `${candidate?.fullName || "Candidate"} submitted corrections for ${app.applicationId}`,
+      applicationId: app.applicationId,
+      applicationDbId: app._id,
+      candidateName: candidate?.fullName,
+      candidateEmail: candidate?.email,
+      jobTitle: app.jobId?.title,
+      adminLink,
+      timestamp: new Date(),
+    });
+
+    emitToCandidate(req.user.id, SOCKET_EVENTS.APPLICATION_STATUS_CHANGED, {
+      type: "correction_submitted",
+      message: "Your corrections have been submitted for review.",
+      application: {
+        _id: app._id,
+        applicationId: app.applicationId,
+        status: app.status,
+      },
+      timestamp: new Date(),
+    });
+  } catch (_) {}
+
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Corrections submitted successfully", {
+      _id: app._id,
+      applicationId: app.applicationId,
+      status: app.status,
+      correctionStatus: app.correction.status,
+      submittedAt: app.correction.submittedAt,
+    }),
+  );
+});
+
 module.exports = {
   createApplication,
   getMyApplications,
@@ -1122,4 +1234,5 @@ module.exports = {
   updatePostSelection,
   submitApplication,
   finalizeApplication,
+  submitCorrection,
 };

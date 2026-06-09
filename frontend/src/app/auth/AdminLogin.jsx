@@ -1,33 +1,51 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Shield } from "lucide-react";
 import toast from "react-hot-toast";
-import { Card, CardContent, CardHeader } from "../../components/ui/Card";
-import Button from "../../components/ui/Button";
 import { authService } from "../../services/auth.service";
+import heroBg from "../../assets/herobg.jpg";
+
+const SIDE_IMAGE =
+  "https://images.unsplash.com/photo-1551434678-e076c223a692?w=480&q=80&fit=crop";
+
+const FEATURES = [
+  "Manage All Recruitment Campaigns",
+  "Real-Time Application Reviews",
+  "Employee & Role Management",
+  "Advanced Analytics & Reports",
+];
+
+const STATS = [
+  { value: "150+", label: "Active Recruitments" },
+  { value: "500K+", label: "Apps Processed" },
+  { value: "99.9%", label: "Secure Platform" },
+];
+
+const TRUST = [
+  { icon: "🏛️", title: "Official Portal",     sub: "Government of India"   },
+  { icon: "🔒", title: "256-bit Encryption", sub: "Bank-level security"    },
+  { icon: "🛡️", title: "Privacy First",      sub: "Your data is protected" },
+];
+
+const inputCls =
+  "w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (error) setError("");
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
     try {
       await authService.adminLogin(formData);
       toast.success("Admin login successful");
@@ -40,135 +58,169 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center space-x-3">
-            <div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <div className="text-left">
-              <div className="font-bold text-xl text-gray-800">Admin Panel</div>
-              <div className="text-sm text-gray-600">RECRUITMENT PORTAL</div>
-            </div>
-          </Link>
-        </div>
+    <div
+      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex flex-col"
+      style={{ backgroundImage: `url(${heroBg})` }}
+    >
+      <div className="fixed inset-0 bg-black/55 pointer-events-none" />
 
-        <Card className="shadow-xl">
-          <CardHeader className="text-center pb-4">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Admin Login
-            </h1>
-            <p className="text-gray-600">Access the administrative dashboard</p>
-          </CardHeader>
+      <div className="relative z-10 flex flex-col items-center justify-center py-12 px-4 min-h-screen">
 
-          <CardContent className="p-6">
-            <form onSubmit={handleLogin} className="space-y-6">
-              {/* Email */}
+        {/* Card */}
+        <div className="w-full max-w-4xl rounded-2xl overflow-hidden shadow-2xl flex bg-white">
+
+          {/* LEFT PANEL */}
+          <div className="hidden lg:flex lg:w-[44%] flex-col bg-[#fdf8f2] p-10 shrink-0">
+            <Link to="/" className="flex items-center gap-2.5 mb-8">
+              <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg flex items-center justify-center shadow-sm">
+                <Shield className="w-4 h-4 text-white" />
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <p className="text-orange-600 font-black text-sm leading-tight">Recruitment Portal</p>
+                <p className="text-gray-400 text-[9px] font-bold tracking-widest uppercase">Admin Panel</p>
+              </div>
+            </Link>
+
+            <h2 className="text-[30px] font-black text-gray-900 leading-tight mb-3">
+              Admin Login
+            </h2>
+            <p className="text-xs text-gray-500 leading-relaxed mb-6">
+              Sign in to manage recruitments, review applications, configure
+              settings, and access comprehensive analytics.
+            </p>
+
+            <ul className="space-y-2.5 mb-7">
+              {FEATURES.map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-xs text-gray-600">
+                  <CheckCircle className="w-4 h-4 text-orange-500 shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <div className="rounded-xl overflow-hidden mb-7 border border-gray-100">
+              <img
+                src={SIDE_IMAGE}
+                alt="Admin"
+                className="w-full h-40 object-cover"
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+            </div>
+
+            <div className="flex gap-6 mt-auto">
+              {STATS.map((s) => (
+                <div key={s.value}>
+                  <p className="text-orange-500 font-black text-base leading-none">{s.value}</p>
+                  <p className="text-gray-400 text-[10px] mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT PANEL */}
+          <div className="flex-1 flex flex-col bg-white">
+            <div className="h-1 w-full bg-gradient-to-r from-orange-500 to-yellow-400 shrink-0" />
+
+            <div className="flex-1 flex flex-col justify-center px-10 py-12">
+              {/* Mobile logo */}
+              <Link to="/" className="flex items-center gap-2 mb-6 lg:hidden">
+                <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+                <p className="font-bold text-gray-800 text-sm">Admin Panel</p>
+              </Link>
+
+              <h1 className="text-3xl font-black text-gray-900 mb-1">Sign In</h1>
+              <p className="text-xs text-gray-400 mb-8">Access Your Admin Dashboard</p>
+
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="Enter your admin email"
+                    placeholder="admin@recruitment.gov.in"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
+                    className={inputCls}
                   />
                 </div>
-              </div>
 
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      handleInputChange("password", e.target.value)
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      className={`${inputCls} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-600">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+                    <input type="checkbox" className="w-3.5 h-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500" />
                     Remember me
-                  </span>
-                </label>
-                <Link
-                  to="/auth/forgot-password"
-                  className="text-sm text-orange-600 hover:text-orange-700"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
+                  </label>
+                  <Link to="/auth/forgot-password" className="text-xs font-semibold text-orange-500 hover:text-orange-600">
+                    Forgot Password?
+                  </Link>
                 </div>
-              )}
 
-              {/* Login Button */}
-              <Button
-                type="submit"
-                className="w-full py-3 flex items-center justify-center space-x-2 bg-orange-600 hover:bg-orange-700"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <Shield className="w-4 h-4" />
-                    <span>Access Admin Panel</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+                {error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-600">
+                    {error}
+                  </div>
                 )}
-              </Button>
 
-              <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-700">
-                Seeded admin: admin@recruitment.gov.in / Admin@123456
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <><Shield className="w-4 h-4" /> Access Admin Panel</>
+                  )}
+                </button>
 
-        {/* Back to Home */}
-        <div className="text-center mt-6">
-          <Link to="/" className="text-gray-600 hover:text-gray-800 text-sm">
-            ← Back to Home
-          </Link>
+                <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3 text-xs text-gray-500">
+                  <span className="font-semibold text-gray-600">Demo:</span>{" "}
+                  admin@recruitment.gov.in / Admin@123456
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
+
+        {/* Trust badges — below card, never overlapping */}
+        <div className="flex flex-wrap justify-center gap-8 mt-8">
+          {TRUST.map((b) => (
+            <div key={b.title} className="flex items-center gap-2 text-white/85">
+              <span className="text-xl leading-none">{b.icon}</span>
+              <div>
+                <p className="text-xs font-bold leading-tight">{b.title}</p>
+                <p className="text-[10px] opacity-70">{b.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   );

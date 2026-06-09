@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { candidateService } from "../../services/candidate.service";
 import { INDIA_STATE_CITIES, INDIA_STATES } from "../../constants/indiaLocations";
+import { buildApplicationSteps } from "../../utils/applicationFlow";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
@@ -276,14 +277,14 @@ const Address = () => {
       if (location.state?.returnToReview) {
         navigate("/application/review", { state: { applicationId } });
       } else {
-        // Check if job has custom form sections
-        const job = jobData?.job || jobData;
-        const hasCustomForms = job?.formSections && job.formSections.length > 0;
-        
-        const nextRoute = hasCustomForms
-          ? "/application/form-responses"
-          : "/application/documents";
-        navigate(nextRoute, { state: { applicationId } });
+        const app = appData?.application || appData;
+        const job = jobData?.job || jobData || app?.jobId;
+        const steps = buildApplicationSteps(job, app);
+        const addressStep = steps.find((step) => step.type === "address")?.id || 4;
+        const nextStep = steps.find((step) => step.id === addressStep + 1);
+        navigate(nextStep?.path || "/application/review", {
+          state: { applicationId },
+        });
       }
     },
     onError: (err) => toast.error(err.message || "Failed to save"),

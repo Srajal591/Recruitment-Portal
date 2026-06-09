@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
+import { REALTIME_ENABLED } from "../../api/config";
 import toast from "react-hot-toast";
 
 // Match the Notification model enum values exactly
@@ -102,7 +103,8 @@ const Notifications = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["candidate-notifications"],
     queryFn: () => candidateService.getNotifications({ limit: 100 }),
-    refetchInterval: 30000, // poll every 30s
+    refetchInterval: REALTIME_ENABLED ? false : 60000,
+    staleTime: 30000,
   });
 
   // API returns { notifications: [...], unreadCount: N } as data field

@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, Edit3 } from "lucide-react";
 import ApplicationLayout from "../../components/layouts/ApplicationLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { candidateService } from "../../services/candidate.service";
-import { buildApplicationSteps } from "../../utils/applicationFlow";
+import {
+  buildApplicationSteps,
+  isCorrectionMode,
+} from "../../utils/applicationFlow";
 
 const APP_KEY = "app_draft";
 const getAppId = () => {
@@ -88,10 +91,25 @@ const Review = () => {
 
   const app = data?.application || data;
   const job = app?.jobId || jobData?.job || jobData;
+  const correctionMode = isCorrectionMode(app);
   const steps = buildApplicationSteps(job, app);
   const reviewStep = steps.find((step) => step.type === "review")?.id || 1;
   const previousStep = steps.find((step) => step.id === reviewStep - 1);
   const nextStep = steps.find((step) => step.id === reviewStep + 1);
+
+  // In correction mode: submit correction directly from review (skip payment)
+  const { mutate: doSubmitCorrection, isPending: isSubmittingCorrection } =
+    useMutation({
+      mutationFn: () =>
+        candidateService.submitCorrection(applicationId, declaration),
+      onSuccess: () => {
+        navigate("/application/success", {
+          state: { applicationId, correctionMode: true },
+        });
+      },
+      onError: (err) =>
+        toast.error(err.message || "Failed to submit corrections"),
+    });
 
   // Review just navigates forward — no API call needed here.
   // Declaration is saved during finalize (after payment).
@@ -111,6 +129,12 @@ const Review = () => {
       APP_KEY,
       JSON.stringify({ ...existing, declaration }),
     );
+
+    if (correctionMode) {
+      // In correction mode: submit corrections now — no payment needed
+      doSubmitCorrection();
+      return;
+    }
 
     navigate(nextStep?.path || "/application/success", {
       state: { applicationId },
@@ -480,6 +504,23 @@ const Review = () => {
               </div>
             )}
 
+            {/* Correction Mode Banner */}
+            {correctionMode && (
+              <div className="border border-orange-300 bg-orange-50 rounded-lg p-4 flex items-start gap-3">
+                <Edit3 className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-orange-800 text-sm">
+                    Correction Mode
+                  </p>
+                  <p className="text-orange-700 text-sm mt-0.5">
+                    You are reviewing corrections requested by the admin. Once
+                    you accept the declaration and submit, your changes will be
+                    sent for re-review. No additional payment is required.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Declaration */}
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-lg font-medium text-gray-800 mb-4">
@@ -520,10 +561,19 @@ const Review = () => {
           </Button>
           <Button
             onClick={handleNext}
-            disabled={!accepted || !applicationId}
+            disabled={!accepted || !applicationId || isSubmittingCorrection}
             className="px-6 bg-orange-600 hover:bg-orange-700"
           >
-            Continue →
+            {isSubmittingCorrection ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Submitting Corrections...
+              </>
+            ) : correctionMode ? (
+              "Submit Corrections →"
+            ) : (
+              "Continue →"
+            )}
           </Button>
         </div>
       </div>

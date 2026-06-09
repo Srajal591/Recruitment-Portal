@@ -1,9 +1,7 @@
 import { useState } from "react";
 import {
-  Search,
   ChevronDown,
   BookOpen,
-  MessageSquare,
   Phone,
   Mail,
   Clock,
@@ -20,6 +18,7 @@ import {
   SearchInput,
   ResourceCard,
   HelpPanel,
+  publicContainer,
 } from "./PublicPageShell";
 
 const fadeUp = {
@@ -35,7 +34,6 @@ const HelpCenter = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategory, setExpandedCategory] = useState(0);
-  const [expandedFaq, setExpandedFaq] = useState(null);
 
   const categories = [
     {
@@ -217,8 +215,8 @@ const HelpCenter = () => {
         description="Find answers to your questions and get support for registration, applications, payments, and more."
       />
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <section className={`${publicContainer} py-8`}>
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
           <div className="space-y-6">
             {/* Search */}
             <SearchInput
@@ -357,7 +355,7 @@ const HelpCenter = () => {
           </div>
 
           {/* Sidebar */}
-          <aside className="space-y-5">
+          <aside className="space-y-5 lg:sticky lg:top-28">
             <HelpPanel />
             <ResourceCard
               icon={Phone}

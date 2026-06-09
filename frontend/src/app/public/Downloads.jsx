@@ -10,6 +10,7 @@ import {
   PageHero,
   ResourceCard,
   StatTile,
+  publicContainer,
 } from "./PublicPageShell";
 
 const fadeUp = {
@@ -47,7 +48,7 @@ const Downloads = () => {
         </div>
       </PageHero>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <section className={`${publicContainer} py-10 space-y-6`}>
         <div className="grid gap-5 md:grid-cols-3">
           {[
             { icon: ListChecks, title: "Document Checklist", description: "Review common documents needed for public recruitment applications.", to: "/how-to-apply" },

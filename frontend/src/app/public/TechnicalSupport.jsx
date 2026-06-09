@@ -2,19 +2,22 @@ import { useState } from "react";
 import {
   ChevronDown,
   AlertCircle,
-  Wifi,
   Lock,
   FileText,
-  Clock,
   Download,
   Eye,
   Smartphone,
   Monitor,
-  HardDrive,
   Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { PageFrame, PageHero, SearchInput, HelpPanel } from "./PublicPageShell";
+import {
+  PageFrame,
+  PageHero,
+  SearchInput,
+  HelpPanel,
+  publicContainer,
+} from "./PublicPageShell";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -27,7 +30,6 @@ const fadeUp = {
 
 const TechnicalSupport = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedFaq, setExpandedFaq] = useState(null);
 
   const issues = [
     {
@@ -198,8 +200,8 @@ const TechnicalSupport = () => {
         description="Troubleshoot common technical issues with login, applications, payments, and browser compatibility."
       />
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <section className={`${publicContainer} py-8`}>
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
           <div className="space-y-6">
             {/* Search */}
             <SearchInput
@@ -317,7 +319,7 @@ const TechnicalSupport = () => {
           </div>
 
           {/* Sidebar */}
-          <aside className="space-y-5">
+          <aside className="space-y-5 lg:sticky lg:top-28">
             <HelpPanel />
             <div className="bg-white border border-[#e0d7cd] rounded-lg p-5">
               <h3 className="font-black text-[#1f1d1b] mb-4 flex items-center gap-2">

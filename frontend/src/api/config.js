@@ -27,19 +27,21 @@ export const REALTIME_ENABLED =
   import.meta.env.VITE_REALTIME_ENABLED === "true" ||
   (!import.meta.env.PROD && import.meta.env.VITE_REALTIME_ENABLED !== "false");
 
+const gatewaySocketBase =
+  import.meta.env.VITE_GATEWAY_SOCKET_URL ||
+  import.meta.env.VITE_GATEWAY_URL ||
+  "http://localhost:5000";
+
 export const SERVICE_SOCKET_URLS = {
   identity:
     import.meta.env.VITE_IDENTITY_SOCKET_URL ||
-    import.meta.env.VITE_IDENTITY_URL ||
-    "http://localhost:5001",
+    `${gatewaySocketBase}/realtime/identity`,
   recruitment:
     import.meta.env.VITE_RECRUITMENT_SOCKET_URL ||
-    import.meta.env.VITE_RECRUITMENT_URL ||
-    "http://localhost:5002",
+    `${gatewaySocketBase}/realtime/recruitment`,
   communication:
     import.meta.env.VITE_COMMUNICATION_SOCKET_URL ||
-    import.meta.env.VITE_COMMUNICATION_URL ||
-    "http://localhost:5003",
+    `${gatewaySocketBase}/realtime/communication`,
 };
 
 export const STORAGE_KEYS = {

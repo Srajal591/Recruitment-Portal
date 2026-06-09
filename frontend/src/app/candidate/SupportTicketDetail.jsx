@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { candidateService } from "../../services/candidate.service";
+import { REALTIME_ENABLED } from "../../api/config";
 import {
   getFirstApplicationRoute,
   persistApplicationDraft,
@@ -73,7 +74,8 @@ const SupportTicketDetail = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["candidate-ticket", id],
     queryFn: () => candidateService.getTicket(id),
-    refetchInterval: 15000,
+    refetchInterval: REALTIME_ENABLED ? false : 60000,
+    staleTime: 30000,
   });
 
   const ticket = data?.ticket || data;
@@ -102,16 +104,18 @@ const SupportTicketDetail = () => {
     onError: (err) => toast.error(err.message || "Failed to close ticket"),
   });
 
-  const { mutate: completeAction, isPending: isCompletingAction } = useMutation({
-    mutationFn: () => candidateService.completeTicketAction(id),
-    onSuccess: () => {
-      toast.success("Support team notified");
-      queryClient.invalidateQueries({ queryKey: ["candidate-ticket", id] });
-      queryClient.invalidateQueries({ queryKey: ["candidate-tickets"] });
+  const { mutate: completeAction, isPending: isCompletingAction } = useMutation(
+    {
+      mutationFn: () => candidateService.completeTicketAction(id),
+      onSuccess: () => {
+        toast.success("Support team notified");
+        queryClient.invalidateQueries({ queryKey: ["candidate-ticket", id] });
+        queryClient.invalidateQueries({ queryKey: ["candidate-tickets"] });
+      },
+      onError: (err) =>
+        toast.error(err.message || "Failed to complete support action"),
     },
-    onError: (err) =>
-      toast.error(err.message || "Failed to complete support action"),
-  });
+  );
 
   const handleSend = () => {
     const msg = replyText.trim();
@@ -163,13 +167,28 @@ const SupportTicketDetail = () => {
     action.type === "application_correction" &&
     action.status === "candidate_action_required" &&
     linkedApplication;
+  // Once the candidate has submitted corrections, the edit button is locked
+  const correctionAlreadySubmitted =
+    linkedApplication?.correction?.status === "submitted" ||
+    action.status === "candidate_completed";
 
   const openApplicationCorrection = () => {
+    // Pass both correctionMode and the support ticket id so the
+    // Success page "Back to Support Ticket" button works correctly
     persistApplicationDraft({
       applicationId: linkedApplication._id,
       jobId: linkedApplication.jobId?._id || linkedApplication.jobId,
+      correctionMode: true,
+      supportTicketId: id, // current ticket id from useParams
     });
-    navigate(getFirstApplicationRoute(linkedApplication));
+    // Navigate to step 1 — sidebar is fully unlocked in correction mode
+    const route = getFirstApplicationRoute(linkedApplication);
+    navigate(route, {
+      state: {
+        applicationId: linkedApplication._id,
+        jobId: linkedApplication.jobId?._id || linkedApplication.jobId,
+      },
+    });
   };
 
   return (
@@ -216,7 +235,7 @@ const SupportTicketDetail = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-6">
           {/* Main — Conversation */}
           <div className="lg:col-span-2 space-y-4">
             {/* Original Issue */}
@@ -517,33 +536,41 @@ const SupportTicketDetail = () => {
                     </div>
                   )}
                   {canCorrectApplication && (
-                    <>
-                      <Button
-                        onClick={openApplicationCorrection}
-                        className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        Edit Application
-                      </Button>
-                      <Button
-                        onClick={() => completeAction()}
-                        disabled={isCompletingAction}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        {isCompletingAction ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                        )}
-                        I Have Updated It
-                      </Button>
-                    </>
+                    <div className="space-y-2">
+                      {correctionAlreadySubmitted ? (
+                        <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-3">
+                          <p className="text-xs font-semibold text-green-800 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            Corrections already submitted
+                          </p>
+                          <p className="text-xs text-green-700 mt-1">
+                            Your edits have been sent to the admin for
+                            re-review. You cannot edit again until admin
+                            reviews.
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={openApplicationCorrection}
+                            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            <Edit3 className="w-4 h-4 mr-2" />
+                            Edit Application
+                          </Button>
+                          <p className="text-xs text-gray-500 text-center">
+                            Make your corrections, then submit from the Review
+                            step.
+                          </p>
+                        </>
+                      )}
+                    </div>
                   )}
                   {action.status === "candidate_completed" && (
                     <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2">
                       <p className="text-xs font-medium text-green-800">
-                        Your update was sent to the support team for review.
+                        Your corrections were submitted. Admin has been notified
+                        for re-review.
                       </p>
                     </div>
                   )}

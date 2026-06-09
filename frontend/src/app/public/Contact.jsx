@@ -1,7 +1,13 @@
 import { Link } from "react-router-dom";
 import { Mail, MapPin, Phone, Send } from "lucide-react";
 import { motion } from "framer-motion";
-import { HelpPanel, PageFrame, PageHero, ResourceCard } from "./PublicPageShell";
+import {
+  HelpPanel,
+  PageFrame,
+  PageHero,
+  ResourceCard,
+  publicContainer,
+} from "./PublicPageShell";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -27,8 +33,8 @@ const Contact = () => (
       description="Use the official support channels for application, payment, document, and portal access queries. Logged-in candidates can also raise support tickets from their dashboard."
     />
 
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <section className={`${publicContainer} py-10`}>
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
         <div className="grid gap-5 md:grid-cols-2">
           {contactCards.map((card, i) => (
             <motion.div

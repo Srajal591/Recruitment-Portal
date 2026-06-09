@@ -271,11 +271,11 @@ const CandidateDashboard = () => {
         </div>
 
         {/* Main content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-6">
           {/* Applications — 2/3 width */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex justify-between items-center">
+          <Card className="lg:col-span-2 overflow-hidden">
+            <CardHeader className="p-5 pb-4 border-b border-gray-100">
+              <div className="flex justify-between items-center gap-4">
                 <h3 className="font-semibold text-gray-800">My Applications</h3>
                 <Link
                   to="/candidate/applications"
@@ -297,7 +297,7 @@ const CandidateDashboard = () => {
                 </div>
               )}
               {!isLoading && applications.length === 0 && (
-                <div className="p-8 text-center">
+                <div className="min-h-[220px] p-8 text-center flex flex-col items-center justify-center">
                   <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm font-medium">
                     No applications yet
@@ -319,7 +319,7 @@ const CandidateDashboard = () => {
                 return (
                   <div
                     key={app._id}
-                    className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-orange-50 transition-colors"
+                    className="flex items-center justify-between px-5 py-4 border-b border-gray-100 last:border-0 hover:bg-orange-50 transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
@@ -388,9 +388,9 @@ const CandidateDashboard = () => {
           {/* Right column */}
           <div className="space-y-5">
             {/* Active Jobs */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
+            <Card className="overflow-hidden">
+              <CardHeader className="p-5 pb-4 border-b border-gray-100">
+                <div className="flex justify-between items-center gap-3">
                   <h3 className="font-semibold text-gray-800">Active Jobs</h3>
                   <Link
                     to="/candidate/jobs"
@@ -402,9 +402,10 @@ const CandidateDashboard = () => {
               </CardHeader>
               <CardContent className="p-0">
                 {jobs.length === 0 && (
-                  <p className="text-sm text-gray-500 px-4 pb-4">
-                    No active jobs right now.
-                  </p>
+                  <div className="min-h-[132px] px-5 py-6 text-center flex flex-col items-center justify-center">
+                    <Briefcase className="w-8 h-8 text-gray-300 mb-2" />
+                    <p className="text-sm text-gray-500">No active jobs right now.</p>
+                  </div>
                 )}
                 {jobs.slice(0, 4).map((job) => {
                   const days = daysLeft(job.applicationDeadline);
@@ -412,7 +413,7 @@ const CandidateDashboard = () => {
                     <Link
                       key={job._id}
                       to={`/jobs/${job._id}`}
-                      className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-orange-50 transition-colors group"
+                      className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 last:border-0 hover:bg-orange-50 transition-colors group"
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-gray-800 text-sm truncate group-hover:text-orange-600 transition-colors">
@@ -442,9 +443,9 @@ const CandidateDashboard = () => {
             </Card>
 
             {/* Notifications */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
+            <Card className="overflow-hidden">
+              <CardHeader className="p-5 pb-4 border-b border-gray-100">
+                <div className="flex justify-between items-center gap-3">
                   <h3 className="font-semibold text-gray-800 flex items-center gap-2">
                     Notifications
                     {unreadCount > 0 && (
@@ -463,9 +464,10 @@ const CandidateDashboard = () => {
               </CardHeader>
               <CardContent className="p-0">
                 {unreadNotifications.length === 0 && (
-                  <p className="text-sm text-gray-500 px-4 pb-4">
-                    No unread notifications.
-                  </p>
+                  <div className="min-h-[132px] px-5 py-6 text-center flex flex-col items-center justify-center">
+                    <Bell className="w-8 h-8 text-gray-300 mb-2" />
+                    <p className="text-sm text-gray-500">No unread notifications.</p>
+                  </div>
                 )}
                 <div className="max-h-80 overflow-y-auto">
                 {unreadNotifications.map((n) => {
@@ -475,7 +477,7 @@ const CandidateDashboard = () => {
                       type="button"
                       key={n._id}
                       onClick={() => handleNotificationClick(n)}
-                      className={`flex items-start gap-3 px-4 py-3 border-b border-gray-100 last:border-0 transition-colors ${
+                      className={`flex items-start gap-3 px-5 py-3.5 border-b border-gray-100 last:border-0 transition-colors ${
                         "w-full text-left bg-orange-50 hover:bg-orange-100"
                       }`}
                     >
@@ -506,8 +508,8 @@ const CandidateDashboard = () => {
             </Card>
 
             {/* Quick links */}
-            <Card>
-              <CardHeader>
+            <Card className="overflow-hidden">
+              <CardHeader className="p-5 pb-4 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-800">Quick Actions</h3>
               </CardHeader>
               <CardContent className="p-3 space-y-1">

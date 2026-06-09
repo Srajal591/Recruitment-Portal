@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Briefcase,
@@ -24,6 +25,7 @@ import { jobService } from "../../services/job.service";
 import { candidateService } from "../../services/candidate.service";
 import { applicationService } from "../../services/application.service";
 import { useAuth, isCandidateUser } from "../../hooks/useAuth";
+import { publicContainer } from "./PublicPageShell";
 import {
   getFirstApplicationRoute,
   getRouteForApplicationStep,
@@ -49,7 +51,7 @@ const formatDate = (d) =>
 // ── Sub-components ────────────────────────────────────────────
 
 const Info = ({ icon: Icon, label, value }) => (
-  <div className="bg-[#faf7f4] border border-[#ede3dc] rounded-2xl px-5 py-4">
+  <div className="bg-[#faf7f4] border border-[#ede3dc] rounded-lg px-5 py-4">
     <div className="text-[10px] uppercase font-bold tracking-wide text-[#9d8f88] mb-2">
       {label}
     </div>
@@ -61,12 +63,18 @@ const Info = ({ icon: Icon, label, value }) => (
 );
 
 const Section = ({ title, children }) => (
-  <div className="bg-white rounded-[24px] border border-[#eadfd7] overflow-hidden shadow-sm">
+  <motion.div
+    initial={{ opacity: 0, y: 18 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.12 }}
+    transition={{ duration: 0.4, ease: "easeOut" }}
+    className="bg-white rounded-lg border border-[#eadfd7] overflow-hidden shadow-sm"
+  >
     <div className="px-6 py-5 bg-[#f8efea]">
       <h2 className="font-bold text-[#3b2e2a] text-[15px]">{title}</h2>
     </div>
     <div className="px-6 py-5">{children}</div>
-  </div>
+  </motion.div>
 );
 
 // ── Apply Sidebar ─────────────────────────────────────────────
@@ -101,7 +109,7 @@ const ApplySidebar = ({
     };
 
     return (
-      <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#eadfd7] rounded-lg overflow-hidden shadow-sm">
         <div
           className={`px-5 py-4 ${isDraft ? "bg-orange-500" : "bg-green-600"}`}
         >
@@ -170,7 +178,7 @@ const ApplySidebar = ({
   // Not logged in
   if (!isLoggedIn) {
     return (
-      <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#eadfd7] rounded-lg overflow-hidden shadow-sm">
         <div className="bg-[#f97316] px-5 py-4">
           <h2 className="font-bold text-white text-[15px]">
             Apply for this Job
@@ -224,7 +232,7 @@ const ApplySidebar = ({
   // Logged in but not a candidate (admin viewing)
   if (!isCandidate) {
     return (
-      <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#eadfd7] rounded-lg overflow-hidden shadow-sm">
         <div className="bg-gray-600 px-5 py-4">
           <h2 className="font-bold text-white text-[15px]">Admin View</h2>
         </div>
@@ -239,7 +247,7 @@ const ApplySidebar = ({
 
   // Logged in candidate, not yet applied
   return (
-    <div className="bg-white border border-[#eadfd7] rounded-[24px] overflow-hidden shadow-sm">
+    <div className="bg-white border border-[#eadfd7] rounded-lg overflow-hidden shadow-sm">
       <div className="bg-[#f97316] px-5 py-4">
         <h2 className="font-bold text-white text-[15px]">Apply for this Job</h2>
       </div>
@@ -349,8 +357,8 @@ const JobDetails = () => {
 
   return (
     <PublicLayout>
-      <div className="min-h-screen bg-[#f5efe9] px-5 lg:px-10 xl:px-14 py-8">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-[#f5efe9] py-8">
+        <div className={publicContainer}>
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-[#8c7a72] mb-6">
             <Link to="/" className="hover:text-orange-600 transition-colors">
@@ -373,16 +381,16 @@ const JobDetails = () => {
           {isLoading && (
             <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 animate-pulse">
               <div className="space-y-5">
-                <div className="bg-white rounded-[24px] p-7 h-64" />
-                <div className="bg-white rounded-[24px] p-7 h-40" />
+                <div className="bg-white rounded-lg p-7 h-64" />
+                <div className="bg-white rounded-lg p-7 h-40" />
               </div>
-              <div className="bg-white rounded-[24px] h-64" />
+              <div className="bg-white rounded-lg h-64" />
             </div>
           )}
 
           {/* Error */}
           {error && !isLoading && (
-            <div className="bg-white border border-red-200 rounded-[24px] p-8 text-center">
+            <div className="bg-white border border-red-200 rounded-lg p-8 text-center">
               <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
               <p className="text-red-700 font-medium">
                 Unable to load this job
@@ -404,7 +412,12 @@ const JobDetails = () => {
               {/* Left — Main content */}
               <div className="space-y-5">
                 {/* Hero card */}
-                <div className="bg-white border border-[#eadfd7] rounded-[24px] p-7 shadow-sm">
+                <motion.div
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, ease: "easeOut" }}
+                  className="bg-white border border-[#eadfd7] rounded-lg p-7 shadow-sm"
+                >
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="inline-flex items-center gap-2 bg-[#ecfdf3] text-[#16a34a] border border-[#bbf7d0] px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide">
                       <span className="w-2 h-2 bg-[#22c55e] rounded-full" />
@@ -475,7 +488,7 @@ const JobDetails = () => {
                       }
                     />
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Description */}
                 {job.description && (
@@ -653,7 +666,7 @@ const JobDetails = () => {
                 />
 
                 {/* Quick info card */}
-                <div className="bg-white border border-[#eadfd7] rounded-[24px] p-5 space-y-3">
+                <div className="bg-white border border-[#eadfd7] rounded-lg p-5 space-y-3 shadow-sm">
                   <h3 className="font-bold text-[#3b2e2a] text-sm">
                     Quick Info
                   </h3>
@@ -690,7 +703,7 @@ const JobDetails = () => {
                 </div>
 
                 {/* Help */}
-                <div className="bg-orange-50 border border-orange-200 rounded-[24px] p-5">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-5 shadow-sm">
                   <p className="text-sm font-semibold text-orange-800 mb-1">
                     Need Help?
                   </p>

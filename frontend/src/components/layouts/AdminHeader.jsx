@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getStoredUser } from '../../services/auth.service'
 import { adminService } from '../../services/admin.service'
+import { REALTIME_ENABLED } from '../../api/config'
 
 const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed, onLogout }) => {
   const user = getStoredUser()
@@ -14,8 +15,8 @@ const AdminHeader = ({ onToggleSidebar, title = 'Admin Panel', isCollapsed, onLo
   const { data: notifData } = useQuery({
     queryKey: ['admin-notifications-count'],
     queryFn: () => adminService.getAdminNotifications({ limit: 1 }),
-    refetchInterval: 30000,
-    staleTime: 15000,
+    refetchInterval: REALTIME_ENABLED ? false : 60000,
+    staleTime: 60000,
   })
   const unreadCount = notifData?.unreadCount || 0
 

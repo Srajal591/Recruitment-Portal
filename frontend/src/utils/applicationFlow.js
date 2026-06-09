@@ -22,7 +22,11 @@ export const getJobDocumentRequirements = (jobOrApplication) => {
     : [];
 };
 
+export const isCorrectionMode = (application = {}) =>
+  ["requested", "in_progress"].includes(application?.correction?.status);
+
 export const hasPaymentStep = (jobOrApplication, application) => {
+  if (isCorrectionMode(application)) return false;
   const job = normaliseJob(jobOrApplication);
   const fee =
     application?.totalFee ||
@@ -77,7 +81,6 @@ export const buildApplicationSteps = (jobOrApplication, application = {}) => {
     });
   }
 
-  // Step 5 (or 5+N if custom forms): Documents
   steps.push({
     id: steps.length + 1,
     type: "documents",
@@ -93,24 +96,21 @@ export const buildApplicationSteps = (jobOrApplication, application = {}) => {
     path: "/application/review",
   });
 
-  // Step 7 (or 7+N): Post Selection (only if multiple posts)
-  const hasMultiplePosts = Array.isArray(job?.posts) && job.posts.length > 1;
-  if (hasMultiplePosts) {
-    steps.push({
-      id: steps.length + 1,
-      type: "post-selection",
-      name: "Post Selection",
-      path: "/application/post-selection",
-    });
-  }
-
-  // Step 8 (or 8+N): Payment
   steps.push({
     id: steps.length + 1,
-    type: "payment",
-    name: "Payment",
-    path: "/application/payment",
+    type: "post-selection",
+    name: "Post Selection",
+    path: "/application/post-selection",
   });
+
+  if (hasPaymentStep(job, application)) {
+    steps.push({
+      id: steps.length + 1,
+      type: "payment",
+      name: "Payment",
+      path: "/application/payment",
+    });
+  }
 
   // Step 9 (or 9+N): Submit
   steps.push({
@@ -149,6 +149,8 @@ export const persistApplicationDraft = ({
   applicationId,
   jobId,
   declaration,
+  supportTicketId,
+  correctionMode,
 }) => {
   let draft = {};
   try {
@@ -163,6 +165,9 @@ export const persistApplicationDraft = ({
       applicationId: applicationId || draft.applicationId,
       jobId: jobId || draft.jobId,
       declaration: declaration || draft.declaration,
+      supportTicketId: supportTicketId || draft.supportTicketId,
+      correctionMode:
+        correctionMode !== undefined ? correctionMode : draft.correctionMode,
     }),
   );
 };

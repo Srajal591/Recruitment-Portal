@@ -6,6 +6,7 @@ import {
   Mail,
   Phone,
   Calendar,
+  Clock,
   Shield,
   Edit3,
   Save,
@@ -52,6 +53,18 @@ const inputCls =
 const labelCls =
   "block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1";
 
+const InfoTile = ({ icon: Icon, label, children }) => (
+  <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+      {Icon && <Icon className="w-3.5 h-3.5 text-orange-500" />}
+      {label}
+    </div>
+    <div className="mt-2 text-sm font-medium text-gray-800 min-h-[22px]">
+      {children || "Not provided"}
+    </div>
+  </div>
+);
+
 // ── Section: Personal Info ────────────────────────────────────
 
 const PersonalSection = ({ user, onSave, isSaving }) => {
@@ -89,8 +102,8 @@ const PersonalSection = ({ user, onSave, isSaving }) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="overflow-hidden">
+      <CardHeader className="p-5 pb-4 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-800 flex items-center gap-2">
             <User className="w-4 h-4 text-orange-600" />
@@ -298,15 +311,15 @@ const PersonalSection = ({ user, onSave, isSaving }) => {
 // ── Section: Account Info (read-only) ─────────────────────────
 
 const AccountSection = ({ user }) => (
-  <Card>
-    <CardHeader>
+  <Card className="overflow-hidden">
+    <CardHeader className="p-5 pb-4 border-b border-gray-100">
       <h3 className="font-semibold text-gray-800 flex items-center gap-2">
         <Shield className="w-4 h-4 text-orange-600" />
         Account Information
       </h3>
     </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <CardContent className="p-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <div>
           <label className={labelCls}>Email Address</label>
           <div className="flex items-center gap-2">
@@ -458,57 +471,73 @@ const PasswordSection = () => {
   })();
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="overflow-hidden">
+      <CardHeader className="p-5 pb-4 border-b border-gray-100">
         <h3 className="font-semibold text-gray-800 flex items-center gap-2">
           <Lock className="w-4 h-4 text-orange-600" />
           Change Password
         </h3>
       </CardHeader>
-      <CardContent>
-        <div className="max-w-md space-y-4">
-          <PasswordInput
-            field="currentPassword"
-            label="Current Password"
-            showKey="current"
-          />
-          <div>
+      <CardContent className="p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,480px)_1fr] gap-6 items-start">
+          <div className="space-y-4">
             <PasswordInput
+              field="currentPassword"
+              label="Current Password"
+              showKey="current"
+            />
+            <div>
+              <PasswordInput
               field="newPassword"
               label="New Password"
               showKey="new"
             />
-            {strength && (
-              <div className="mt-2">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Password strength</span>
-                  <span
-                    className={
-                      strength.label === "Strong"
-                        ? "text-green-600"
-                        : strength.label === "Good"
-                          ? "text-blue-600"
-                          : "text-gray-500"
-                    }
-                  >
-                    {strength.label}
-                  </span>
+              {strength && (
+                <div className="mt-2">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Password strength</span>
+                    <span
+                      className={
+                        strength.label === "Strong"
+                          ? "text-green-600"
+                          : strength.label === "Good"
+                            ? "text-blue-600"
+                            : "text-gray-500"
+                      }
+                    >
+                      {strength.label}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div
+                      className={`h-1.5 rounded-full transition-all ${strength.color}`}
+                      style={{ width: strength.width }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                  <div
-                    className={`h-1.5 rounded-full transition-all ${strength.color}`}
-                    style={{ width: strength.width }}
-                  />
-                </div>
-              </div>
-            )}
+              )}
+            </div>
+            <PasswordInput
+              field="confirmPassword"
+              label="Confirm New Password"
+              showKey="confirm"
+            />
+            <Button
+              onClick={handleSubmit}
+              disabled={isPending}
+              className="bg-orange-600 hover:bg-orange-700 text-white w-full"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Changing...
+                </>
+              ) : (
+                "Change Password"
+              )}
+            </Button>
           </div>
-          <PasswordInput
-            field="confirmPassword"
-            label="Confirm New Password"
-            showKey="confirm"
-          />
-          <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500 space-y-1">
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-xs text-gray-500 space-y-2">
             <p className="font-medium text-gray-600">Password requirements:</p>
             {[
               ["At least 8 characters", form.newPassword.length >= 8],
@@ -523,21 +552,11 @@ const PasswordSection = () => {
                 <span>{text}</span>
               </div>
             ))}
+            <p className="pt-2 leading-5 text-gray-500">
+              Use a unique password that you do not use on other services.
+              Password changes take effect immediately after saving.
+            </p>
           </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={isPending}
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Changing...
-              </>
-            ) : (
-              "Change Password"
-            )}
-          </Button>
         </div>
       </CardContent>
     </Card>

@@ -10,10 +10,9 @@ const NORMAL_DISCONNECT_REASONS = new Set([
   "transport close",
 ]);
 
-const parsedOrigins =
-  env.CLIENT_URL?.split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean) || ["http://localhost:5173"];
+const parsedOrigins = env.CLIENT_URL?.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean) || ["http://localhost:5173"];
 
 /**
  * Initialize Socket.IO on the HTTP server.
@@ -130,6 +129,7 @@ const SOCKET_EVENTS = {
   APPLICATION_SUBMITTED: "application:submitted",
   APPLICATION_STATUS_CHANGED: "application:status:changed",
   APPLICATION_NEW: "admin:application:new",
+  APPLICATION_UPDATED: "application:updated",
 
   // Documents
   DOCUMENT_VERIFIED: "document:verified",

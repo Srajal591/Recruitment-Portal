@@ -86,6 +86,13 @@ export const candidateService = {
     );
     return unwrapData(response);
   },
+  async submitCorrection(id, declaration) {
+    const response = await apiClient.post(
+      `/candidate/applications/${id}/submit-correction`,
+      { declaration },
+    );
+    return unwrapData(response);
+  },
 
   // ── Notifications ─────────────────────────────────────────
   async getNotifications(params = {}) {
@@ -157,7 +164,9 @@ export const candidateService = {
 
   // ── Payments ──────────────────────────────────────────────
   async getMyPayments(params = {}) {
-    const response = await apiClient.get("/candidate/payments/history", { params });
+    const response = await apiClient.get("/candidate/payments/history", {
+      params,
+    });
     return unwrapData(response);
   },
   async initiatePayment(applicationId, gateway = "razorpay") {
@@ -172,7 +181,9 @@ export const candidateService = {
     return unwrapData(response);
   },
   async getPaymentByTransaction(transactionId) {
-    const response = await apiClient.get(`/candidate/payments/${transactionId}`);
+    const response = await apiClient.get(
+      `/candidate/payments/${transactionId}`,
+    );
     return unwrapData(response);
   },
 };

@@ -76,11 +76,27 @@ const Support = () => {
     queryFn: () => candidateService.getMyPayments({ limit: 100 }),
   });
 
-  // Filter out draft applications - only show submitted/completed applications
+  // Filter applications - only show submitted/under_review/approved (not draft)
+  // AND only applications whose job deadline hasn't passed yet
+  // This prevents candidates from raising tickets for expired jobs
   const allApplications = Array.isArray(applicationsData)
     ? applicationsData
     : applicationsData?.applications || applicationsData?.data || [];
-  const applications = allApplications.filter((app) => app.status !== "draft");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const applications = allApplications.filter((app) => {
+    const statusOk = [
+      "submitted",
+      "under_review",
+      "approved",
+      "shortlisted",
+    ].includes(app.status);
+    const deadline = app.jobId?.applicationDeadline
+      ? new Date(app.jobId.applicationDeadline)
+      : null;
+    const deadlineOk = deadline ? deadline >= today : true;
+    return statusOk && deadlineOk;
+  });
 
   const payments = Array.isArray(paymentsData)
     ? paymentsData
@@ -300,7 +316,7 @@ const Support = () => {
                         {isLoadingApplications
                           ? "Loading applications..."
                           : applications.length === 0
-                            ? "No submitted applications found"
+                            ? "No active applications found"
                             : "Select application (optional)"}
                       </option>
                       {applications.map((app) => (
@@ -311,8 +327,8 @@ const Support = () => {
                     </select>
                     {!isLoadingApplications && applications.length === 0 && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Only submitted applications can be linked. Complete and
-                        submit your draft applications first.
+                        Only submitted applications with an active deadline can
+                        be linked. Expired or draft applications are not shown.
                       </p>
                     )}
                     {!isLoadingApplications && applications.length > 0 && (

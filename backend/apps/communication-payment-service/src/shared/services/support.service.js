@@ -1,5 +1,6 @@
 const SupportTicket = require("../models/SupportTicket");
-// Must be imported so mongoose has User and Employee registered before populate runs
+// Import models in order: Job before Application (for populate)
+const Job = require("../models/Job");
 const User = require("../models/User");
 const Employee = require("../models/Employee");
 const Application = require("../models/Application");
@@ -93,8 +94,14 @@ const getTicketById = async (id) => {
   const ticket = await SupportTicket.findById(id)
     .populate("raisedBy", "fullName email registeredMobile")
     .populate("assignedTo", "fullName employeeId")
-    .populate("linkedApplication", "applicationId status paymentStatus correction personalDetails totalFee transactionId")
-    .populate("linkedPayment", "transactionId amount status gateway paidAt applicationId")
+    .populate(
+      "linkedApplication",
+      "applicationId status paymentStatus correction personalDetails totalFee transactionId",
+    )
+    .populate(
+      "linkedPayment",
+      "transactionId amount status gateway paidAt applicationId",
+    )
     .populate("replies.sentBy", "fullName");
   if (!ticket) throw new ApiError(404, "Ticket not found");
   return ticket;
@@ -173,16 +180,29 @@ const addReply = async (ticketId, message, sentBy, sentByModel, sentByName) => {
 };
 
 const requestApplicationCorrection = async (ticketId, adminId, note) => {
-  const ticket = await SupportTicket.findById(ticketId).populate(
-    "linkedApplication",
-  );
+  const ticket =
+    await SupportTicket.findById(ticketId).populate("linkedApplication");
   if (!ticket) throw new ApiError(404, "Ticket not found");
   if (!ticket.linkedApplication) {
     throw new ApiError(400, "Link an application before requesting correction");
   }
 
-  const application = await Application.findById(ticket.linkedApplication._id);
+  const application = await Application.findById(
+    ticket.linkedApplication._id,
+  ).populate("jobId", "applicationDeadline title");
   if (!application) throw new ApiError(404, "Linked application not found");
+
+  // Check if application deadline has passed
+  if (application.jobId?.applicationDeadline) {
+    const deadline = new Date(application.jobId.applicationDeadline);
+    const now = new Date();
+    if (now > deadline) {
+      throw new ApiError(
+        400,
+        `Cannot request correction. Application deadline (${deadline.toLocaleDateString()}) has passed.`,
+      );
+    }
+  }
 
   application.correction = {
     status: "requested",
@@ -217,7 +237,10 @@ const requestApplicationCorrection = async (ticketId, adminId, note) => {
     title: "Application Correction Requested",
     message: `Correction has been requested for application ${application.applicationId}. Please update it from your support ticket.`,
     link: `/candidate/support/${ticket._id}`,
-    metadata: { ticketId: ticket.ticketId, applicationId: application.applicationId },
+    metadata: {
+      ticketId: ticket.ticketId,
+      applicationId: application.applicationId,
+    },
   });
 
   emitToCandidate(ticket.raisedBy.toString(), SOCKET_EVENTS.NEW_NOTIFICATION, {
@@ -230,7 +253,10 @@ const requestApplicationCorrection = async (ticketId, adminId, note) => {
 };
 
 const completeCandidateAction = async (ticketId, candidateId) => {
-  const ticket = await SupportTicket.findOne({ _id: ticketId, raisedBy: candidateId });
+  const ticket = await SupportTicket.findOne({
+    _id: ticketId,
+    raisedBy: candidateId,
+  });
   if (!ticket) throw new ApiError(404, "Ticket not found");
   if (ticket.resolutionAction?.type !== "application_correction") {
     throw new ApiError(400, "No correction action is pending for this ticket");
@@ -240,10 +266,40 @@ const completeCandidateAction = async (ticketId, candidateId) => {
   }
 
   if (ticket.linkedApplication) {
-    await Application.findByIdAndUpdate(ticket.linkedApplication, {
-      "correction.status": "submitted",
-      "correction.submittedAt": new Date(),
-    });
+    const application = await Application.findById(
+      ticket.linkedApplication,
+    ).populate("jobId", "title");
+    if (application) {
+      application.correction.status = "submitted";
+      application.correction.submittedAt = new Date();
+      // Mark application for re-review
+      application.status = "under_review";
+      await application.save();
+
+      // Notify all admins with detailed info
+      await notifyAdmins({
+        type: "application_updated",
+        title: "Application Corrected - Needs Re-Review",
+        message: `Candidate has submitted corrections for application ${application.applicationId}. Please review the updated application.`,
+        link: `/admin/applications/${application._id}`,
+        metadata: {
+          applicationId: application.applicationId,
+          ticketId: ticket.ticketId,
+          jobTitle: application.jobId?.title,
+        },
+      });
+
+      // Emit socket event to admins
+      try {
+        emitToAdmins(SOCKET_EVENTS.APPLICATION_UPDATED, {
+          type: "correction_submitted",
+          applicationId: application.applicationId,
+          applicationNumber: application.applicationId,
+          ticketId: ticket.ticketId,
+          message: `Application ${application.applicationId} has been corrected and needs re-review`,
+        });
+      } catch (_) {}
+    }
   }
 
   ticket.resolutionAction.status = "candidate_completed";
@@ -259,10 +315,10 @@ const completeCandidateAction = async (ticketId, candidateId) => {
   await ticket.save();
 
   notifyAdmins({
-    type: "general",
-    title: "Application Correction Submitted",
-    message: `Candidate completed correction for support ticket ${ticket.ticketId}. Please review and update the ticket status.`,
-    link: `/admin/support/ticket/${ticket._id}`,
+    type: "ticket_updated",
+    title: "Correction Completed by Candidate",
+    message: `Candidate completed correction for ticket ${ticket.ticketId}. Application is now under re-review.`,
+    link: `/admin/support/tickets/${ticket._id}`,
     metadata: { ticketId: ticket.ticketId },
   });
 
@@ -282,8 +338,9 @@ const verifyPaymentForTicket = async (ticketId, adminId, note) => {
 
   let payment = ticket.linkedPayment;
   if (!payment && ticket.linkedApplication) {
-    payment = await Payment.findOne({ applicationId: ticket.linkedApplication._id })
-      .sort({ createdAt: -1 });
+    payment = await Payment.findOne({
+      applicationId: ticket.linkedApplication._id,
+    }).sort({ createdAt: -1 });
   }
   if (!payment) throw new ApiError(400, "Link a payment before verification");
 
@@ -331,7 +388,10 @@ const verifyPaymentForTicket = async (ticketId, adminId, note) => {
     title: "Payment Verified",
     message: `Your payment ${payment.transactionId} has been verified successfully.`,
     link: `/candidate/support/${ticket._id}`,
-    metadata: { ticketId: ticket.ticketId, transactionId: payment.transactionId },
+    metadata: {
+      ticketId: ticket.ticketId,
+      transactionId: payment.transactionId,
+    },
   });
 
   emitToCandidate(ticket.raisedBy.toString(), SOCKET_EVENTS.PAYMENT_SUCCESS, {

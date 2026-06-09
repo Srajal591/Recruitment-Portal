@@ -2,8 +2,17 @@ const mongoose = require("mongoose");
 const env = require("./env");
 const logger = require("../utils/logger");
 
+const RETRY_DELAY_MS = 10000;
+let listenersRegistered = false;
+let retryTimer = null;
+
 const connectDB = async () => {
   try {
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+
     const conn = await mongoose.connect(env.MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
@@ -12,20 +21,28 @@ const connectDB = async () => {
 
     logger.info(`MongoDB connected: ${conn.connection.host}`);
 
-    mongoose.connection.on("disconnected", () => {
-      logger.warn("MongoDB disconnected. Attempting to reconnect...");
-    });
+    if (!listenersRegistered) {
+      mongoose.connection.on("disconnected", () => {
+        logger.warn("MongoDB disconnected. Attempting to reconnect...");
+      });
 
-    mongoose.connection.on("reconnected", () => {
-      logger.info("MongoDB reconnected");
-    });
+      mongoose.connection.on("reconnected", () => {
+        logger.info("MongoDB reconnected");
+      });
 
-    mongoose.connection.on("error", (err) => {
-      logger.error(`MongoDB connection error: ${err.message}`);
-    });
+      mongoose.connection.on("error", (err) => {
+        logger.error(`MongoDB connection error: ${err.message}`);
+      });
+
+      listenersRegistered = true;
+    }
+
+    return conn;
   } catch (error) {
     logger.error(`MongoDB connection failed: ${error.message}`);
-    process.exit(1);
+    retryTimer = setTimeout(connectDB, RETRY_DELAY_MS);
+    retryTimer.unref?.();
+    return null;
   }
 };
 

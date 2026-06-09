@@ -16,6 +16,7 @@ import {
 import { candidateService } from "../../services/candidate.service";
 import {
   buildApplicationSteps,
+  isCorrectionMode,
   readApplicationDraft,
 } from "../../utils/applicationFlow";
 
@@ -74,6 +75,7 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
   });
 
   const app = appData?.application || appData;
+  const correctionMode = isCorrectionMode(app) || draft.correctionMode === true;
   const dynamicSteps =
     app?.jobId?.formSections || app?.jobId?.documentRequirements
       ? buildApplicationSteps(app.jobId, app)
@@ -87,9 +89,18 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
       return query === location.search.replace(/^\?/, "");
     })?.id || Math.min(currentStep, steps.length);
 
-  // A step is accessible only if it has been reached (currentStep >= step.id)
-  // OR it's the current step. Future steps are locked.
-  const canAccess = (stepId) => stepId <= activeStep;
+  // In correction mode, ALL non-payment steps are freely accessible
+  // Otherwise, a step is accessible only if currentStep >= step.id
+  const canAccess = (stepId) => {
+    const step = steps.find((s) => s.id === stepId);
+    if (correctionMode) {
+      // Payment step is hidden/inaccessible in correction mode
+      if (step?.type === "payment") return false;
+      // All other steps are freely accessible in correction mode
+      return true;
+    }
+    return stepId <= (app?.currentStep || activeStep);
+  };
 
   const handleStepClick = (step) => {
     if (!canAccess(step.id)) return; // locked — do nothing
@@ -189,6 +200,16 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
               <p className="text-gray-400 text-xs mt-1 truncate">
                 {jobTitle || "Application Form"}
               </p>
+              {correctionMode && (
+                <div className="mt-2 px-2 py-1.5 bg-orange-600 rounded-lg">
+                  <p className="text-white text-xs font-semibold">
+                    ✎ Correction Mode
+                  </p>
+                  <p className="text-orange-200 text-xs">
+                    You can edit any step freely
+                  </p>
+                </div>
+              )}
             </div>
 
             <nav className="p-3 space-y-0.5">
@@ -207,8 +228,11 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
                             ? CheckCheck
                             : Eye);
                 const isActive = step.id === activeStep;
-                const isCompleted = step.id < activeStep;
-                const isLocked = step.id > activeStep;
+                const accessible = canAccess(step.id);
+                const isCompleted = correctionMode
+                  ? step.id < activeStep && accessible
+                  : step.id < (app?.currentStep || activeStep);
+                const isLocked = !accessible;
 
                 return (
                   <button
@@ -217,21 +241,27 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
                     onClick={() => handleStepClick(step)}
                     disabled={isLocked}
                     title={
-                      isLocked ? "Complete previous steps first" : step.name
+                      isLocked ? "Not available in correction mode" : step.name
                     }
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
                       isActive
                         ? "bg-orange-600 text-white"
-                        : isCompleted
-                          ? "text-green-400 hover:bg-gray-700 cursor-pointer"
-                          : "text-gray-500 cursor-not-allowed opacity-60"
+                        : isLocked
+                          ? "text-gray-500 cursor-not-allowed opacity-40"
+                          : correctionMode
+                            ? "text-orange-300 hover:bg-gray-700 cursor-pointer"
+                            : isCompleted
+                              ? "text-green-400 hover:bg-gray-700 cursor-pointer"
+                              : "text-gray-500 cursor-not-allowed opacity-60"
                     }`}
                   >
                     <div className="flex-shrink-0">
-                      {isCompleted ? (
-                        <CheckCircle className="w-4 h-4" />
+                      {isActive ? (
+                        <Icon className="w-4 h-4" />
                       ) : isLocked ? (
                         <Lock className="w-4 h-4" />
+                      ) : isCompleted && !correctionMode ? (
+                        <CheckCircle className="w-4 h-4" />
                       ) : (
                         <Icon className="w-4 h-4" />
                       )}
@@ -239,9 +269,14 @@ const ApplicationLayout = ({ children, currentStep = 1, title, jobTitle }) => {
                     <span className="text-sm font-medium truncate">
                       {step.name}
                     </span>
-                    {isCompleted && (
+                    {isCompleted && !correctionMode && (
                       <span className="ml-auto text-xs text-green-500 flex-shrink-0">
                         ✓
+                      </span>
+                    )}
+                    {correctionMode && !isActive && !isLocked && (
+                      <span className="ml-auto text-xs text-orange-400 flex-shrink-0">
+                        ✎
                       </span>
                     )}
                   </button>

@@ -16,11 +16,10 @@ import {
   PlayCircle,
   Filter,
   X,
-  Building2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PublicLayout from "../../components/layouts/PublicLayout";
-import Button from "../../components/ui/Button";
+import { publicContainer } from "./PublicPageShell";
 import { jobService } from "../../services/job.service";
 import { candidateService } from "../../services/candidate.service";
 import { applicationService } from "../../services/application.service";
@@ -174,7 +173,7 @@ const JobCard = ({
 
   return (
     <div
-      className={`bg-white border rounded-2xl overflow-hidden transition-all hover:shadow-md ${
+      className={`bg-white border rounded-lg overflow-hidden shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
         existingApp
           ? "border-green-200"
           : "border-[#e0d7cd] hover:border-orange-300"
@@ -275,7 +274,7 @@ const JobCard = ({
 // ── Skeleton ──────────────────────────────────────────────────
 
 const SkeletonCard = () => (
-  <div className="bg-white border border-[#e0d7cd] rounded-2xl p-5 animate-pulse">
+  <div className="bg-white border border-[#e0d7cd] rounded-lg p-5 animate-pulse">
     <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
     <div className="h-3 bg-gray-100 rounded w-1/2 mb-4" />
     <div className="space-y-2 mb-4">
@@ -388,8 +387,8 @@ const Jobs = () => {
 
   return (
     <PublicLayout>
-      <div className="min-h-screen bg-[#f5efe9] px-4 py-10">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <div className="min-h-screen bg-[#f5efe9] py-10">
+        <div className={`${publicContainer} space-y-6`}>
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -505,7 +504,7 @@ const Jobs = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white border border-[#e0d7cd] rounded-2xl p-12 text-center"
+                className="bg-white border border-[#e0d7cd] rounded-lg p-12 text-center shadow-sm"
             >
               <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-600 font-semibold">No jobs found</p>
@@ -557,7 +556,7 @@ const Jobs = () => {
                 onClick={() => setPage((p) => p - 1)}
                 className="px-4 py-2 rounded-lg border border-[#e0d7cd] text-sm font-semibold text-gray-600 hover:border-orange-400 disabled:opacity-40 disabled:cursor-not-allowed bg-white"
               >
-                ← Prev
+                Prev
               </button>
               <span className="text-sm text-gray-600 px-3">
                 Page {page} of {totalPages}
@@ -567,14 +566,14 @@ const Jobs = () => {
                 onClick={() => setPage((p) => p + 1)}
                 className="px-4 py-2 rounded-lg border border-[#e0d7cd] text-sm font-semibold text-gray-600 hover:border-orange-400 disabled:opacity-40 disabled:cursor-not-allowed bg-white"
               >
-                Next →
+                Next
               </button>
             </div>
           )}
 
           {/* Not logged in CTA */}
           {!isLoggedIn && (
-            <div className="bg-white border border-[#e0d7cd] rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="bg-white border border-[#e0d7cd] rounded-lg p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
               <div>
                 <p className="font-bold text-[#1f1d1b]">Ready to apply?</p>
                 <p className="text-sm text-[#6d6761] mt-0.5">

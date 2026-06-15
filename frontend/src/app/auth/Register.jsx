@@ -4,6 +4,15 @@ import { ArrowRight, Eye, EyeOff, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { authService } from "../../services/auth.service";
 import heroBg from "../../assets/herobg.jpg";
+import CustomSelect from "../../components/ui/CustomSelect";
+
+const STATES = [
+  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa",
+  "Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala",
+  "Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland",
+  "Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura",
+  "Uttar Pradesh","Uttarakhand","West Bengal",
+];
 
 const SIDE_IMAGE =
   "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=480&q=80&fit=crop";
@@ -225,34 +234,30 @@ const Register = () => {
                   </div>
                   <div>
                     <Label>Gender <span className="text-red-500">*</span></Label>
-                    <select
-                      required
+                    <CustomSelect
                       value={formData.gender}
-                      onChange={(e) => handleChange("gender", e.target.value)}
-                      className={inputCls}
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
+                      onChange={(val) => handleChange("gender", val)}
+                      options={[
+                        { value: "", label: "Select Gender" },
+                        { value: "male", label: "Male" },
+                        { value: "female", label: "Female" },
+                        { value: "other", label: "Other" },
+                      ]}
+                      placeholder="Select Gender"
+                    />
                   </div>
                 </div>
 
                 {/* State */}
                 <div>
                   <Label>State <span className="text-red-500">*</span></Label>
-                  <select
-                    required
+                  <CustomSelect
                     value={formData.state}
-                    onChange={(e) => handleChange("state", e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="">Select your state</option>
-                    {["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal"].map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => handleChange("state", val)}
+                    options={[{ value: "", label: "Select your state" }, ...STATES.map(s => ({ value: s, label: s }))]}
+                    placeholder="Select your state"
+                    error={false}
+                  />
                 </div>
 
                 {/* Password */}

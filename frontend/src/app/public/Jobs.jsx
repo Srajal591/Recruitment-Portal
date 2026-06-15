@@ -29,6 +29,7 @@ import {
   getRouteForApplicationStep,
   persistApplicationDraft,
 } from "../../utils/applicationFlow";
+import ShareJobButton from "../../components/ui/ShareJobButton";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -90,27 +91,23 @@ const JobCard = ({
     daysLeft(job.applicationDeadline) < 0;
   const isApplying = applyingId === job._id;
   const fee = job.applicationFee?.general || job.applicationFee?.amount || 0;
+  const isApplied   = !!existingApp;
+  const isDraft     = existingApp?.status === "draft";
 
   const handleAction = () => {
-    if (!existingApp) {
-      onApply(job._id);
-      return;
-    }
-    // Already applied — resume draft or view status
+    if (!existingApp) { onApply(job._id); return; }
     persistApplicationDraft({ applicationId: existingApp._id, jobId: job._id });
-    if (existingApp.status === "draft") {
+    if (isDraft) {
       navigate(getRouteForApplicationStep({ ...existingApp, jobId: job }, existingApp.currentStep || 1), {
         state: { applicationId: existingApp._id, jobId: job._id },
       });
     } else {
-      // Go to dedicated application status page
       navigate(`/candidate/applications/${existingApp._id}`);
     }
   };
 
   const renderActionButton = () => {
     if (existingApp) {
-      const isDraft = existingApp.status === "draft";
       return (
         <button
           onClick={handleAction}
@@ -121,20 +118,13 @@ const JobCard = ({
           }`}
         >
           {isDraft ? (
-            <>
-              <PlayCircle className="w-4 h-4" />
-              Resume
-            </>
+            <><PlayCircle className="w-4 h-4" />Resume</>
           ) : (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              Applied
-            </>
+            <><CheckCircle className="w-4 h-4" />Applied</>
           )}
         </button>
       );
     }
-
     if (!isLoggedIn || !isCandidate) {
       return (
         <Link
@@ -146,7 +136,6 @@ const JobCard = ({
         </Link>
       );
     }
-
     return (
       <button
         onClick={handleAction}
@@ -158,52 +147,20 @@ const JobCard = ({
         }`}
       >
         {isApplying ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Starting...
-          </>
-        ) : isClosed ? (
-          "Closed"
-        ) : (
-          "Apply Now"
-        )}
+          <><Loader2 className="w-4 h-4 animate-spin" />Starting...</>
+        ) : isClosed ? "Closed" : "Apply Now"}
       </button>
     );
   };
 
   return (
     <div
-      className={`bg-white border rounded-lg overflow-hidden shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
-        existingApp
-          ? "border-green-200"
-          : "border-[#e0d7cd] hover:border-orange-300"
+      className={`bg-white border-2 rounded-xl overflow-hidden shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+        isApplied ? "border-green-400" : "border-[#e0d7cd] hover:border-orange-300"
       }`}
     >
-      {/* Applied ribbon */}
-      {existingApp && (
-        <div
-          className={`px-4 py-1.5 text-xs font-bold flex items-center gap-1.5 ${
-            existingApp.status === "draft"
-              ? "bg-orange-500 text-white"
-              : "bg-green-600 text-white"
-          }`}
-        >
-          {existingApp.status === "draft" ? (
-            <>
-              <PlayCircle className="w-3.5 h-3.5" />
-              Draft — Resume to continue
-            </>
-          ) : (
-            <>
-              <CheckCircle className="w-3.5 h-3.5" />
-              Applied
-            </>
-          )}
-        </div>
-      )}
-
       <div className="p-5">
-        {/* Header */}
+        {/* Header row — title + chips */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
             <h2 className="font-black text-lg text-[#1f1d1b] leading-snug truncate">
@@ -213,7 +170,19 @@ const JobCard = ({
               {job.department}
             </p>
           </div>
-          <DaysChip deadline={job.applicationDeadline} />
+          {/* Right side: days chip + applied badge + share icon — all inline */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <DaysChip deadline={job.applicationDeadline} />
+            {isApplied && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                isDraft ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"
+              }`}>
+                <CheckCircle className="w-3 h-3" />
+                {isDraft ? "Draft" : "Applied"}
+              </span>
+            )}
+            <ShareJobButton job={job} />
+          </div>
         </div>
 
         {/* Stats */}
@@ -242,9 +211,7 @@ const JobCard = ({
           {(job.workLocation || job.projectId?.state) && (
             <div className="flex items-center gap-2 text-sm text-[#4b4744]">
               <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0" />
-              <span className="truncate">
-                {job.workLocation || job.projectId?.state}
-              </span>
+              <span className="truncate">{job.workLocation || job.projectId?.state}</span>
             </div>
           )}
         </div>

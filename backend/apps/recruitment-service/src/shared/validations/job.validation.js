@@ -13,6 +13,12 @@ const jobPostSchema = z.object({
   status: z.enum(["active", "inactive"]).optional().default("active"),
 });
 
+const educationItemSchema = z.object({
+  degree: z.string().optional(),
+  specialization: z.string().optional(),
+  university: z.string().optional(),
+});
+
 const createJobSchema = z.object({
   projectId: z.string().min(1, "Project ID is required"),
   title: z.string().min(3, "Job title must be at least 3 characters").max(200),
@@ -53,6 +59,74 @@ const createJobSchema = z.object({
   applicationStartDate: z.string().optional(),
   applicationDeadline: z.string().optional(),
   examDate: z.string().optional(),
+  // Eligibility fields
+  ageLimit: z
+    .object({
+      min: z.number().min(0).optional(),
+      max: z.number().min(0).optional(),
+      relaxation: z
+        .object({
+          sc:  z.number().min(0).optional(),
+          st:  z.number().min(0).optional(),
+          obc: z.number().min(0).optional(),
+          pwd: z.number().min(0).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  education: z
+    .object({
+      essential:  z.array(educationItemSchema).optional(),
+      desirable:  z.array(educationItemSchema).optional(),
+    })
+    .optional(),
+  experience: z
+    .object({
+      required:    z.boolean().optional(),
+      years:       z.number().min(0).optional(),
+      type:        z.string().optional(),
+      description: z.string().optional(),
+    })
+    .optional(),
+  physicalStandards: z
+    .object({
+      required: z.boolean().optional(),
+      height:   z.object({ male: z.number().optional(), female: z.number().optional() }).optional(),
+      chest:    z.object({ male: z.number().optional(), female: z.number().optional() }).optional(),
+      weight:   z.object({ male: z.number().optional(), female: z.number().optional() }).optional(),
+    })
+    .optional(),
+  medicalStandards: z
+    .object({
+      required: z.boolean().optional(),
+      vision:   z.string().optional(),
+      hearing:  z.string().optional(),
+      other:    z.string().optional(),
+    })
+    .optional(),
+  otherRequirements: z.array(z.string()).optional(),
+  documentRequirements: z
+    .array(
+      z.object({
+        name:        z.string(),
+        description: z.string().optional(),
+        required:    z.boolean().optional(),
+        formats:     z.array(z.string()).optional(),
+        maxSizeKB:   z.number().optional(),
+      }),
+    )
+    .optional(),
+  paymentConfig: z
+    .object({
+      applicationFee:      z.number().min(0).optional(),
+      examFee:             z.number().min(0).optional(),
+      processingFee:       z.number().min(0).optional(),
+      paymentMethods:      z.array(z.string()).optional(),
+      refundPolicy:        z.string().optional(),
+      paymentDeadline:     z.string().optional(),
+      paymentDeadlineHours:z.number().optional(),
+    })
+    .optional(),
 });
 
 const updateJobSchema = createJobSchema.partial();

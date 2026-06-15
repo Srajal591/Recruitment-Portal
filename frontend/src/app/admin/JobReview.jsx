@@ -23,35 +23,125 @@ import { adminService } from "../../services/admin.service";
 
 const STORAGE_KEY = "job_draft";
 
-// Build the update payload — strips create-only fields and cleans empty values
-// so Zod doesn't reject them on the update call
+// Build the update payload — only sends fields the backend updateJobSchema accepts
 const buildUpdatePayload = (draft) => {
-  const {
-    projectId: _pid,
-    title: _t,
-    postCode: _pc,
-    department: _d,
-    ...rest
-  } = draft;
+  const num = (v) => (v !== undefined && v !== null && v !== "" ? Number(v) : undefined);
+  const str = (v) => (v !== undefined && v !== null && v !== "" ? String(v) : undefined);
+  const def = (v) => (v !== undefined && v !== null && v !== "" ? v : undefined);
 
-  // Remove keys with undefined, null, or empty string values at top level
-  const clean = {};
-  for (const [key, value] of Object.entries(rest)) {
-    if (value === undefined || value === null || value === "") continue;
-    // For nested objects, only include if they have at least one meaningful value
-    if (typeof value === "object" && !Array.isArray(value)) {
-      const nested = {};
-      for (const [k, v] of Object.entries(value)) {
-        if (v !== undefined && v !== null && v !== "") nested[k] = v;
-      }
-      if (Object.keys(nested).length > 0) clean[key] = nested;
-    } else if (Array.isArray(value)) {
-      if (value.length > 0) clean[key] = value;
-    } else {
-      clean[key] = value;
-    }
+  const payload = {};
+
+  if (def(draft.category))    payload.category    = draft.category;
+  if (def(draft.jobType))     payload.jobType     = draft.jobType;
+  if (def(draft.workLocation)) payload.workLocation = draft.workLocation;
+  if (def(draft.description)) payload.description = draft.description;
+  if (num(draft.totalPosts))  payload.totalPosts  = num(draft.totalPosts);
+
+  // Posts — normalise types
+  if (Array.isArray(draft.posts) && draft.posts.length > 0) {
+    payload.posts = draft.posts
+      .filter((p) => p?.title && p?.designation)
+      .map((p) => ({
+        postCode:    p.postCode    || "",
+        title:       p.title,
+        designation: p.designation,
+        department:  p.department  || "",
+        category:    p.category    || "",
+        vacancies:   Number(p.vacancies) || 1,
+        payLevel:    p.payLevel    || "",
+        location:    p.location    || "",
+        status:      p.status      || "active",
+      }));
   }
-  return clean;
+
+  // Reserved posts
+  if (draft.reservedPosts) {
+    payload.reservedPosts = {
+      sc:  num(draft.reservedPosts.sc)  || 0,
+      st:  num(draft.reservedPosts.st)  || 0,
+      obc: num(draft.reservedPosts.obc) || 0,
+      ews: num(draft.reservedPosts.ews) || 0,
+      pwd: num(draft.reservedPosts.pwd) || 0,
+    };
+  }
+
+  // Salary
+  if (draft.salaryRange?.min || draft.salaryRange?.max) {
+    payload.salaryRange = {
+      min: num(draft.salaryRange.min) || 0,
+      max: num(draft.salaryRange.max) || 0,
+    };
+  }
+
+  // Application fee
+  if (draft.applicationFee) {
+    payload.applicationFee = {
+      general: num(draft.applicationFee.general) || 0,
+      obc:     num(draft.applicationFee.obc)     || 0,
+      scSt:    num(draft.applicationFee.scSt)    || 0,
+      ews:     num(draft.applicationFee.ews)     || 0,
+      pwd:     num(draft.applicationFee.pwd)     || 0,
+    };
+  }
+
+  // Dates
+  if (def(draft.applicationDeadline)) payload.applicationDeadline = draft.applicationDeadline;
+  if (def(draft.examDate))            payload.examDate            = draft.examDate;
+  if (def(draft.applicationStartDate)) payload.applicationStartDate = draft.applicationStartDate;
+
+  // Eligibility
+  if (draft.ageLimit) {
+    payload.ageLimit = {
+      ...(num(draft.ageLimit.min) !== undefined && { min: num(draft.ageLimit.min) }),
+      ...(num(draft.ageLimit.max) !== undefined && { max: num(draft.ageLimit.max) }),
+      relaxation: {
+        sc:  num(draft.ageLimit.relaxation?.sc)  || 0,
+        st:  num(draft.ageLimit.relaxation?.st)  || 0,
+        obc: num(draft.ageLimit.relaxation?.obc) || 0,
+        pwd: num(draft.ageLimit.relaxation?.pwd) || 0,
+      },
+    };
+  }
+
+  if (draft.education) {
+    payload.education = {
+      essential: Array.isArray(draft.education.essential) ? draft.education.essential : [],
+      desirable: Array.isArray(draft.education.desirable) ? draft.education.desirable : [],
+    };
+  }
+
+  if (draft.experience) {
+    payload.experience = {
+      required:    !!draft.experience.required,
+      years:       num(draft.experience.years) || 0,
+      type:        str(draft.experience.type)  || "",
+      description: str(draft.experience.description) || "",
+    };
+  }
+
+  if (draft.physicalStandards) payload.physicalStandards = draft.physicalStandards;
+  if (draft.medicalStandards)  payload.medicalStandards  = draft.medicalStandards;
+
+  if (Array.isArray(draft.otherRequirements) && draft.otherRequirements.length > 0) {
+    payload.otherRequirements = draft.otherRequirements.filter(Boolean);
+  }
+
+  if (Array.isArray(draft.documentRequirements) && draft.documentRequirements.length > 0) {
+    payload.documentRequirements = draft.documentRequirements;
+  }
+
+  // Payment config — only safe fields
+  if (draft.paymentConfig) {
+    payload.paymentConfig = {
+      applicationFee:  num(draft.paymentConfig.applicationFee) || 0,
+      examFee:         num(draft.paymentConfig.examFee)        || 0,
+      processingFee:   num(draft.paymentConfig.processingFee)  || 0,
+      paymentMethods:  Array.isArray(draft.paymentConfig.paymentMethods) ? draft.paymentConfig.paymentMethods : [],
+      ...(def(draft.paymentConfig.refundPolicy)    && { refundPolicy:        draft.paymentConfig.refundPolicy }),
+    };
+  }
+
+  return payload;
 };
 
 const JobReview = () => {
@@ -70,12 +160,17 @@ const JobReview = () => {
     }
   })();
 
-  const missingRequired =
+  // For DRAFT: only need projectId + title + postCode + department
+  const missingForDraft =
     !draft.title ||
     !draft.postCode ||
     !draft.department ||
     !draft.projectId ||
-    !/^[a-f\d]{24}$/i.test(draft.projectId || "") ||
+    !/^[a-f\d]{24}$/i.test(draft.projectId || "");
+
+  // For PUBLISH: also need posts + applicationDeadline
+  const missingRequired =
+    missingForDraft ||
     !draft.posts?.length;
 
   const missingFields = [
@@ -106,14 +201,12 @@ const JobReview = () => {
   const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(id);
 
   const handleSaveDraft = async () => {
-    if (missingRequired) {
-      toast.error("Please complete Step 1 (Basic Info) first");
+    if (missingForDraft) {
+      toast.error("Please complete Step 1 (Basic Info) first — title, post code, department, and project are required.");
       return;
     }
     if (!isValidObjectId(draft.projectId)) {
-      toast.error(
-        "Invalid project ID. Please go back to Jobs, select a project, and start again.",
-      );
+      toast.error("Invalid project ID. Please go back to Jobs, select a project, and start again.");
       return;
     }
     try {
@@ -124,9 +217,40 @@ const JobReview = () => {
         postCode: draft.postCode,
         department: draft.department,
       };
-      const createRes = await createJob(createPayload);
-      const jobId = createRes?.job?._id;
+
+      let jobId;
+      try {
+        const createRes = await createJob(createPayload);
+        jobId = createRes?.job?._id;
+      } catch (createErr) {
+        // 409 = postCode already exists — find the existing draft and update it
+        if (createErr?.status === 409) {
+          try {
+            const existing = await adminService.getAdminJobs({
+              search: draft.postCode,
+              limit: 5,
+            });
+            // Find the job whose postCode exactly matches
+            const match = existing?.jobs?.find(
+              (j) => j.postCode === draft.postCode
+            );
+            if (match?._id) {
+              jobId = match._id;
+            } else {
+              throw new Error(
+                `Post code "${draft.postCode}" already exists. Please use a different post code in Step 1.`
+              );
+            }
+          } catch (lookupErr) {
+            throw lookupErr;
+          }
+        } else {
+          throw createErr;
+        }
+      }
+
       if (!jobId) throw new Error("Job creation failed — no job ID returned");
+
       const updatePayload = buildUpdatePayload(draft);
       if (Object.keys(updatePayload).length > 0) {
         await updateJob({ id: jobId, data: updatePayload });
@@ -143,14 +267,12 @@ const JobReview = () => {
   };
 
   const handlePublish = async () => {
-    if (missingRequired) {
+    if (missingForDraft) {
       toast.error("Please complete Step 1 (Basic Info) first");
       return;
     }
     if (!isValidObjectId(draft.projectId)) {
-      toast.error(
-        "Invalid project ID. Please go back to Jobs, select a project, and start again.",
-      );
+      toast.error("Invalid project ID. Please go back to Jobs, select a project, and start again.");
       return;
     }
     if (!draft.applicationDeadline) {
@@ -169,9 +291,38 @@ const JobReview = () => {
         postCode: draft.postCode,
         department: draft.department,
       };
-      const createRes = await createJob(createPayload);
-      const jobId = createRes?.job?._id;
+
+      let jobId;
+      try {
+        const createRes = await createJob(createPayload);
+        jobId = createRes?.job?._id;
+      } catch (createErr) {
+        if (createErr?.status === 409) {
+          try {
+            const existing = await adminService.getAdminJobs({
+              search: draft.postCode,
+              limit: 5,
+            });
+            const match = existing?.jobs?.find(
+              (j) => j.postCode === draft.postCode
+            );
+            if (match?._id) {
+              jobId = match._id;
+            } else {
+              throw new Error(
+                `Post code "${draft.postCode}" already exists. Please use a different post code in Step 1.`
+              );
+            }
+          } catch (lookupErr) {
+            throw lookupErr;
+          }
+        } else {
+          throw createErr;
+        }
+      }
+
       if (!jobId) throw new Error("Job creation failed — no job ID returned");
+
       const updatePayload = buildUpdatePayload(draft);
       if (Object.keys(updatePayload).length > 0) {
         await updateJob({ id: jobId, data: updatePayload });
@@ -547,7 +698,7 @@ const JobReview = () => {
                   <Button
                     variant="outline"
                     onClick={handleSaveDraft}
-                    disabled={isPublishing || missingRequired}
+                    disabled={isPublishing || missingForDraft}
                     className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
                   >
                     Save as Draft
@@ -576,8 +727,7 @@ const JobReview = () => {
                 disabled={isPublishing}
               >
                 Save Draft
-              </Button>
-              <Button
+              </Button>              <Button
                 onClick={handlePublish}
                 disabled={isPublishing || missingRequired}
                 className="bg-orange-600 hover:bg-orange-700 text-white px-8"

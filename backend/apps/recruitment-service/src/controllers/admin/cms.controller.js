@@ -140,7 +140,6 @@ const uploadBannerImage = asyncHandler(async (req, res) => {
   const result = await uploadToCloudinary(req.file.buffer, {
     folder: "recruitment_portal/cms_banners",
     resource_type: "image",
-    transformation: [{ width: 1920, height: 480, crop: "fill", quality: "auto" }],
   });
 
   res.status(StatusCodes.OK).json(

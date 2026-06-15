@@ -22,6 +22,7 @@ import heroBg from "../../assets/herobg.jpg";
 import { jobService } from "../../services/job.service";
 import { getStoredUser } from "../../services/auth.service";
 import CustomSelect from "../../components/ui/CustomSelect";
+import ShareJobButton from "../../components/ui/ShareJobButton";
 
 // Reusable fade-up variant for scroll sections
 const fadeUp = {
@@ -130,33 +131,25 @@ const Home = () => {
         <section
           className="relative bg-cover bg-center overflow-hidden h-[88vh]"
           style={{
-            backgroundImage: `url(${heroBg})`,
+            backgroundImage: `url(${
+              stateBanner?.bannerImage ? stateBanner.bannerImage : heroBg
+            })`,
           }}
         >
-          {/* OVERLAY */}
+          {/* OVERLAY — lighter when CMS image is set so it shows clearly */}
+          <div className={`absolute inset-0 ${stateBanner?.bannerImage ? 'bg-black/35' : 'bg-black/55'}`} />
+          <div className={`absolute inset-0 bg-gradient-to-r ${stateBanner?.bannerImage ? 'from-black/50 via-black/20 to-transparent' : 'from-black/70 via-black/40 to-black/20'}`} />
 
-          <div className="absolute inset-0 bg-black/55" />
-
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/20" />
-
-          {/* ── CMS State Banner (shows when candidate has a state) ── */}
+          {/* ── CMS State personalisation (tag + ticker) ── */}
           {stateBanner && (
             <>
-              {/* State-specific hero image overlay */}
-              {stateBanner.bannerImage && (
-                <div
-                  className="absolute inset-0 bg-cover bg-center opacity-30"
-                  style={{ backgroundImage: `url(${stateBanner.bannerImage})` }}
-                />
-              )}
-
               {/* State tag top-left */}
               <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-orange-500/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
                 <MapPin className="w-3.5 h-3.5" />
                 {stateBanner.state} — Personalised
               </div>
 
-              {/* Announcements ticker (bottom of hero) */}
+              {/* Announcements ticker — bottom of hero */}
               {announcements.length > 0 && (
                 <div className="absolute bottom-0 left-0 right-0 z-10 bg-black/70 backdrop-blur-sm border-t border-white/10">
                   <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3 py-2">
@@ -190,7 +183,11 @@ const Home = () => {
                         <button
                           key={i}
                           onClick={() => setTickerIdx(i)}
-                          className={`w-1.5 h-1.5 rounded-full transition-colors ${i === tickerIdx % announcements.length ? 'bg-orange-400' : 'bg-white/30'}`}
+                          className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                            i === tickerIdx % announcements.length
+                              ? 'bg-orange-400'
+                              : 'bg-white/30'
+                          }`}
                         />
                       ))}
                     </div>
@@ -199,8 +196,6 @@ const Home = () => {
               )}
             </>
           )}
-
-          {/* CONTENT */}
 
           <div className="relative max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 pt-10 lg:pt-14 pb-10">
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10 items-center h-[78vh]">
@@ -213,9 +208,10 @@ const Home = () => {
                   transition={{ duration: 0.7, ease: "easeOut" }}
                   className="text-[28px] sm:text-[42px] lg:text-[52px] leading-[0.95] tracking-[-1.5px] font-black text-white"
                 >
-                  {stateBanner?.heroTitle || "Your Career in Public Service"}
-                  <br />
-                  {stateBanner?.heroTitle ? "" : "Starts Here."}
+                  {stateBanner?.heroTitle
+                    ? stateBanner.heroTitle
+                    : <>Your Career in Public Service<br />Starts Here.</>
+                  }
                 </motion.h1>
 
                 <motion.p
@@ -504,9 +500,12 @@ const Home = () => {
                       {(job.daysLeft || 0) > 7 ? "ACTIVE" : "CLOSING SOON"}
                     </span>
 
-                    <span className="text-[11px] text-[#857d77]">
-                      Ref. No: {job.postCode || "N/A"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-[#857d77]">
+                        Ref. No: {job.postCode || "N/A"}
+                      </span>
+                      <ShareJobButton job={job} />
+                    </div>
                   </div>
 
                   {/* TITLE */}

@@ -33,6 +33,12 @@ export const jobService = {
     return unwrapData(response);
   },
 
+  // ── CMS — Public state banner ────────────────────────────
+  async getStateBanner(state) {
+    const response = await apiClient.get(`/cms/state/${encodeURIComponent(state)}`);
+    return unwrapData(response);
+  },
+
   // ── Admin (kept for backward compat — delegates to adminService) ──
   async getAdminJobs(params = {}) {
     const response = await apiClient.get("/admin/jobs", { params });

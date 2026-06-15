@@ -52,6 +52,7 @@ const userSchema = new mongoose.Schema(
     identificationMark: { type: String, trim: true },
     registeredMobile: { type: String, trim: true },
     isDomicileOfBihar: { type: Boolean },
+    state: { type: String, trim: true, default: "" },
 
     // ── Profile Photo ─────────────────────────────────────
     profilePhoto: { type: String }, // Cloudinary URL

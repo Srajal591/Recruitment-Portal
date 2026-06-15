@@ -9,22 +9,24 @@ import {
   Shield, 
   CreditCard,
   FolderOpen,
+  Layers,
   X
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard',        path: '/admin/dashboard' },
-  { icon: FolderOpen,      label: 'Projects',          path: '/admin/projects' },
-  { icon: Briefcase,       label: 'Jobs',              path: '/admin/jobs' },
-  { icon: Users,           label: 'Applications',      path: '/admin/applications' },
-  { icon: BarChart3,       label: 'Analytics',         path: '/admin/analytics' },
-  { icon: Activity,        label: 'Activity Logs',     path: '/admin/activity-logs' },
-  { icon: HeadphonesIcon,  label: 'Support',           path: '/admin/support' },
-  { icon: UserCheck,       label: 'Employees',         path: '/admin/employees' },
+  { icon: LayoutDashboard, label: 'Dashboard',          path: '/admin/dashboard' },
+  { icon: FolderOpen,      label: 'Projects',            path: '/admin/projects' },
+  { icon: Briefcase,       label: 'Jobs',                path: '/admin/jobs' },
+  { icon: Users,           label: 'Applications',        path: '/admin/applications' },
+  { icon: BarChart3,       label: 'Analytics',           path: '/admin/analytics' },
+  { icon: Activity,        label: 'Activity Logs',       path: '/admin/activity-logs' },
+  { icon: HeadphonesIcon,  label: 'Support',             path: '/admin/support' },
+  { icon: UserCheck,       label: 'Employees',           path: '/admin/employees' },
   { icon: Shield,          label: 'Roles & Permissions', path: '/admin/roles' },
-  { icon: CreditCard,      label: 'Payment Settings',  path: '/admin/payment-settings' },
+  { icon: CreditCard,      label: 'Payment Settings',    path: '/admin/payment-settings' },
+  { icon: Layers,          label: 'CMS',                 path: '/admin/cms' },
 ]
 
 const AdminSidebar = ({ isCollapsed = false, isMobile = false, onClose }) => {

@@ -290,6 +290,40 @@ export const adminService = {
     return unwrapData(response);
   },
 
+  // ── CMS — State Banner Pages ──────────────────────────────
+  async getCmsPages() {
+    const response = await apiClient.get("/admin/cms");
+    return unwrapData(response);
+  },
+  async getCmsPage(state) {
+    const response = await apiClient.get(`/admin/cms/${encodeURIComponent(state)}`);
+    return unwrapData(response);
+  },
+  async uploadCmsBannerImage(file) {
+    const formData = new FormData();
+    formData.append("image", file);
+    const response = await apiClient.post("/admin/cms/upload-image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return unwrapData(response);
+  },
+  async createCmsPage(data) {
+    const response = await apiClient.post("/admin/cms", data);
+    return unwrapData(response);
+  },
+  async updateCmsPage(state, data) {
+    const response = await apiClient.put(`/admin/cms/${encodeURIComponent(state)}`, data);
+    return unwrapData(response);
+  },
+  async publishCmsPage(state) {
+    const response = await apiClient.put(`/admin/cms/${encodeURIComponent(state)}/publish`);
+    return unwrapData(response);
+  },
+  async deleteCmsPage(state) {
+    const response = await apiClient.delete(`/admin/cms/${encodeURIComponent(state)}`);
+    return unwrapData(response);
+  },
+
   // ── Activity Logs ─────────────────────────────────────────
   async getActivityLogs(params = {}) {
     const response = await apiClient.get("/admin/activity-logs", { params });

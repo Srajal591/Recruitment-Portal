@@ -49,6 +49,10 @@ export default defineConfig({
         target: RECRUITMENT_URL,
         changeOrigin: true,
       },
+      '/api/cms': {
+        target: RECRUITMENT_URL,
+        changeOrigin: true,
+      },
       '/api/admin/projects': {
         target: RECRUITMENT_URL,
         changeOrigin: true,
@@ -62,6 +66,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/api/admin/analytics': {
+        target: RECRUITMENT_URL,
+        changeOrigin: true,
+      },
+      '/api/admin/cms': {
         target: RECRUITMENT_URL,
         changeOrigin: true,
       },

@@ -100,6 +100,9 @@ const SettingsProfile = lazy(() => import("../app/admin/SettingsProfile"));
 const AdminNotifications = lazy(
   () => import("../app/admin/AdminNotifications"),
 );
+const CmsHome = lazy(() => import("../app/admin/CmsHome"));
+const CmsCreate = lazy(() => import("../app/admin/CmsCreate"));
+const CmsEdit = lazy(() => import("../app/admin/CmsEdit"));
 
 // Candidate Pages (Dashboard only - no sidebar)
 const CandidateDashboard = lazy(() => import("../app/candidate/Dashboard"));
@@ -499,6 +502,30 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute role="admin">
               <AdminNotifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/cms"
+          element={
+            <ProtectedRoute role="admin">
+              <CmsHome />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/cms/create"
+          element={
+            <ProtectedRoute role="admin">
+              <CmsCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/cms/edit/:state"
+          element={
+            <ProtectedRoute role="admin">
+              <CmsEdit />
             </ProtectedRoute>
           }
         />

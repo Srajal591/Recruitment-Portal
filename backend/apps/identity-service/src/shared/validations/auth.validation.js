@@ -6,6 +6,11 @@ const registerSchema = z.object({
   registeredMobile: z
     .string()
     .regex(/^[6-9]\d{9}$/, "Invalid Indian mobile number"),
+  // Optional fields passed from registration form
+  fullName:    z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender:      z.string().optional(),
+  state:       z.string().optional(),
 });
 
 const verifyOTPSchema = z.object({

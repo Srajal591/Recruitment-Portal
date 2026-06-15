@@ -58,6 +58,7 @@ const registerCandidate = async ({
   fullName,
   dateOfBirth,
   gender,
+  state,
 }) => {
   const existing = await User.findOne({ email });
   if (existing) throw new ApiError(409, "Email already registered");
@@ -69,6 +70,7 @@ const registerCandidate = async ({
     fullName,
     dateOfBirth,
     gender,
+    state: state || "",
     role: "candidate",
   });
 

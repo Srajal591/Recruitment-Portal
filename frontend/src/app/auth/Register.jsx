@@ -41,6 +41,7 @@ const Register = () => {
     registeredMobile: "",
     dateOfBirth: "",
     gender: "",
+    state: "",
     password: "",
   });
 
@@ -238,10 +239,25 @@ const Register = () => {
                   </div>
                 </div>
 
+                {/* State */}
+                <div>
+                  <Label>State <span className="text-red-500">*</span></Label>
+                  <select
+                    required
+                    value={formData.state}
+                    onChange={(e) => handleChange("state", e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="">Select your state</option>
+                    {["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal"].map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Password */}
                 <div>
-                  <Label>Password <span className="text-red-500">*</span></Label>
-                  <div className="relative">
+                  <Label>Password <span className="text-red-500">*</span></Label>                  <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       required

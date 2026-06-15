@@ -215,6 +215,7 @@ app.use(
 
 // ── Recruitment Service routes ────────────────────────────────
 app.use("/api/jobs", proxy(RECRUITMENT_URL, "Recruitment"));
+app.use("/api/cms", proxy(RECRUITMENT_URL, "Recruitment"));
 app.use(
   "/api/admin/projects",
   proxy(RECRUITMENT_URL, "Recruitment"),
@@ -226,6 +227,10 @@ app.use(
 );
 app.use(
   "/api/admin/analytics",
+  proxy(RECRUITMENT_URL, "Recruitment"),
+);
+app.use(
+  "/api/admin/cms",
   proxy(RECRUITMENT_URL, "Recruitment"),
 );
 app.use(

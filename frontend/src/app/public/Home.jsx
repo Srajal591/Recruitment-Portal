@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 import {
   Search,
@@ -10,6 +10,8 @@ import {
   CircleHelp,
   Phone,
   ChevronDown,
+  MapPin,
+  Megaphone,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
@@ -41,6 +43,21 @@ const Home = () => {
   });
 
   const [openFaq, setOpenFaq] = useState(null);
+  const [tickerIdx, setTickerIdx] = useState(0);
+
+  // ── Detect logged-in candidate's state ───────────────────────
+  const storedUser = getStoredUser();
+  const candidateState = storedUser?.state || "";
+
+  // Fetch CMS state banner if candidate has a state
+  const { data: cmsData } = useQuery({
+    queryKey: ["public-cms-banner", candidateState],
+    queryFn: () => jobService.getStateBanner(candidateState),
+    enabled: !!candidateState,
+    staleTime: 5 * 60 * 1000,
+  });
+  const stateBanner = cmsData?.page || null;
+  const announcements = stateBanner?.announcements || [];
 
   const handleEligibilityCheck = () => {
     if (!eligibilityForm.qualification && !eligibilityForm.age) {
@@ -122,6 +139,67 @@ const Home = () => {
 
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/20" />
 
+          {/* ── CMS State Banner (shows when candidate has a state) ── */}
+          {stateBanner && (
+            <>
+              {/* State-specific hero image overlay */}
+              {stateBanner.bannerImage && (
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-30"
+                  style={{ backgroundImage: `url(${stateBanner.bannerImage})` }}
+                />
+              )}
+
+              {/* State tag top-left */}
+              <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-orange-500/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
+                <MapPin className="w-3.5 h-3.5" />
+                {stateBanner.state} — Personalised
+              </div>
+
+              {/* Announcements ticker (bottom of hero) */}
+              {announcements.length > 0 && (
+                <div className="absolute bottom-0 left-0 right-0 z-10 bg-black/70 backdrop-blur-sm border-t border-white/10">
+                  <div className="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3 py-2">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Megaphone className="w-3.5 h-3.5 text-orange-400" />
+                      <span className="text-orange-400 text-[10px] font-black uppercase tracking-widest">
+                        {stateBanner.state}
+                      </span>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <AnimatePresence mode="wait">
+                        <motion.p
+                          key={tickerIdx}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.3 }}
+                          onAnimationComplete={() => {
+                            setTimeout(() => {
+                              setTickerIdx((i) => (i + 1) % announcements.length);
+                            }, 3500);
+                          }}
+                          className="text-white/90 text-xs truncate"
+                        >
+                          {announcements[tickerIdx % announcements.length]?.text}
+                        </motion.p>
+                      </AnimatePresence>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {announcements.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setTickerIdx(i)}
+                          className={`w-1.5 h-1.5 rounded-full transition-colors ${i === tickerIdx % announcements.length ? 'bg-orange-400' : 'bg-white/30'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           {/* CONTENT */}
 
           <div className="relative max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 pt-10 lg:pt-14 pb-10">
@@ -135,9 +213,9 @@ const Home = () => {
                   transition={{ duration: 0.7, ease: "easeOut" }}
                   className="text-[28px] sm:text-[42px] lg:text-[52px] leading-[0.95] tracking-[-1.5px] font-black text-white"
                 >
-                  Your Career in Public Service
+                  {stateBanner?.heroTitle || "Your Career in Public Service"}
                   <br />
-                  Starts Here.
+                  {stateBanner?.heroTitle ? "" : "Starts Here."}
                 </motion.h1>
 
                 <motion.p
@@ -146,9 +224,8 @@ const Home = () => {
                   transition={{ duration: 0.7, ease: "easeOut", delay: 0.15 }}
                   className="mt-5 text-[13px] sm:text-[15px] leading-7 text-white/80 max-w-[500px]"
                 >
-                  Transparent, accessible, and reliable government job
-                  opportunities for every qualified citizen. Find your role
-                  today.
+                  {stateBanner?.heroSubtitle ||
+                    "Transparent, accessible, and reliable government job opportunities for every qualified citizen. Find your role today."}
                 </motion.p>
 
                 <motion.div

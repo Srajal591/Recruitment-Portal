@@ -27,10 +27,12 @@ const swaggerSpec = require("./src/docs/swagger");
 
 // ── Service-local routes ──────────────────────────────────────
 const publicJobRoutes = require("./src/routes/public/job.routes");
+const publicCmsRoutes = require("./src/routes/public/cms.routes");
 const adminProjectRoutes = require("./src/routes/admin/project.routes");
 const adminJobRoutes = require("./src/routes/admin/job.routes");
 const adminApplicationRoutes = require("./src/routes/admin/application.routes");
 const adminAnalyticsRoutes = require("./src/routes/admin/analytics.routes");
+const adminCmsRoutes = require("./src/routes/admin/cms.routes");
 const candidateApplicationRoutes = require("./src/routes/candidate/application.routes");
 
 const PORT = parseInt(process.env.RECRUITMENT_SERVICE_PORT, 10) || 5002;
@@ -79,10 +81,12 @@ app.get("/api/docs.json", (_req, res) => {
 // ── Routes ────────────────────────────────────────────────────
 app.use("/api", apiLimiter);
 app.use("/api/jobs", publicJobRoutes);
+app.use("/api/cms/state", publicCmsRoutes);
 app.use("/api/admin/projects", adminProjectRoutes);
 app.use("/api/admin/jobs", adminJobRoutes);
 app.use("/api/admin/applications", adminApplicationRoutes);
 app.use("/api/admin/analytics", adminAnalyticsRoutes);
+app.use("/api/admin/cms", adminCmsRoutes);
 app.use("/api/candidate/applications", candidateApplicationRoutes);
 
 // ── Health ────────────────────────────────────────────────────

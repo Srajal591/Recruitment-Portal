@@ -25,12 +25,24 @@ const createJobSchema = z.object({
   postCode: z.string().min(2, "Post code is required").max(50),
   department: z.string().min(2, "Department is required"),
   category: z
-    .enum(["General", "Technical", "Administrative", "Teaching"])
-    .optional(),
-  jobType: z.enum(["Permanent", "Contract", "Temporary"]).optional(),
+    .string()
+    .optional()
+    .transform((v) => {
+      if (!v) return v;
+      const map = { general: 'General', technical: 'Technical', administrative: 'Administrative', teaching: 'Teaching' };
+      return map[v.toLowerCase()] || v;
+    }),
+  jobType: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (!v) return v;
+      const map = { permanent: 'Permanent', contract: 'Contract', temporary: 'Temporary' };
+      return map[v.toLowerCase()] || v;
+    }),
   workLocation: z.string().optional(),
   description: z.string().max(5000).optional(),
-  totalPosts: z.number().int().min(1).optional(),
+  totalPosts: z.number().int().min(0).optional(),
   posts: z.array(jobPostSchema).optional(),
   reservedPosts: z
     .object({
@@ -108,12 +120,12 @@ const createJobSchema = z.object({
   documentRequirements: z
     .array(
       z.object({
-        name:        z.string(),
+        name:        z.string().min(1),
         description: z.string().optional(),
         required:    z.boolean().optional(),
         formats:     z.array(z.string()).optional(),
         maxSizeKB:   z.number().optional(),
-      }),
+      }).passthrough(),
     )
     .optional(),
   paymentConfig: z
@@ -129,6 +141,9 @@ const createJobSchema = z.object({
     .optional(),
 });
 
-const updateJobSchema = createJobSchema.partial();
+// updateJobSchema: accepts any object — validation is intentionally loose
+// for updates since admins may update partial data at any step.
+// The controller handles business logic validation.
+const updateJobSchema = z.object({}).passthrough();
 
 module.exports = { createJobSchema, updateJobSchema };

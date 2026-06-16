@@ -11,6 +11,7 @@ router.use(authenticate, authorize("admin", "employee"));
 router.post("/upload-image", upload.single("image"), cms.uploadBannerImage);
 
 router.get("/",               cms.getAll);
+router.get("/activity",       cms.getActivity);
 router.post("/",              cms.create);
 router.get("/:state",         cms.getOne);
 router.put("/:state",         cms.update);

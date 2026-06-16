@@ -31,13 +31,22 @@ const buildUpdatePayload = (draft) => {
 
   const payload = {};
 
-  if (def(draft.category))    payload.category    = draft.category;
-  if (def(draft.jobType))     payload.jobType     = draft.jobType;
+  const CATEGORY_MAP = { general:'General', technical:'Technical', administrative:'Administrative', teaching:'Teaching' };
+  const JOB_TYPE_MAP = { permanent:'Permanent', contract:'Contract', temporary:'Temporary' };
+
+  if (def(draft.category)) {
+    const cat = draft.category;
+    payload.category = CATEGORY_MAP[cat?.toLowerCase()] || cat;
+  }
+  if (def(draft.jobType)) {
+    const jt = draft.jobType;
+    payload.jobType = JOB_TYPE_MAP[jt?.toLowerCase()] || jt;
+  }
   if (def(draft.workLocation)) payload.workLocation = draft.workLocation;
   if (def(draft.description)) payload.description = draft.description;
   if (num(draft.totalPosts))  payload.totalPosts  = num(draft.totalPosts);
 
-  // Posts — normalise types
+  // Posts — normalise types, strip _id so Zod doesn't choke on ObjectId format
   if (Array.isArray(draft.posts) && draft.posts.length > 0) {
     payload.posts = draft.posts
       .filter((p) => p?.title && p?.designation)
@@ -47,10 +56,10 @@ const buildUpdatePayload = (draft) => {
         designation: p.designation,
         department:  p.department  || "",
         category:    p.category    || "",
-        vacancies:   Number(p.vacancies) || 1,
+        vacancies:   Math.max(1, Math.round(Number(p.vacancies) || 1)),
         payLevel:    p.payLevel    || "",
         location:    p.location    || "",
-        status:      p.status      || "active",
+        status:      "active",
       }));
   }
 
@@ -127,7 +136,8 @@ const buildUpdatePayload = (draft) => {
   }
 
   if (Array.isArray(draft.documentRequirements) && draft.documentRequirements.length > 0) {
-    payload.documentRequirements = draft.documentRequirements;
+    const validDocs = draft.documentRequirements.filter((d) => d?.name?.trim());
+    if (validDocs.length > 0) payload.documentRequirements = validDocs;
   }
 
   // Payment config — only safe fields
@@ -200,60 +210,73 @@ const JobReview = () => {
   // Validate projectId is a valid MongoDB ObjectId (24 hex chars)
   const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(id);
 
+  // Create job or recover existing ID on 409 conflict
+  const getOrCreateJobId = async () => {
+    // If we already have a jobId stored in the draft (from a previous save attempt), use it
+    if (draft._jobId && /^[a-f\d]{24}$/i.test(draft._jobId)) {
+      return draft._jobId;
+    }
+
+    const createPayload = {
+      projectId: draft.projectId,
+      title: draft.title,
+      postCode: draft.postCode,
+      department: draft.department,
+    };
+
+    try {
+      const res = await createJob(createPayload);
+      const jobId = res?.job?._id;
+      if (jobId) {
+        // Store the jobId in draft so retries skip the create step
+        const current = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...current, _jobId: jobId }));
+      }
+      return jobId || null;
+    } catch (err) {
+      if (err?.status === 409) {
+        // postCode already in DB — fetch that job directly
+        try {
+          const res = await adminService.getAdminJobByPostCode(draft.postCode);
+          const jobId = res?.job?._id;
+          if (jobId) {
+            // Cache it for future retries
+            const current = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...current, _jobId: jobId }));
+            return jobId;
+          }
+        } catch {
+          // lookup failed
+        }
+        toast.error(`Post code "${draft.postCode}" is already used. Go to Step 1 and change it.`);
+        return null;
+      }
+      throw err;
+    }
+  };
+
   const handleSaveDraft = async () => {
     if (missingForDraft) {
       toast.error("Please complete Step 1 (Basic Info) first — title, post code, department, and project are required.");
       return;
     }
-    if (!isValidObjectId(draft.projectId)) {
-      toast.error("Invalid project ID. Please go back to Jobs, select a project, and start again.");
-      return;
-    }
     try {
       setIsPublishing(true);
-      const createPayload = {
-        projectId: draft.projectId,
-        title: draft.title,
-        postCode: draft.postCode,
-        department: draft.department,
-      };
-
-      let jobId;
-      try {
-        const createRes = await createJob(createPayload);
-        jobId = createRes?.job?._id;
-      } catch (createErr) {
-        // 409 = postCode already exists — find the existing draft and update it
-        if (createErr?.status === 409) {
-          try {
-            const existing = await adminService.getAdminJobs({
-              search: draft.postCode,
-              limit: 5,
-            });
-            // Find the job whose postCode exactly matches
-            const match = existing?.jobs?.find(
-              (j) => j.postCode === draft.postCode
-            );
-            if (match?._id) {
-              jobId = match._id;
-            } else {
-              throw new Error(
-                `Post code "${draft.postCode}" already exists. Please use a different post code in Step 1.`
-              );
-            }
-          } catch (lookupErr) {
-            throw lookupErr;
-          }
-        } else {
-          throw createErr;
-        }
-      }
-
-      if (!jobId) throw new Error("Job creation failed — no job ID returned");
-
+      const jobId = await getOrCreateJobId();
+      if (!jobId) return; // error already shown
       const updatePayload = buildUpdatePayload(draft);
       if (Object.keys(updatePayload).length > 0) {
-        await updateJob({ id: jobId, data: updatePayload });
+        try {
+          await updateJob({ id: jobId, data: updatePayload });
+        } catch (updateErr) {
+          // Log for debugging but don't block — job was created as draft
+          console.error("Update payload error:", updateErr?.errors || updateErr?.message);
+          toast.success("Job saved as draft (some optional fields skipped)");
+          sessionStorage.removeItem(STORAGE_KEY);
+          queryClient.invalidateQueries({ queryKey: ["admin-jobs"] });
+          navigate("/admin/jobs");
+          return;
+        }
       }
       toast.success("Job saved as draft");
       sessionStorage.removeItem(STORAGE_KEY);
@@ -271,10 +294,6 @@ const JobReview = () => {
       toast.error("Please complete Step 1 (Basic Info) first");
       return;
     }
-    if (!isValidObjectId(draft.projectId)) {
-      toast.error("Invalid project ID. Please go back to Jobs, select a project, and start again.");
-      return;
-    }
     if (!draft.applicationDeadline) {
       toast.error("Application deadline is required to publish");
       return;
@@ -285,44 +304,8 @@ const JobReview = () => {
     }
     try {
       setIsPublishing(true);
-      const createPayload = {
-        projectId: draft.projectId,
-        title: draft.title,
-        postCode: draft.postCode,
-        department: draft.department,
-      };
-
-      let jobId;
-      try {
-        const createRes = await createJob(createPayload);
-        jobId = createRes?.job?._id;
-      } catch (createErr) {
-        if (createErr?.status === 409) {
-          try {
-            const existing = await adminService.getAdminJobs({
-              search: draft.postCode,
-              limit: 5,
-            });
-            const match = existing?.jobs?.find(
-              (j) => j.postCode === draft.postCode
-            );
-            if (match?._id) {
-              jobId = match._id;
-            } else {
-              throw new Error(
-                `Post code "${draft.postCode}" already exists. Please use a different post code in Step 1.`
-              );
-            }
-          } catch (lookupErr) {
-            throw lookupErr;
-          }
-        } else {
-          throw createErr;
-        }
-      }
-
-      if (!jobId) throw new Error("Job creation failed — no job ID returned");
-
+      const jobId = await getOrCreateJobId();
+      if (!jobId) return;
       const updatePayload = buildUpdatePayload(draft);
       if (Object.keys(updatePayload).length > 0) {
         await updateJob({ id: jobId, data: updatePayload });

@@ -6,6 +6,7 @@ import {
   Layers, Plus, Eye, Pencil, Trash2,
   Globe, FileText, Archive, Clock,
   Filter, Download, Loader2, AlertCircle,
+  Megaphone,
 } from 'lucide-react'
 import AdminLayout from '../../components/layouts/AdminLayout'
 import { adminService } from '../../services/admin.service'
@@ -48,12 +49,32 @@ const StatCard = ({ icon: Icon, label, value, color, sub }) => (
   </div>
 )
 
-const RECENT_ACTIVITY = [
-  { text: 'Bihar state page updated', time: '2 minutes ago', type: 'edit' },
-  { text: "Announcement 'New Exam Calendar' published", time: '1 hour ago', type: 'publish' },
-  { text: 'Maharashtra page saved as draft', time: '3 hours ago', type: 'draft' },
-  { text: 'System CMS module initialized', time: 'Yesterday', type: 'system' },
-]
+const RECENT_ACTIVITY = [] // removed — now dynamic
+
+// Time-ago helper
+const timeAgo = (date) => {
+  if (!date) return '—'
+  const diff = Date.now() - new Date(date).getTime()
+  const mins  = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days  = Math.floor(diff / 86400000)
+  if (mins < 1)   return 'Just now'
+  if (mins < 60)  return `${mins} minute${mins === 1 ? '' : 's'} ago`
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  if (days === 1) return 'Yesterday'
+  return `${days} days ago`
+}
+
+// Icon + colour per activity type
+const ACTIVITY_CFG = {
+  edit:         { Icon: Pencil,   bg: 'bg-orange-100',  color: 'text-orange-600' },
+  publish:      { Icon: Globe,    bg: 'bg-emerald-100', color: 'text-emerald-600' },
+  archive:      { Icon: Archive,  bg: 'bg-gray-100',    color: 'text-gray-600' },
+  create:       { Icon: Plus,     bg: 'bg-blue-100',    color: 'text-blue-600' },
+  announcement: { Icon: Megaphone,bg: 'bg-amber-100',   color: 'text-amber-600' },
+  draft:        { Icon: FileText, bg: 'bg-orange-100',  color: 'text-orange-600' },
+  system:       { Icon: Layers,   bg: 'bg-orange-100',  color: 'text-orange-600' },
+}
 
 const CmsHome = () => {
   const navigate = useNavigate()
@@ -63,6 +84,12 @@ const CmsHome = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-cms-pages'],
     queryFn: () => adminService.getCmsPages(),
+  })
+
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['admin-cms-activity'],
+    queryFn: () => adminService.getCmsActivity(8),
+    refetchInterval: 30000, // auto-refresh every 30s
   })
 
   const { mutate: deletePage, isPending: deleting } = useMutation({
@@ -253,28 +280,58 @@ const CmsHome = () => {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 max-w-lg">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-900">Recent Activity</h2>
-            <button className="text-xs font-semibold text-orange-500 hover:text-orange-600">View All</button>
+            <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live
+            </span>
           </div>
-          <div className="space-y-4">
-            {RECENT_ACTIVITY.map((a, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center shrink-0 mt-0.5">
-                  {a.type === 'edit'    && <Pencil    className="w-3.5 h-3.5 text-orange-600" />}
-                  {a.type === 'publish' && <Globe     className="w-3.5 h-3.5 text-orange-600" />}
-                  {a.type === 'draft'   && <FileText  className="w-3.5 h-3.5 text-orange-600" />}
-                  {a.type === 'system'  && <Layers    className="w-3.5 h-3.5 text-orange-600" />}
+
+          {activityLoading && (
+            <div className="space-y-3">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="flex items-start gap-3 animate-pulse">
+                  <div className="w-7 h-7 rounded-full bg-gray-100 shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 bg-gray-100 rounded w-3/4" />
+                    <div className="h-2.5 bg-gray-100 rounded w-1/3" />
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-800">{a.text}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {a.time}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {!activityLoading && (!activityData?.activities?.length) && (
+            <div className="text-center py-8 text-gray-400">
+              <Layers className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No activity yet. Create your first state page.</p>
+            </div>
+          )}
+
+          {!activityLoading && activityData?.activities?.length > 0 && (
+            <div className="space-y-4">
+              {activityData.activities.map((a) => {
+                const cfg = ACTIVITY_CFG[a.type] || ACTIVITY_CFG.edit
+                const { Icon } = cfg
+                return (
+                  <div key={a.id} className="flex items-start gap-3">
+                    <div className={`w-7 h-7 rounded-full ${cfg.bg} flex items-center justify-center shrink-0 mt-0.5`}>
+                      <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-800">{a.text}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {timeAgo(a.time)}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <p className="text-center text-[10px] text-gray-400 mt-5 pt-4 border-t border-gray-100 tracking-widest uppercase">
-            Real-time update stream active
+            Real-time update stream active · refreshes every 30s
           </p>
         </div>
 

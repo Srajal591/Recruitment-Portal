@@ -18,6 +18,11 @@ router.get(
   checkPermission("jobs", "view"),
   jobController.getJobStats,
 );
+router.get(
+  "/by-postcode/:postCode",
+  checkPermission("jobs", "view"),
+  jobController.getJobByPostCode,
+);
 router.get("/:id", checkPermission("jobs", "view"), jobController.getJob);
 router.post(
   "/",

@@ -40,6 +40,10 @@ export const adminService = {
     const response = await apiClient.get(`/admin/jobs/${id}`);
     return unwrapData(response);
   },
+  async getAdminJobByPostCode(postCode) {
+    const response = await apiClient.get(`/admin/jobs/by-postcode/${encodeURIComponent(postCode)}`);
+    return unwrapData(response);
+  },
   async createJob(data) {
     const response = await apiClient.post("/admin/jobs", data);
     return unwrapData(response);

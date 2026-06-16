@@ -406,14 +406,7 @@ const publishJob = asyncHandler(async (req, res) => {
   }
 
   // Validate required fields for publishing
-  const requiredFields = [
-    "title",
-    "postCode",
-    "department",
-    "totalPosts",
-    "applicationDeadline",
-  ];
-
+  const requiredFields = ["title", "postCode", "department"];
   const missingFields = requiredFields.filter((field) => !job[field]);
   if (missingFields.length > 0) {
     throw new ApiError(
@@ -422,16 +415,17 @@ const publishJob = asyncHandler(async (req, res) => {
     );
   }
 
-  if (!job.posts?.length) {
+  // Auto-compute totalPosts from posts array if available
+  if (job.posts?.length) {
+    const computed = getPostVacancyTotal(job.posts);
+    if (computed > 0) job.totalPosts = computed;
+  }
+
+  if (!job.posts?.length && !job.totalPosts) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       "At least one post/designation must be added before publishing",
     );
-  }
-
-  const totalPostVacancies = getPostVacancyTotal(job.posts);
-  if (totalPostVacancies !== job.totalPosts) {
-    job.totalPosts = totalPostVacancies;
   }
 
   job.status = "active";
@@ -596,9 +590,18 @@ const getJobStats = asyncHandler(async (req, res) => {
   );
 });
 
+const getJobByPostCode = asyncHandler(async (req, res) => {
+  const job = await Job.findOne({ postCode: req.params.postCode }).lean();
+  if (!job) throw new ApiError(StatusCodes.NOT_FOUND, "Job not found");
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "Job fetched", { job }),
+  );
+});
+
 module.exports = {
   getJobs,
   getJob,
+  getJobByPostCode,
   createJob,
   updateJob,
   publishJob,

@@ -118,14 +118,7 @@ const AdminSidebar = ({ isCollapsed = false, isMobile = false, onClose }) => {
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 pb-2">
             Quick Access
           </p>
-          <Link
-            to="/candidate/dashboard"
-            onClick={isMobile ? onClose : undefined}
-            className="flex items-center space-x-3 px-3 py-2 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors text-sm font-medium"
-          >
-            <UserCheck className="w-4 h-4 flex-shrink-0" />
-            <span>Candidate Portal</span>
-          </Link>
+          
           <Link
             to="/"
             onClick={isMobile ? onClose : undefined}

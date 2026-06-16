@@ -150,4 +150,73 @@ const uploadBannerImage = asyncHandler(async (req, res) => {
   );
 });
 
-module.exports = { getAll, getOne, create, update, remove, publish, getPublicStatePage, uploadBannerImage };
+// GET /api/admin/cms/activity  — recent CMS activity from real DB data
+const getActivity = asyncHandler(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+
+  // Get the most recently modified pages
+  const recentPages = await StateBanner.find()
+    .sort({ updatedAt: -1 })
+    .limit(limit)
+    .select("state status heroTitle announcements updatedAt createdAt updatedBy")
+    .lean();
+
+  const activities = [];
+
+  for (const page of recentPages) {
+    const isNew = Math.abs(new Date(page.updatedAt) - new Date(page.createdAt)) < 5000;
+
+    if (page.status === "published") {
+      activities.push({
+        id:   `${page._id}-published`,
+        type: "publish",
+        text: `${page.state} state page published`,
+        time: page.updatedAt,
+      });
+    } else if (page.status === "archived") {
+      activities.push({
+        id:   `${page._id}-archived`,
+        type: "archive",
+        text: `${page.state} state page archived`,
+        time: page.updatedAt,
+      });
+    } else if (isNew) {
+      activities.push({
+        id:   `${page._id}-created`,
+        type: "create",
+        text: `${page.state} state page created`,
+        time: page.createdAt,
+      });
+    } else {
+      activities.push({
+        id:   `${page._id}-edit`,
+        type: "edit",
+        text: `${page.state} state page updated`,
+        time: page.updatedAt,
+      });
+    }
+
+    // Surface individual announcement additions (latest 1 per page)
+    if (Array.isArray(page.announcements) && page.announcements.length > 0) {
+      const latest = page.announcements[page.announcements.length - 1];
+      if (latest?.text) {
+        activities.push({
+          id:   `${page._id}-ann`,
+          type: "announcement",
+          text: `Announcement added for ${page.state}: "${latest.text.slice(0, 60)}${latest.text.length > 60 ? "…" : ""}"`,
+          time: page.updatedAt,
+        });
+      }
+    }
+  }
+
+  // Sort by time desc, take top `limit`
+  activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+  const result = activities.slice(0, limit);
+
+  res.status(StatusCodes.OK).json(
+    new ApiResponse(StatusCodes.OK, "CMS activity fetched", { activities: result }),
+  );
+});
+
+module.exports = { getAll, getOne, create, update, remove, publish, getPublicStatePage, uploadBannerImage, getActivity };

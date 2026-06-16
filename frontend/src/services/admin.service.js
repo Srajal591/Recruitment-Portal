@@ -299,6 +299,10 @@ export const adminService = {
     const response = await apiClient.get("/admin/cms");
     return unwrapData(response);
   },
+  async getCmsActivity(limit = 10) {
+    const response = await apiClient.get(`/admin/cms/activity?limit=${limit}`);
+    return unwrapData(response);
+  },
   async getCmsPage(state) {
     const response = await apiClient.get(`/admin/cms/${encodeURIComponent(state)}`);
     return unwrapData(response);

@@ -3,11 +3,10 @@
 // ============================
 
 import { Link, useLocation } from "react-router-dom";
-
 import { Menu, X, Bell, Phone, Mail, MapPin } from "lucide-react";
-
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import logo from "../../assets/logo.png";
 
 const PublicLayout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -83,19 +82,13 @@ const PublicLayout = ({ children }) => {
           <div className="h-[72px] flex items-center justify-between">
             {/* LOGO */}
 
-            <Link to="/" className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-[6px] bg-[#e46a1d] flex items-center justify-center shadow-md">
-                <span className="text-white font-black text-sm">RP</span>
-              </div>
-
-              <div>
-                <h2 className="text-[18px] leading-none tracking-[-0.5px] font-black text-[#1f1d1b]">
-                  Recruitment Portal
-                </h2>
-
-                <p className="mt-1 text-[10px] uppercase tracking-[0.14em] font-bold text-[#857b74]">
-                  Government of India
-                </p>
+            <Link to="/" className="flex items-center gap-3">
+              <div className="h-12 px-5 rounded-[6px] bg-[#1f1d1b] flex items-center justify-center">
+                <img
+                  src={logo}
+                  alt="Recruitment Portal"
+                  className="h-9 w-auto object-contain"
+                />
               </div>
             </Link>
 

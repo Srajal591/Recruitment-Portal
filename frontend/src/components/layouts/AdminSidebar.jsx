@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../../lib/utils'
+import logo from '../../assets/logo.png'
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard',          path: '/admin/dashboard' },
@@ -39,20 +40,23 @@ const AdminSidebar = ({ isCollapsed = false, isMobile = false, onClose }) => {
         'flex items-center border-b border-orange-100 bg-white flex-shrink-0',
         isCollapsed && !isMobile ? 'p-3 justify-center' : 'p-4'
       )}>
-        <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
-          <span className="text-white font-bold text-sm">BR</span>
-        </div>
-        {(!isCollapsed || isMobile) && (
-          <div className="ml-3 flex-1 min-w-0">
-            <span className="font-bold text-gray-900 text-sm tracking-tight block truncate">Admin Panel</span>
-            <span className="text-[10px] text-orange-500 font-semibold uppercase tracking-widest">Recruitment Portal</span>
-          </div>
+        {isCollapsed && !isMobile ? (
+          <Link to="/admin/dashboard">
+            <div className="w-9 h-9 rounded-lg bg-[#1f1d1b] flex items-center justify-center p-1.5">
+              <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+          </Link>
+        ) : (
+          <Link to="/admin/dashboard" className="flex items-center flex-1 min-w-0">
+            <div className="h-10 px-4 rounded-lg bg-[#1f1d1b] inline-flex items-center justify-center">
+              <img src={logo} alt="Recruitment Portal" className="h-7 w-auto object-contain" />
+            </div>
+          </Link>
         )}
-        {/* Mobile close button */}
         {isMobile && onClose && (
           <button
             onClick={onClose}
-            className="ml-2 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
+            className="ml-auto p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
             aria-label="Close sidebar"
           >
             <X className="w-4 h-4" />
